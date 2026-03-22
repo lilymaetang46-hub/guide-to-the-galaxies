@@ -1,8 +1,36 @@
 ﻿import { useEffect, useMemo, useState } from "react";
 import { supabase } from "./supabase";
+import TrackerLayout from "./layouts/TrackerLayout";
+import OutsiderLayout from "./layouts/OutsiderLayout";
+import TrackerOverviewPage from "./pages/tracker/OverviewPage";
+import TrackerTrackingPage from "./pages/tracker/TrackingPage";
+import TrackerMoodPage from "./pages/tracker/MoodPage";
+import TrackerGoalsPage from "./pages/tracker/GoalsPage";
+import TrackerChartsPage from "./pages/tracker/ChartsPage";
+import TrackerConnectionsPage from "./pages/tracker/ConnectionsPage";
+import TrackerSettingsPage from "./pages/tracker/SettingsPage";
+import OutsiderOverviewPage from "./pages/outsider/OverviewPage";
+import OutsiderTrackerDataPage from "./pages/outsider/TrackerDataPage";
+import OutsiderSupportPage from "./pages/outsider/SupportPage";
+import OutsiderGoalsPage from "./pages/outsider/GoalsPage";
+
+const PENDING_SIGNUP_PROFILE_KEY = "pendingSignupProfile";
+const PREFERRED_APP_EXPERIENCE_KEY = "preferredAppExperience";
+const DEFAULT_CONNECTION_PERMISSIONS = {
+  meds: true,
+  food: true,
+  hygiene: true,
+  sleep: true,
+  exercise: true,
+  mood: true,
+  streaks: true,
+  rewards: true,
+  activity: true,
+  alerts: true,
+};
 
 function App() {
-  const today = new Date().toISOString().split("T")[0];
+  const today = getLocalDateKey(new Date());
 
   const [entryId, setEntryId] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -11,7 +39,55 @@ function App() {
     const savedTheme = localStorage.getItem("darkMode");
     return savedTheme === null ? true : savedTheme === "true";
   });
-  const [activePage, setActivePage] = useState("dashboard");
+  const [session, setSession] = useState(null);
+  const [user, setUser] = useState(null);
+  const [authLoading, setAuthLoading] = useState(true);
+  const [profileSyncLoading, setProfileSyncLoading] = useState(false);
+  const [authMode, setAuthMode] = useState("login");
+  const [authMessage, setAuthMessage] = useState("");
+  const [selectedExperience, setSelectedExperience] = useState(
+    () => localStorage.getItem(PREFERRED_APP_EXPERIENCE_KEY) || "tracker"
+  );
+  const [appExperience, setAppExperience] = useState(
+    () => localStorage.getItem(PREFERRED_APP_EXPERIENCE_KEY) || "tracker"
+  );
+  const [authEmail, setAuthEmail] = useState("");
+  const [authPassword, setAuthPassword] = useState("");
+  const [authConfirmPassword, setAuthConfirmPassword] = useState("");
+  const [signupStep, setSignupStep] = useState(1);
+  const [themeFamily, setThemeFamily] = useState("galaxy");
+  const [signupThemeFamily, setSignupThemeFamily] = useState("galaxy");
+  const [signupMode, setSignupMode] = useState("dark");
+  const [displayName, setDisplayName] = useState("");
+  const [secondaryDisplayName, setSecondaryDisplayName] = useState("");
+  const [pin, setPin] = useState("");
+  const [confirmPin, setConfirmPin] = useState("");
+  const [profilePin, setProfilePin] = useState("");
+  const [settingsMessage, setSettingsMessage] = useState("");
+  const [currentPinInput, setCurrentPinInput] = useState("");
+  const [newPinInput, setNewPinInput] = useState("");
+  const [confirmNewPinInput, setConfirmNewPinInput] = useState("");
+  const [resetPinPassword, setResetPinPassword] = useState("");
+  const [resetNewPinInput, setResetNewPinInput] = useState("");
+  const [resetConfirmNewPinInput, setResetConfirmNewPinInput] = useState("");
+  const [activePage, setActivePage] = useState("mission");
+  const [outsiderPage, setOutsiderPage] = useState("outsiderOverview");
+  const [showOutsiderChooser, setShowOutsiderChooser] = useState(false);
+  const [selectedOutsiderId, setSelectedOutsiderId] = useState("aria");
+  const [outsiderTrackers, setOutsiderTrackers] = useState([]);
+  const [outsiderLoading, setOutsiderLoading] = useState(false);
+  const [outsiderMessage, setOutsiderMessage] = useState("");
+  const [outsiderCooldownUntil, setOutsiderCooldownUntil] = useState("");
+  const [inviteCode, setInviteCode] = useState("");
+  const [inviteLink, setInviteLink] = useState("");
+  const [joinCodeInput, setJoinCodeInput] = useState("");
+  const [joinLinkInput, setJoinLinkInput] = useState("");
+  const [connectionsMessage, setConnectionsMessage] = useState("");
+  const [connectionsLoading, setConnectionsLoading] = useState(false);
+  const [pendingRequests, setPendingRequests] = useState([]);
+  const [connectedOutsiders, setConnectedOutsiders] = useState([]);
+  const [pinApprovalTarget, setPinApprovalTarget] = useState(null);
+  const [approvalPinInput, setApprovalPinInput] = useState("");
 
   const [medTaken, setMedTaken] = useState(false);
   const [medsTime, setMedsTime] = useState("");
@@ -75,7 +151,13 @@ function App() {
   const [historyData, setHistoryData] = useState([]);
   const [chartRange, setChartRange] = useState(7);
 
-  const theme = darkMode ? mellowDarkTheme : mellowLightTheme;
+  const outsiderPeople = outsiderTrackers;
+  const selectedOutsider =
+    outsiderPeople.find((person) => person.id === selectedOutsiderId) || outsiderPeople[0];
+  const theme = getAppTheme(
+    darkMode,
+    appExperience === "outsider" ? selectedOutsider?.themeFamily || themeFamily : themeFamily
+  );
   const moodTagGroups = [
     {
       label: "Positive",
@@ -104,17 +186,103 @@ function App() {
   ];
 
   useEffect(() => {
-    loadEntry();
-    loadHistory();
+    let subscribed = true;
+
+    supabase.auth.getSession().then(({ data }) => {
+      if (!subscribed) return;
+      setSession(data.session ?? null);
+      setUser(data.session?.user ?? null);
+      setAuthLoading(false);
+    });
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (_event, nextSession) => {
+      setSession(nextSession ?? null);
+      setUser(nextSession?.user ?? null);
+      setAuthLoading(false);
+    });
+
+    return () => {
+      subscribed = false;
+      subscription.unsubscribe();
+    };
   }, []);
+
+  useEffect(() => {
+    if (!user) {
+      setLoading(false);
+      setEntryId(null);
+      setHistoryData([]);
+      return;
+    }
+
+    setLoading(true);
+    setProfileSyncLoading(true);
+
+    (async () => {
+      const profileSync = await ensureProfileExists(user);
+
+      if (!profileSync.ok) {
+        setAuthMessage(profileSync.error || "Could not sync your profile.");
+      }
+
+      await loadProfile(user.id);
+      await loadEntry();
+      await loadHistory();
+      setProfileSyncLoading(false);
+    })();
+  }, [user]);
+
+  useEffect(() => {
+    if (user && activePage === "settings") {
+      loadProfile(user.id);
+    }
+  }, [activePage, user]);
+
+  useEffect(() => {
+    if (user) {
+      loadConnectionsData();
+      loadOutsiderTrackers();
+    }
+  }, [user]);
+
+  useEffect(() => {
+    if (user && activePage === "connections") {
+      loadConnectionsData();
+    }
+  }, [activePage, user]);
+
+  useEffect(() => {
+    if (!user || activePage !== "connections") return undefined;
+
+    const intervalId = window.setInterval(() => {
+      loadConnectionsData();
+    }, 10000);
+
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, [activePage, user]);
+
+  useEffect(() => {
+    if (user && appExperience === "outsider") {
+      loadOutsiderTrackers();
+    }
+  }, [appExperience, outsiderPage, user]);
 
   useEffect(() => {
     localStorage.setItem("darkMode", darkMode);
   }, [darkMode]);
 
   useEffect(() => {
-    setGoalSuggestions(makeGoalSuggestions(darkMode ? "galaxy" : "solar"));
-  }, [darkMode]);
+    localStorage.setItem(PREFERRED_APP_EXPERIENCE_KEY, appExperience);
+    setSelectedExperience(appExperience);
+  }, [appExperience]);
+
+  useEffect(() => {
+    setGoalSuggestions(makeGoalSuggestions(themeFamily, darkMode));
+  }, [darkMode, themeFamily]);
 
   useEffect(() => {
     if (!entryId || historyData.length === 0 || goals.length === 0) return;
@@ -137,9 +305,9 @@ function App() {
       }
 
       if (justCompleted) {
-        const rewardMode = darkMode ? "galaxy" : "solar";
+        const rewardMode = themeFamily;
         const rewardTitle = makeRewardName(rewardMode);
-        const rewardType = darkMode ? "Constellation" : "Sunburst";
+        const rewardType = getThemeRewardCopy(themeFamily).singular;
 
         goal.rewardEarned = rewardTitle;
         goal.completedAt = today;
@@ -157,10 +325,7 @@ function App() {
         updatedRewards.unshift(reward);
         hasRewardChanges = true;
         latestPopup = {
-          message:
-            rewardMode === "galaxy"
-              ? `${goal.name} complete! You unlocked a Constellation.`
-              : `${goal.name} complete! You unlocked a Sunburst.`,
+          message: `${goal.name} complete! You unlocked a ${rewardType}.`,
           reward,
         };
       }
@@ -181,13 +346,1116 @@ function App() {
         rewards: updatedRewards,
       });
     }
-  }, [historyData, goals, rewards, entryId, darkMode, today]);
+  }, [historyData, goals, rewards, entryId, darkMode, today, themeFamily]);
+
+  async function loadProfile(userId) {
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("id", userId)
+      .maybeSingle();
+
+    if (error) {
+      console.error("Profile load error:", error);
+      return;
+    }
+
+    if (data) {
+      setDisplayName(data.display_name || "");
+      setSecondaryDisplayName(data.secondary_display_name || "");
+      setProfilePin(data.pin || "");
+      setThemeFamily(data.tracker_theme_family || "galaxy");
+      setDarkMode((data.tracker_mode || "dark") === "dark");
+    }
+  }
+
+  async function ensureProfileExists(authUser) {
+    if (!authUser) {
+      return { ok: false, error: "No authenticated user found." };
+    }
+
+    const { data: existingProfile, error: profileLookupError } = await supabase
+      .from("profiles")
+      .select("id")
+      .eq("id", authUser.id)
+      .maybeSingle();
+
+    if (profileLookupError) {
+      console.error("Profile lookup error:", profileLookupError);
+      return { ok: false, error: "Could not check your profile yet." };
+    }
+
+    if (existingProfile) {
+      localStorage.removeItem(PENDING_SIGNUP_PROFILE_KEY);
+      return { ok: true, created: false };
+    }
+
+    let pendingProfile = null;
+
+    try {
+      pendingProfile = JSON.parse(localStorage.getItem(PENDING_SIGNUP_PROFILE_KEY) || "null");
+    } catch (error) {
+      pendingProfile = null;
+    }
+
+    const profilePayload = {
+      id: authUser.id,
+      email: authUser.email,
+      display_name:
+        pendingProfile?.email === authUser.email
+          ? pendingProfile.display_name
+          : authUser.user_metadata?.display_name || "Stargazer",
+      secondary_display_name:
+        pendingProfile?.email === authUser.email
+          ? pendingProfile.secondary_display_name || null
+          : authUser.user_metadata?.secondary_display_name || null,
+      tracker_theme_family:
+        pendingProfile?.email === authUser.email
+          ? pendingProfile.tracker_theme_family || "galaxy"
+          : authUser.user_metadata?.tracker_theme_family || "galaxy",
+      tracker_mode:
+        pendingProfile?.email === authUser.email
+          ? pendingProfile.tracker_mode || "dark"
+          : authUser.user_metadata?.tracker_mode || "dark",
+      pin:
+        pendingProfile?.email === authUser.email
+          ? pendingProfile.pin || "0000"
+          : "0000",
+      updated_at: new Date().toISOString(),
+    };
+
+    const { error: profileCreateError } = await supabase.from("profiles").upsert(profilePayload);
+
+    if (profileCreateError) {
+      console.error("Profile create error:", profileCreateError);
+      return { ok: false, error: "Your account signed in, but profile setup needs another try." };
+    }
+
+    localStorage.removeItem(PENDING_SIGNUP_PROFILE_KEY);
+    return { ok: true, created: true };
+  }
+
+  async function saveProfileSettings() {
+    if (!user) return;
+
+    if (!displayName.trim()) {
+      setSettingsMessage("Display name is required.");
+      return;
+    }
+
+    const payload = {
+      id: user.id,
+      email: user.email,
+      display_name: displayName.trim(),
+      secondary_display_name: secondaryDisplayName.trim() || null,
+      tracker_theme_family: themeFamily,
+      tracker_mode: darkMode ? "dark" : "light",
+      pin: profilePin,
+      updated_at: new Date().toISOString(),
+    };
+
+    const { error } = await supabase.from("profiles").upsert(payload);
+
+    if (error) {
+      setSettingsMessage(error.message);
+      return;
+    }
+
+    setSettingsMessage("Settings saved.");
+  }
+
+  async function changePin() {
+    if (!user) return;
+
+    if (currentPinInput !== profilePin) {
+      setSettingsMessage("Current PIN is incorrect.");
+      return;
+    }
+
+    if (!/^\d{4,8}$/.test(newPinInput)) {
+      setSettingsMessage("New PIN must be numbers only and 4 to 8 digits.");
+      return;
+    }
+
+    if (newPinInput !== confirmNewPinInput) {
+      setSettingsMessage("New PIN and confirm PIN must match.");
+      return;
+    }
+
+    const nextPin = newPinInput;
+    const { error } = await supabase
+      .from("profiles")
+      .upsert({
+        id: user.id,
+        email: user.email,
+        display_name: displayName.trim() || "Stargazer",
+        secondary_display_name: secondaryDisplayName.trim() || null,
+        tracker_theme_family: themeFamily,
+        tracker_mode: darkMode ? "dark" : "light",
+        pin: nextPin,
+        updated_at: new Date().toISOString(),
+      });
+
+    if (error) {
+      setSettingsMessage(error.message);
+      return;
+    }
+
+    setProfilePin(nextPin);
+    setCurrentPinInput("");
+    setNewPinInput("");
+    setConfirmNewPinInput("");
+    setSettingsMessage("PIN updated.");
+  }
+
+  async function resetPinWithPassword() {
+    if (!user?.email) return;
+
+    if (!resetPinPassword) {
+      setSettingsMessage("Enter your account password to reset your PIN.");
+      return;
+    }
+
+    if (!/^\d{4,8}$/.test(resetNewPinInput)) {
+      setSettingsMessage("New PIN must be numbers only and 4 to 8 digits.");
+      return;
+    }
+
+    if (resetNewPinInput !== resetConfirmNewPinInput) {
+      setSettingsMessage("New PIN and confirm PIN must match.");
+      return;
+    }
+
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: user.email,
+      password: resetPinPassword,
+    });
+
+    if (error) {
+      console.error("Reset PIN password verification error:", error);
+      setSettingsMessage("Password verification failed.");
+      return;
+    }
+
+    if (!data?.user || data.user.id !== user.id) {
+      setSettingsMessage("Password verification failed.");
+      return;
+    }
+
+    const nextPin = resetNewPinInput;
+    const { error: profileError } = await supabase.from("profiles").upsert({
+      id: user.id,
+      email: user.email,
+      display_name: displayName.trim() || "Stargazer",
+      secondary_display_name: secondaryDisplayName.trim() || null,
+      tracker_theme_family: themeFamily,
+      tracker_mode: darkMode ? "dark" : "light",
+      pin: nextPin,
+      updated_at: new Date().toISOString(),
+    });
+
+    if (profileError) {
+      console.error("Reset PIN profile update error:", profileError);
+      setSettingsMessage(profileError.message);
+      return;
+    }
+
+    setProfilePin(nextPin);
+    setResetPinPassword("");
+    setResetNewPinInput("");
+    setResetConfirmNewPinInput("");
+    setSettingsMessage("PIN reset successfully.");
+  }
+
+  async function handleLogin() {
+    setAuthMessage("");
+
+    if (!authEmail || !authPassword) {
+      setAuthMessage("Enter your email and password.");
+      return;
+    }
+
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: authEmail,
+      password: authPassword,
+    });
+
+    if (error) {
+      setAuthMessage(error.message);
+      return;
+    }
+
+    if (data?.user) {
+      const profileSync = await ensureProfileExists(data.user);
+
+      if (!profileSync.ok) {
+        setAuthMessage(profileSync.error || "Could not finish setting up your profile.");
+        return;
+      }
+    }
+
+    setAppExperience(selectedExperience);
+    setAuthPassword("");
+    setAuthConfirmPassword("");
+  }
+
+  async function handleSignup() {
+    setAuthMessage("");
+
+    if (authPassword !== authConfirmPassword) {
+      setAuthMessage("Password and confirm password must match.");
+      return;
+    }
+
+    if (!/^\d{4,8}$/.test(pin)) {
+      setAuthMessage("PIN must be numbers only and 4 to 8 digits.");
+      return;
+    }
+
+    if (pin !== confirmPin) {
+      setAuthMessage("PIN and confirm PIN must match.");
+      return;
+    }
+
+    if (!displayName.trim()) {
+      setAuthMessage("Add a display name to continue.");
+      return;
+    }
+
+    const { data, error } = await supabase.auth.signUp({
+      email: authEmail,
+      password: authPassword,
+      options: {
+        data: {
+          display_name: displayName.trim(),
+          secondary_display_name: secondaryDisplayName.trim(),
+          tracker_theme_family: signupThemeFamily,
+          tracker_mode: signupMode,
+        },
+      },
+    });
+
+    if (error) {
+      setAuthMessage(error.message);
+      return;
+    }
+
+    localStorage.setItem(
+      PENDING_SIGNUP_PROFILE_KEY,
+      JSON.stringify({
+        email: authEmail,
+        display_name: displayName.trim(),
+        secondary_display_name: secondaryDisplayName.trim() || null,
+        tracker_theme_family: signupThemeFamily,
+        tracker_mode: signupMode,
+        pin,
+      })
+    );
+
+    setThemeFamily(signupThemeFamily);
+    setDarkMode(signupMode === "dark");
+    setAuthMode("login");
+    setSignupStep(1);
+    setAuthPassword("");
+    setAuthConfirmPassword("");
+    setPin("");
+    setConfirmPin("");
+    setAuthMessage(
+      data.session
+        ? "Account created. Please log in to finish setting up your profile."
+        : "Account created. Check your email if needed, then log in to finish setting up your profile."
+    );
+  }
+
+  async function handleLogout() {
+    await supabase.auth.signOut();
+    setSession(null);
+    setUser(null);
+    setAppExperience(selectedExperience);
+    setOutsiderPage("outsiderOverview");
+    setGoals([]);
+    setRewards([]);
+  }
+
+  function makeConnectionCode() {
+    return `STAR-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
+  }
+
+  function makeConnectionToken() {
+    return `${crypto.randomUUID().replace(/-/g, "")}${Math.random()
+      .toString(36)
+      .slice(2, 10)}`;
+  }
+
+  async function loadConnectionsData() {
+    if (!user) return;
+
+    setConnectionsLoading(true);
+
+    const [{ data: inviteRow, error: inviteError }, { data: connectionRows, error: connectionError }] =
+      await Promise.all([
+        supabase
+          .from("connection_invites")
+          .select("*")
+          .eq("tracker_id", user.id)
+          .eq("active", true)
+          .maybeSingle(),
+        supabase
+          .from("tracker_connections")
+          .select(
+            `
+              id,
+              tracker_id,
+              outsider_id,
+              status,
+              name_visibility,
+              notification_cap,
+              cooldown_minutes,
+              permissions,
+              created_at,
+              approved_at
+            `
+          )
+          .eq("tracker_id", user.id)
+          .order("created_at", { ascending: false }),
+      ]);
+
+    if (inviteError) {
+      console.error("Invite load error:", inviteError);
+      setConnectionsMessage("Could not load invite details.");
+    } else {
+      setInviteCode(inviteRow?.invite_code || "");
+      setInviteLink(
+        inviteRow?.invite_token
+          ? `https://guide-to-the-galaxies.app/connect/${inviteRow.invite_token}`
+          : ""
+      );
+    }
+
+    if (connectionError) {
+      console.error("Connections load error:", connectionError);
+      setConnectionsMessage("Could not load connections.");
+    } else {
+      const rows = connectionRows || [];
+      const isApprovedConnection = (row) =>
+        String(row.status || "").toLowerCase() === "approved" || Boolean(row.approved_at);
+      const isPendingConnection = (row) => {
+        const normalizedStatus = String(row.status || "").toLowerCase();
+        return !isApprovedConnection(row) && normalizedStatus !== "rejected" && normalizedStatus !== "revoked";
+      };
+      const outsiderIds = [...new Set(rows.map((row) => row.outsider_id).filter(Boolean))];
+      let outsiderProfilesById = new Map();
+
+      if (outsiderIds.length > 0) {
+        const { data: outsiderProfiles, error: outsiderProfilesError } = await supabase
+          .from("profiles")
+          .select("id, display_name, secondary_display_name, email")
+          .in("id", outsiderIds);
+
+        if (outsiderProfilesError) {
+          console.error("Outsider profile load error:", outsiderProfilesError);
+        } else {
+          outsiderProfilesById = new Map(
+            (outsiderProfiles || []).map((profile) => [profile.id, profile])
+          );
+        }
+      }
+
+      setPendingRequests(
+        rows
+          .filter(isPendingConnection)
+          .map((row) => ({
+            id: row.id,
+            outsiderId: row.outsider_id,
+            name:
+              outsiderProfilesById.get(row.outsider_id)?.display_name ||
+              outsiderProfilesById.get(row.outsider_id)?.secondary_display_name ||
+              "Pending outsider",
+            note: row.created_at
+              ? `Requested connection on ${new Date(row.created_at).toLocaleDateString()}`
+              : "Pending approval",
+          }))
+      );
+      setConnectedOutsiders(
+        rows
+          .filter(isApprovedConnection)
+          .map((row) => ({
+            id: row.id,
+            outsiderId: row.outsider_id,
+            name:
+              outsiderProfilesById.get(row.outsider_id)?.display_name ||
+              outsiderProfilesById.get(row.outsider_id)?.secondary_display_name ||
+              "Connected outsider",
+            nameVisibility: row.name_visibility || "display",
+            notificationCap: String(row.notification_cap ?? 3),
+            cooldownLength: String(row.cooldown_minutes ?? 15),
+            permissions: normalizeConnectionPermissions(row.permissions),
+          }))
+      );
+    }
+
+    setConnectionsLoading(false);
+  }
+
+  async function loadOutsiderTrackers() {
+    if (!user) return;
+
+    setOutsiderLoading(true);
+
+    const { data, error } = await supabase
+      .from("tracker_connections")
+      .select(
+        `
+          id,
+          tracker_id,
+          name_visibility,
+          notification_cap,
+          cooldown_minutes,
+          permissions,
+          tracker:tracker_id (
+            id,
+            display_name,
+            secondary_display_name,
+            tracker_theme_family
+          )
+        `
+      )
+      .eq("outsider_id", user.id)
+      .eq("status", "approved")
+      .order("approved_at", { ascending: false });
+
+    if (error) {
+      console.error("Outsider tracker load error:", error);
+      setOutsiderTrackers([]);
+      setOutsiderLoading(false);
+      return;
+    }
+
+    const trackerIds = (data || []).map((row) => row.tracker_id).filter(Boolean);
+    let entryRows = [];
+
+    if (trackerIds.length > 0) {
+      const { data: outsiderEntries, error: outsiderEntriesError } = await supabase
+        .from("daily_entries")
+        .select(
+          `
+            user_id,
+            entry_date,
+            meds_taken,
+            meds,
+            meals,
+            showered,
+            brushed_teeth,
+            skincare,
+            bed_time,
+            wake_time,
+            sleep_quality,
+            exercise_done,
+            exercise_logs,
+            mood,
+            focus,
+            energy,
+            goals,
+            rewards
+          `
+        )
+        .in("user_id", trackerIds)
+        .order("entry_date", { ascending: false });
+
+      if (outsiderEntriesError) {
+        console.error("Outsider tracker entries load error:", outsiderEntriesError);
+      } else {
+        entryRows = outsiderEntries || [];
+      }
+    }
+
+    const trackerEntriesMap = trackerIds.reduce((accumulator, trackerId) => {
+      const dedupedEntries = getLatestEntriesByDate(
+        entryRows.filter((row) => row.user_id === trackerId)
+      );
+
+      accumulator[trackerId] = dedupedEntries.slice(-14).reverse();
+      return accumulator;
+    }, {});
+
+    const mappedTrackers = (data || []).map((row) => {
+      const visibleName =
+        row.name_visibility === "secondary"
+          ? row.tracker?.secondary_display_name || row.tracker?.display_name || "Connected tracker"
+          : row.tracker?.display_name || row.tracker?.secondary_display_name || "Connected tracker";
+
+      const trackerThemeFamily = row.tracker?.tracker_theme_family || "galaxy";
+      const trackerHistory = trackerEntriesMap[row.tracker_id] || [];
+      const latestEntry = trackerHistory[0] || null;
+      const hygieneCount =
+        (latestEntry?.showered ? 1 : 0) +
+        (latestEntry?.brushed_teeth ? 1 : 0) +
+        (latestEntry?.skincare ? 1 : 0);
+      const mealsCount = Array.isArray(latestEntry?.meals) ? latestEntry.meals.length : 0;
+      const medsCount = Array.isArray(latestEntry?.meds) ? latestEntry.meds.length : 0;
+      const exerciseCount = Array.isArray(latestEntry?.exercise_logs)
+        ? latestEntry.exercise_logs.length
+        : latestEntry?.exercise_done
+        ? 1
+        : 0;
+      const trackerGoals = Array.isArray(latestEntry?.goals) ? latestEntry.goals : [];
+      const trackerRewards = Array.isArray(latestEntry?.rewards) ? latestEntry.rewards : [];
+      const activeGoals = trackerGoals.filter((goal) => !goal.completed).slice(0, 3);
+      const completedGoals = trackerGoals.filter((goal) => goal.completed).slice(0, 3);
+      const goalSummary =
+        activeGoals.length > 0
+          ? activeGoals.map((goal) => ({
+              label: goal.name,
+              summary: `${goal.currentStreakProgress}/${goal.streakLength} ${goal.checkType === "weekly" ? "weeks" : "days"}`,
+            }))
+          : [
+              {
+                label: "Connection status",
+                summary: "Approved and active",
+              },
+            ];
+      const recentMeals = trackerHistory.reduce(
+        (count, entry) => count + (Array.isArray(entry.meals) ? entry.meals.length : 0),
+        0
+      );
+      const recentExercise = trackerHistory.reduce(
+        (count, entry) =>
+          count +
+          (Array.isArray(entry.exercise_logs)
+            ? entry.exercise_logs.length
+            : entry.exercise_done
+            ? 1
+            : 0),
+        0
+      );
+      const recentMoodAverage =
+        trackerHistory.filter((entry) => typeof entry.mood === "number").length > 0
+          ? (
+              trackerHistory
+                .filter((entry) => typeof entry.mood === "number")
+                .reduce((sum, entry) => sum + Number(entry.mood), 0) /
+              trackerHistory.filter((entry) => typeof entry.mood === "number").length
+            ).toFixed(1)
+          : null;
+      const statusText =
+        latestEntry && (mealsCount > 0 || medsCount > 0 || exerciseCount > 0 || hygieneCount > 0)
+          ? "All systems stable"
+          : "Attention needed";
+      const comparisonStats = [
+        { label: "Meals / 14d", value: recentMeals },
+        { label: "Movement / 14d", value: recentExercise },
+        { label: "Mood avg", value: recentMoodAverage || "N/A" },
+      ];
+
+      return {
+        id: row.id,
+        trackerId: row.tracker_id,
+        name: visibleName,
+        themeFamily: trackerThemeFamily,
+        status: statusText,
+        moodScore: Number(latestEntry?.mood ?? 3),
+        systems: [
+          {
+            label: "meds",
+            value: latestEntry?.meds_taken || medsCount > 0 ? "logged" : "open",
+            note: latestEntry ? `${medsCount} entries in latest check-in` : "No tracker data shared yet",
+          },
+          {
+            label: "food",
+            value: mealsCount > 0 ? "steady" : "open",
+            note: latestEntry ? `${mealsCount} meals in latest check-in` : "No tracker data shared yet",
+          },
+          {
+            label: "hygiene",
+            value: hygieneCount > 0 ? "tracked" : "open",
+            note: latestEntry ? `${hygieneCount}/3 hygiene habits logged` : "No tracker data shared yet",
+          },
+          {
+            label: "sleep",
+            value: latestEntry?.bed_time || latestEntry?.wake_time ? "logged" : "open",
+            note:
+              latestEntry?.sleep_quality != null
+                ? `Sleep quality ${latestEntry.sleep_quality}/5`
+                : "No sleep check recorded yet",
+          },
+          {
+            label: "exercise",
+            value: exerciseCount > 0 ? "moving" : "open",
+            note: latestEntry ? `${exerciseCount} movement logs in latest check-in` : "No tracker data shared yet",
+          },
+        ],
+        alignments: [
+          ...goalSummary,
+          {
+            label: "Support settings",
+            summary: `${row.notification_cap ?? 3} reminders, ${row.cooldown_minutes ?? 15} minute cooldown`,
+          },
+        ],
+        activity: [
+          latestEntry ? `Latest check-in: ${latestEntry.entry_date}` : "No shared tracker check-ins yet",
+          latestEntry?.mood ? `Mood logged at ${latestEntry.mood}/5` : "Mood not shared in the latest check-in",
+          mealsCount > 0 ? `${mealsCount} meals logged in the latest check-in` : "No meals logged in the latest check-in",
+        ],
+        rewards:
+          trackerRewards.length > 0
+            ? trackerRewards.slice(0, 3).map((reward) => reward.title || reward.rewardType || "Reward earned")
+            : ["No shared rewards yet"],
+        history: trackerHistory,
+        latestEntry,
+        activeGoals,
+        completedGoals,
+        comparisonStats,
+        permissions: normalizeConnectionPermissions(row.permissions),
+      };
+    });
+
+    setOutsiderTrackers(mappedTrackers);
+
+    if (mappedTrackers.length > 0) {
+      setSelectedOutsiderId((currentId) =>
+        mappedTrackers.some((person) => person.id === currentId) ? currentId : mappedTrackers[0].id
+      );
+    } else {
+      setSelectedOutsiderId("");
+      setShowOutsiderChooser(false);
+    }
+
+    setOutsiderLoading(false);
+  }
+
+  function sendSupportMessage(message) {
+    setOutsiderMessage(message);
+    const nextTime = new Date(Date.now() + 15 * 60 * 1000);
+    setOutsiderCooldownUntil(
+      nextTime.toLocaleTimeString([], {
+        hour: "numeric",
+        minute: "2-digit",
+      })
+    );
+  }
+
+  async function generateInviteCode() {
+    if (!user) return;
+
+    const code = makeConnectionCode();
+    const token = makeConnectionToken();
+    const { error } = await supabase.from("connection_invites").upsert({
+      tracker_id: user.id,
+      invite_code: code,
+      invite_token: token,
+      active: true,
+      updated_at: new Date().toISOString(),
+    });
+
+    if (error) {
+      console.error("Invite code error:", error);
+      setConnectionsMessage("Could not generate invite code.");
+      return;
+    }
+
+    setInviteCode(code);
+    setInviteLink(`https://guide-to-the-galaxies.app/connect/${token}`);
+    setConnectionsMessage("Invite code generated.");
+  }
+
+  async function generateInviteLink() {
+    if (!user) return;
+
+    const code = inviteCode || makeConnectionCode();
+    const token = makeConnectionToken();
+    const { error } = await supabase.from("connection_invites").upsert({
+      tracker_id: user.id,
+      invite_code: code,
+      invite_token: token,
+      active: true,
+      updated_at: new Date().toISOString(),
+    });
+
+    if (error) {
+      console.error("Invite link error:", error);
+      setConnectionsMessage("Could not generate invite link.");
+      return;
+    }
+
+    setInviteCode(code);
+    setInviteLink(`https://guide-to-the-galaxies.app/connect/${token}`);
+    setConnectionsMessage("Invite link generated.");
+  }
+
+  async function createPendingConnectionFromInvite(invite, sourceLabel) {
+    if (!user) return;
+
+    if (!invite) {
+      setConnectionsMessage(`That ${sourceLabel} could not be found.`);
+      return;
+    }
+
+    console.log(`Invite lookup result for ${sourceLabel}:`, invite);
+
+    if (invite.tracker_id === user.id) {
+      setConnectionsMessage("You cannot connect to yourself.");
+      return;
+    }
+
+    const { data: existingConnection, error: existingError } = await supabase
+      .from("tracker_connections")
+      .select("*")
+      .eq("tracker_id", invite.tracker_id)
+      .eq("outsider_id", user.id)
+      .maybeSingle();
+
+    if (existingError) {
+      console.error(`Connection lookup error for ${sourceLabel}:`, existingError);
+      setConnectionsMessage(`Could not process that ${sourceLabel}.`);
+      return;
+    }
+
+    if (existingConnection?.status === "pending") {
+      console.log(`Existing pending connection found for ${sourceLabel}:`, existingConnection);
+      setConnectionsMessage("A pending request already exists.");
+      await loadConnectionsData();
+      return;
+    }
+
+    if (existingConnection?.status === "approved") {
+      console.log(`Existing approved connection found for ${sourceLabel}:`, existingConnection);
+      setConnectionsMessage("You are already connected.");
+      await loadConnectionsData();
+      return;
+    }
+
+    if (existingConnection) {
+      const { data: revivedConnection, error: reviveError } = await supabase
+        .from("tracker_connections")
+        .update({
+          status: "pending",
+          approved_at: null,
+          created_at: new Date().toISOString(),
+        })
+        .select("id")
+        .maybeSingle()
+        .eq("id", existingConnection.id);
+
+      if (reviveError) {
+        console.error(`Connection revive error for ${sourceLabel}:`, reviveError);
+        setConnectionsMessage("Could not send join request.");
+        return;
+      }
+
+      if (!revivedConnection?.id) {
+        console.error(`Connection revive affected no rows for ${sourceLabel}.`, existingConnection);
+        setConnectionsMessage("Could not send join request.");
+        return;
+      }
+
+      console.log(`Connection revived for ${sourceLabel}:`, existingConnection.id);
+      setConnectionsMessage(`Join request sent for ${sourceLabel}.`);
+      setJoinCodeInput("");
+      setJoinLinkInput("");
+      await loadConnectionsData();
+      return;
+    }
+
+    const { error: insertError } = await supabase.from("tracker_connections").insert({
+      tracker_id: invite.tracker_id,
+      outsider_id: user.id,
+      status: "pending",
+      approved_at: null,
+      created_at: new Date().toISOString(),
+      name_visibility: "display",
+      notification_cap: 3,
+      cooldown_minutes: 15,
+      permissions: DEFAULT_CONNECTION_PERMISSIONS,
+    });
+
+    if (insertError) {
+      console.error(`Connection insert error for ${sourceLabel}:`, insertError);
+      setConnectionsMessage("Could not send join request.");
+      return;
+    }
+
+    console.log(`Connection insert result for ${sourceLabel}: success`);
+    setConnectionsMessage(`Join request sent for ${sourceLabel}.`);
+    setJoinCodeInput("");
+    setJoinLinkInput("");
+    await loadConnectionsData();
+  }
+
+  function requestApproval(requestId) {
+    setPinApprovalTarget(requestId);
+    setApprovalPinInput("");
+    setConnectionsMessage("");
+  }
+
+  async function confirmApproveRequest() {
+    if (approvalPinInput !== profilePin) {
+      setConnectionsMessage("PIN confirmation failed.");
+      return;
+    }
+
+    const approvedRequest = pendingRequests.find((request) => request.id === pinApprovalTarget);
+
+    if (!approvedRequest) {
+      setPinApprovalTarget(null);
+      return;
+    }
+
+    const { error } = await supabase
+      .from("tracker_connections")
+      .update({
+        status: "approved",
+        approved_at: new Date().toISOString(),
+      })
+      .eq("id", pinApprovalTarget)
+      .eq("tracker_id", user.id);
+
+    if (error) {
+      console.error("Approve error:", error);
+      setConnectionsMessage("Could not approve request.");
+      return;
+    }
+
+    setPinApprovalTarget(null);
+    setApprovalPinInput("");
+    setConnectionsMessage(`${approvedRequest.name} approved.`);
+    await loadConnectionsData();
+  }
+
+  async function rejectRequest(requestId) {
+    const rejected = pendingRequests.find((request) => request.id === requestId);
+    const { error } = await supabase
+      .from("tracker_connections")
+      .update({
+        status: "rejected",
+      })
+      .eq("id", requestId)
+      .eq("tracker_id", user.id);
+
+    if (error) {
+      console.error("Reject error:", error);
+      setConnectionsMessage("Could not reject request.");
+      return;
+    }
+
+    setConnectionsMessage(rejected ? `${rejected.name} rejected.` : "Request rejected.");
+    await loadConnectionsData();
+  }
+
+  async function revokeOutsider(connectionId) {
+    const outsider = connectedOutsiders.find((person) => person.id === connectionId);
+    const { error } = await supabase
+      .from("tracker_connections")
+      .update({
+        status: "revoked",
+      })
+      .eq("id", connectionId)
+      .eq("tracker_id", user.id);
+
+    if (error) {
+      console.error("Revoke error:", error);
+      setConnectionsMessage("Could not remove connection.");
+      return;
+    }
+
+    setConnectionsMessage(outsider ? `${outsider.name} removed.` : "Connection removed.");
+    await loadConnectionsData();
+  }
+
+  async function updateOutsiderSetting(connectionId, field, value) {
+    const mappedField =
+      field === "cooldownLength"
+        ? "cooldown_minutes"
+        : field === "notificationCap"
+        ? "notification_cap"
+        : "name_visibility";
+
+    const nextValue =
+      mappedField === "notification_cap" || mappedField === "cooldown_minutes"
+        ? Number(value)
+        : value;
+
+    const { error } = await supabase
+      .from("tracker_connections")
+      .update({
+        [mappedField]: nextValue,
+      })
+      .eq("id", connectionId)
+      .eq("tracker_id", user.id);
+
+    if (error) {
+      console.error("Connection setting error:", error);
+      setConnectionsMessage("Could not save connection settings.");
+      return;
+    }
+
+    setConnectedOutsiders((current) =>
+      current.map((person) =>
+        person.id === connectionId
+          ? {
+              ...person,
+              [field]: value,
+            }
+          : person
+      )
+    );
+  }
+
+  async function updateOutsiderPermission(connectionId, permissionKey, enabled) {
+    const connection = connectedOutsiders.find((person) => person.id === connectionId);
+    const nextPermissions = normalizeConnectionPermissions({
+      ...(connection?.permissions || {}),
+      [permissionKey]: enabled,
+    });
+
+    const { error } = await supabase
+      .from("tracker_connections")
+      .update({
+        permissions: nextPermissions,
+      })
+      .eq("id", connectionId)
+      .eq("tracker_id", user.id);
+
+    if (error) {
+      console.error("Connection permission error:", error);
+      setConnectionsMessage("Could not save permissions.");
+      return;
+    }
+
+    setConnectedOutsiders((current) =>
+      current.map((person) =>
+        person.id === connectionId
+          ? {
+              ...person,
+              permissions: nextPermissions,
+            }
+          : person
+      )
+    );
+    setConnectionsMessage("Permissions saved.");
+  }
+
+  async function joinByCode() {
+    if (!user) return;
+
+    if (!joinCodeInput.trim()) {
+      setConnectionsMessage("Enter a code to continue.");
+      return;
+    }
+
+    const normalizedCode = joinCodeInput.trim().toUpperCase();
+    const { data: invite, error: inviteError } = await supabase
+      .from("connection_invites")
+      .select("*")
+      .eq("invite_code", normalizedCode)
+      .eq("active", true)
+      .maybeSingle();
+
+    if (inviteError) {
+      console.error("Join by code invite lookup error:", inviteError);
+      setConnectionsMessage("Could not look up that invite code.");
+      return;
+    }
+
+    console.log("Join by code invite lookup result:", invite);
+
+    if (!invite) {
+      setConnectionsMessage("Invite code not found.");
+      return;
+    }
+
+    await createPendingConnectionFromInvite(invite, `code ${normalizedCode}`);
+  }
+
+  async function joinByLink() {
+    if (!user) return;
+
+    if (!joinLinkInput.trim()) {
+      setConnectionsMessage("Paste a link to continue.");
+      return;
+    }
+
+    let inviteToken = joinLinkInput.trim();
+
+    try {
+      const parsedUrl = new URL(joinLinkInput.trim());
+      const segments = parsedUrl.pathname.split("/").filter(Boolean);
+      inviteToken = segments[segments.length - 1] || joinLinkInput.trim();
+    } catch (error) {
+      const tokenMatch = joinLinkInput.trim().match(/connect\/([a-zA-Z0-9]+)/);
+      inviteToken = tokenMatch ? tokenMatch[1] : joinLinkInput.trim();
+    }
+
+    const { data: invite, error: inviteError } = await supabase
+      .from("connection_invites")
+      .select("*")
+      .eq("invite_token", inviteToken)
+      .eq("active", true)
+      .maybeSingle();
+
+    if (inviteError) {
+      console.error("Join by link invite lookup error:", inviteError);
+      setConnectionsMessage("Could not look up that invite link.");
+      return;
+    }
+
+    console.log("Join by link invite lookup result:", invite);
+
+    if (!invite) {
+      setConnectionsMessage("Invite link not found.");
+      return;
+    }
+
+    await createPendingConnectionFromInvite(invite, "invite link");
+  }
+
+  function applyEntryRow(row) {
+    setEntryId(row.id);
+    setMedTaken(row.meds_taken ?? false);
+    setMedsTime(row.meds_time ?? "");
+    setMeds(Array.isArray(row.meds) ? row.meds : []);
+    setMeals(Array.isArray(row.meals) ? normalizeMeals(row.meals) : []);
+    setShowered(row.showered ?? false);
+    setShoweredTime(row.showered_time ?? "");
+    setBrushedTeeth(row.brushed_teeth ?? false);
+    setBrushedTeethTime(row.brushed_teeth_time ?? "");
+    setSkincare(row.skincare ?? false);
+    setSkincareTime(row.skincare_time ?? "");
+    setLaundryDone(row.laundry_done ?? false);
+    setLaundryTime(row.laundry_time ?? "");
+    setBedsheetsDone(row.bedsheets_done ?? false);
+    setBedsheetsTime(row.bedsheets_time ?? "");
+    setRoomCleaned(row.room_cleaned ?? false);
+    setRoomCleanedTime(row.room_cleaned_time ?? "");
+    setCleaningMinutes(row.cleaning_minutes ?? "");
+    setCleaningWorthIt(row.cleaning_worth_it ?? 3);
+    setExerciseDone(row.exercise_done ?? false);
+    setExerciseTime(row.exercise_time ?? "");
+    setExerciseType(row.exercise_type ?? "");
+    setExerciseMinutes(row.exercise_minutes ?? "");
+    setExerciseFeeling(row.exercise_feeling ?? "");
+    setExtraWalk(row.extra_walk ?? false);
+    setAfterExerciseState(row.after_exercise_state ?? "");
+    setExerciseLogs(Array.isArray(row.exercise_logs) ? row.exercise_logs : []);
+    setBedTime(row.bed_time ?? "");
+    setWakeTime(row.wake_time ?? "");
+    setSleepRoutine(row.sleep_routine ?? "");
+    setUsedScreensBeforeBed(row.used_screens_before_bed ?? false);
+    setSleepQuality(row.sleep_quality ?? 3);
+    setMood(row.mood ?? 3);
+    setMoodTags(Array.isArray(row.mood_tags) ? row.mood_tags : []);
+    setFocus(row.focus ?? 3);
+    setEnergy(row.energy ?? 3);
+  }
 
   async function loadEntry() {
+    if (!user) return;
+
     const { data, error } = await supabase
       .from("daily_entries")
       .select("*")
+      .eq("user_id", user.id)
       .eq("entry_date", today)
+      .order("created_at", { ascending: false })
       .order("id", { ascending: false })
       .limit(1);
 
@@ -201,55 +1469,42 @@ function App() {
     if (data && data.length > 0) {
       const row = data[0];
 
-      setEntryId(row.id);
-      setMedTaken(row.meds_taken ?? false);
-      setMedsTime(row.meds_time ?? "");
-      setMeds(Array.isArray(row.meds) ? row.meds : []);
-      setMeals(Array.isArray(row.meals) ? normalizeMeals(row.meals) : []);
-      setShowered(row.showered ?? false);
-      setShoweredTime(row.showered_time ?? "");
-      setBrushedTeeth(row.brushed_teeth ?? false);
-      setBrushedTeethTime(row.brushed_teeth_time ?? "");
-      setSkincare(row.skincare ?? false);
-      setSkincareTime(row.skincare_time ?? "");
-      setLaundryDone(row.laundry_done ?? false);
-      setLaundryTime(row.laundry_time ?? "");
-      setBedsheetsDone(row.bedsheets_done ?? false);
-      setBedsheetsTime(row.bedsheets_time ?? "");
-      setRoomCleaned(row.room_cleaned ?? false);
-      setRoomCleanedTime(row.room_cleaned_time ?? "");
-      setCleaningMinutes(row.cleaning_minutes ?? "");
-      setCleaningWorthIt(row.cleaning_worth_it ?? 3);
-      setExerciseDone(row.exercise_done ?? false);
-      setExerciseTime(row.exercise_time ?? "");
-      setExerciseType(row.exercise_type ?? "");
-      setExerciseMinutes(row.exercise_minutes ?? "");
-      setExerciseFeeling(row.exercise_feeling ?? "");
-      setExtraWalk(row.extra_walk ?? false);
-      setAfterExerciseState(row.after_exercise_state ?? "");
-      setExerciseLogs(Array.isArray(row.exercise_logs) ? row.exercise_logs : []);
-      setBedTime(row.bed_time ?? "");
-      setWakeTime(row.wake_time ?? "");
-      setSleepRoutine(row.sleep_routine ?? "");
-      setUsedScreensBeforeBed(row.used_screens_before_bed ?? false);
-      setSleepQuality(row.sleep_quality ?? 3);
-      setMood(row.mood ?? 3);
-      setMoodTags(Array.isArray(row.mood_tags) ? row.mood_tags : []);
-      setFocus(row.focus ?? 3);
-      setEnergy(row.energy ?? 3);
+      applyEntryRow(row);
+      setStatus("");
       await loadGoalCollections(row);
     } else {
       const { data: inserted, error: insertError } = await supabase
         .from("daily_entries")
-        .insert([{ entry_date: today }])
+        .upsert([{ entry_date: today, user_id: user.id }], {
+          onConflict: "user_id,entry_date",
+        })
         .select()
         .single();
 
       if (insertError) {
-        console.error("Insert error:", insertError);
-        setStatus("Error creating today");
+        const { data: retryData, error: retryError } = await supabase
+          .from("daily_entries")
+          .select("*")
+          .eq("user_id", user.id)
+          .eq("entry_date", today)
+          .order("created_at", { ascending: false })
+          .order("id", { ascending: false })
+          .limit(1);
+
+        if (!retryError && retryData && retryData.length > 0) {
+          applyEntryRow(retryData[0]);
+          setStatus("");
+          await loadGoalCollections(retryData[0]);
+        } else {
+          console.error("Insert error:", insertError);
+          if (retryError) {
+            console.error("Retry load error:", retryError);
+          }
+          setStatus("Error loading today");
+        }
       } else {
-        setEntryId(inserted.id);
+        applyEntryRow(inserted);
+        setStatus("");
         await loadGoalCollections(inserted);
       }
     }
@@ -270,6 +1525,7 @@ function App() {
     const { data, error } = await supabase
       .from("daily_entries")
       .select("goals,rewards,entry_date")
+      .eq("user_id", user.id)
       .order("entry_date", { ascending: false })
       .limit(60);
 
@@ -290,21 +1546,26 @@ function App() {
   }
 
   async function loadHistory() {
+    if (!user) return;
+
     const { data, error } = await supabase
       .from("daily_entries")
       .select("*")
-      .order("entry_date", { ascending: true });
+      .eq("user_id", user.id)
+      .order("entry_date", { ascending: true })
+      .order("created_at", { ascending: true })
+      .order("id", { ascending: true });
 
     if (error) {
       console.error("History load error:", error);
       return;
     }
 
-    setHistoryData(data || []);
+    setHistoryData(getLatestEntriesByDate(data || []));
   }
 
   async function saveEntry(updated = {}) {
-    if (!entryId) return;
+    if (!entryId || !user) return;
 
     const payload = {
       meds_taken: medTaken,
@@ -346,6 +1607,7 @@ function App() {
       energy: Number(energy),
       goals,
       rewards,
+      user_id: user.id,
       ...updated,
     };
 
@@ -385,7 +1647,7 @@ function App() {
   }
 
   function startOfWeek(date) {
-    const value = new Date(`${date}T00:00:00`);
+    const value = parseDateKey(date);
     const day = value.getDay();
     const diff = day === 0 ? -6 : 1 - day;
     value.setDate(value.getDate() + diff);
@@ -393,7 +1655,100 @@ function App() {
   }
 
   function formatDateKey(date) {
-    return date.toISOString().split("T")[0];
+    return getLocalDateKey(date);
+  }
+
+  function getLocalDateKey(dateInput) {
+    const value = dateInput instanceof Date ? new Date(dateInput) : new Date(dateInput);
+
+    if (Number.isNaN(value.getTime())) {
+      return "";
+    }
+
+    const year = value.getFullYear();
+    const month = String(value.getMonth() + 1).padStart(2, "0");
+    const day = String(value.getDate()).padStart(2, "0");
+
+    return `${year}-${month}-${day}`;
+  }
+
+  function parseDateKey(dateKey) {
+    if (!dateKey) {
+      return new Date();
+    }
+
+    const [year, month, day] = String(dateKey).split("-").map(Number);
+    return new Date(year, (month || 1) - 1, day || 1);
+  }
+
+  function getLatestEntriesByDate(rows) {
+    const latestByDate = new Map();
+
+    rows.forEach((row) => {
+      if (!row?.entry_date) return;
+      const existing = latestByDate.get(row.entry_date);
+
+      if (!existing || compareEntryRecency(row, existing) > 0) {
+        latestByDate.set(row.entry_date, row);
+      }
+    });
+
+    return [...latestByDate.values()].sort(
+      (a, b) => new Date(a.entry_date) - new Date(b.entry_date)
+    );
+  }
+
+  function compareEntryRecency(left, right) {
+    const leftCreatedAt = left?.created_at ? new Date(left.created_at).getTime() : 0;
+    const rightCreatedAt = right?.created_at ? new Date(right.created_at).getTime() : 0;
+
+    if (leftCreatedAt !== rightCreatedAt) {
+      return leftCreatedAt - rightCreatedAt;
+    }
+
+    return Number(left?.id ?? 0) - Number(right?.id ?? 0);
+  }
+
+  function buildChartPoint(row, date) {
+    return {
+      date,
+      mood: Number(row?.mood ?? 0),
+      focus: Number(row?.focus ?? 0),
+      energy: Number(row?.energy ?? 0),
+      mealsCount: Array.isArray(row?.meals) ? row.meals.length : 0,
+      medsTaken: row?.meds_taken ? 1 : 0,
+      medsCount: Array.isArray(row?.meds) ? row.meds.length : 0,
+      exerciseCount: Array.isArray(row?.exercise_logs)
+        ? row.exercise_logs.length
+        : row?.exercise_done
+        ? 1
+        : 0,
+      cleaningMinutes: Number(row?.cleaning_minutes ?? 0),
+      sleepQuality: Number(row?.sleep_quality ?? 0),
+      hygieneCount:
+        (row?.showered ? 1 : 0) +
+        (row?.brushed_teeth ? 1 : 0) +
+        (row?.skincare ? 1 : 0),
+    };
+  }
+
+  function buildRecentChartData(rows, days) {
+    const latestEntries = getLatestEntriesByDate(rows);
+    const rowByDate = new Map(
+      latestEntries
+        .filter((row) => row?.entry_date && row.entry_date <= today)
+        .map((row) => [row.entry_date, row])
+    );
+    const safeDays = Math.max(1, Number(days) || 7);
+    const startDate = parseDateKey(today);
+    startDate.setDate(startDate.getDate() - (safeDays - 1));
+
+    return Array.from({ length: safeDays }, (_, index) => {
+      const current = new Date(startDate);
+      current.setDate(startDate.getDate() + index);
+      const dateKey = formatDateKey(current);
+      return buildChartPoint(rowByDate.get(dateKey), dateKey);
+    });
   }
 
   function getGoalUnitValue(entry, category) {
@@ -512,7 +1867,7 @@ function App() {
     };
   }
 
-  function makeGoalSuggestions(mode) {
+  function makeGoalSuggestions(mode, isDarkVariant = false) {
     const solarWords = [
       "Sun",
       "Sunrise",
@@ -541,6 +1896,34 @@ function App() {
       "Galaxy",
       "Celestial",
     ];
+    const underwaterWords = [
+      "Current",
+      "Tidal",
+      "Coral",
+      "Deep",
+      "Pearl",
+      "Blue",
+      "Drift",
+      "Wave",
+      "Harbor",
+      "Reef",
+      "Sea",
+      "Lagoon",
+    ];
+    const forestWords = [
+      "Grove",
+      "Fern",
+      "Moss",
+      "Cedar",
+      "Bloom",
+      "Trail",
+      "Canopy",
+      "Meadow",
+      "Wild",
+      "Oak",
+      "Leaf",
+      "Thicket",
+    ];
     const actionWords = [
       "Ritual",
       "Journey",
@@ -556,7 +1939,14 @@ function App() {
       "Check-In",
     ];
 
-    const themeWords = mode === "galaxy" ? galaxyWords : solarWords;
+    const themeWords =
+      mode === "underwater"
+        ? underwaterWords
+        : mode === "forest"
+        ? forestWords
+        : isDarkVariant
+        ? galaxyWords
+        : solarWords;
     const suggestions = [];
 
     while (suggestions.length < 3) {
@@ -575,12 +1965,38 @@ function App() {
   }
 
   function makeRewardName(mode) {
-    const solarRewards = ["Golden", "Radiant", "Dawn", "Glow", "Halo", "Aurora"];
     const galaxyRewards = ["Nova", "Celestial", "Lunar", "Comet", "Nebula", "Starlight"];
-    const rewardType = mode === "galaxy" ? "Constellation" : "Sunburst";
-    const baseWords = mode === "galaxy" ? galaxyRewards : solarRewards;
+    const underwaterRewards = ["Coral", "Tidal", "Pearl", "Blue", "Deep", "Drift"];
+    const forestRewards = ["Moss", "Fern", "Grove", "Cedar", "Meadow", "Wild"];
+    const rewardType = getThemeRewardCopy(mode).singular;
+    const baseWords =
+      mode === "underwater"
+        ? underwaterRewards
+        : mode === "forest"
+        ? forestRewards
+        : galaxyRewards;
     const word = baseWords[Math.floor(Math.random() * baseWords.length)];
     return `${word} ${rewardType}`;
+  }
+
+  function calculateSimpleDailyStreak(rows, predicate) {
+    const rowMap = new Map(rows.map((row) => [row.entry_date, row]));
+    const cursor = new Date(`${today}T00:00:00`);
+    let streak = 0;
+
+    while (true) {
+      const key = formatDateKey(cursor);
+      const entry = rowMap.get(key);
+
+      if (!entry || !predicate(entry)) {
+        break;
+      }
+
+      streak += 1;
+      cursor.setDate(cursor.getDate() - 1);
+    }
+
+    return streak;
   }
 
   const toggleMed = async () => {
@@ -829,7 +2245,7 @@ function App() {
   };
 
   const refreshGoalSuggestions = () => {
-    setGoalSuggestions(makeGoalSuggestions(darkMode ? "galaxy" : "solar"));
+    setGoalSuggestions(makeGoalSuggestions(themeFamily, darkMode));
   };
 
   const applyGoalSuggestion = (suggestion) => {
@@ -926,33 +2342,17 @@ function App() {
     await saveEntry({ after_exercise_state: value });
   };
 
-  const chartData = useMemo(() => {
-    return historyData.map((row) => ({
-      date: row.entry_date,
-      mood: Number(row.mood ?? 0),
-      focus: Number(row.focus ?? 0),
-      energy: Number(row.energy ?? 0),
-      mealsCount: Array.isArray(row.meals) ? row.meals.length : 0,
-      medsTaken: row.meds_taken ? 1 : 0,
-      medsCount: Array.isArray(row.meds) ? row.meds.length : 0,
-      exerciseCount: Array.isArray(row.exercise_logs) ? row.exercise_logs.length : 0,
-      cleaningMinutes: Number(row.cleaning_minutes ?? 0),
-      sleepQuality: Number(row.sleep_quality ?? 0),
-      hygieneCount:
-        (row.showered ? 1 : 0) +
-        (row.brushed_teeth ? 1 : 0) +
-        (row.skincare ? 1 : 0),
-    }));
-  }, [historyData]);
-
-  const maxMeals = Math.max(...chartData.map((d) => d.mealsCount), 1);
-  const maxHygiene = Math.max(...chartData.map((d) => d.hygieneCount), 1);
-  const maxMeds = Math.max(...chartData.map((d) => d.medsCount), 1);
-  const maxExercise = Math.max(...chartData.map((d) => d.exerciseCount), 1);
+  const chartRangeOptions = [7, 14];
+  const recentChartData = useMemo(
+    () => buildRecentChartData(historyData, chartRange),
+    [historyData, chartRange, today]
+  );
+  const maxMeals = Math.max(...recentChartData.map((d) => d.mealsCount), 1);
+  const maxHygiene = Math.max(...recentChartData.map((d) => d.hygieneCount), 1);
+  const maxMeds = Math.max(...recentChartData.map((d) => d.medsCount), 1);
+  const maxExercise = Math.max(...recentChartData.map((d) => d.exerciseCount), 1);
   const maintenanceCount =
     (showered ? 1 : 0) + (brushedTeeth ? 1 : 0) + (skincare ? 1 : 0);
-  const recentChartData = chartData.slice(-chartRange);
-  const chartRangeOptions = [7, 14];
   const dashboardStats = [
     { label: "Meds logged", value: meds.length, note: medTaken ? `Marked at ${medsTime}` : "Not marked yet" },
     { label: "Meals logged", value: meals.length, note: meals.length > 0 ? "Fuel recorded for today" : "No meals yet" },
@@ -962,12 +2362,159 @@ function App() {
     { label: "Cleaning minutes", value: cleaningMinutes || "0", note: "Small resets count too" },
     { label: "Sleep quality", value: `${sleepQuality}/5`, note: `${bedTime || "No bed"} to ${wakeTime || "No wake"}` },
   ];
-  const pageAccent = (solarAccent, galaxyAccent) => (darkMode ? galaxyAccent : solarAccent);
+  const energyFlowCards = [
+    {
+      label: "Meds",
+      value: medTaken ? "Complete" : "Pending",
+      note: medTaken ? `Marked ${medsTime || "today"}` : "No med check yet",
+    },
+    {
+      label: "Food",
+      value: meals.length > 0 ? `${meals.length} logged` : "Pending",
+      note: meals.length > 0 ? `${meals[meals.length - 1]?.text || "Meal"} added` : "No meals yet",
+    },
+    {
+      label: "Hygiene",
+      value: `${maintenanceCount}/3`,
+      note:
+        maintenanceCount > 0
+          ? `${[showered && "shower", brushedTeeth && "teeth", skincare && "skincare"]
+              .filter(Boolean)
+              .join(", ")}`
+          : "Nothing checked yet",
+    },
+    {
+      label: "Sleep",
+      value: bedTime && wakeTime ? "Logged" : "Open",
+      note: bedTime && wakeTime ? `${bedTime} to ${wakeTime}` : "Bedtime and wake time not both set",
+    },
+    {
+      label: "Exercise",
+      value: exerciseDone || exerciseLogs.length > 0 ? "Complete" : "Pending",
+      note:
+        exerciseLogs.length > 0
+          ? `${exerciseLogs.length} log${exerciseLogs.length === 1 ? "" : "s"} today`
+          : exerciseDone
+          ? "Movement marked today"
+          : "No movement yet",
+    },
+  ];
+  const recentMoodSummary =
+    historyData
+      .slice()
+      .reverse()
+      .find(
+        (row) =>
+          row.entry_date <= today &&
+          (row.mood != null ||
+            (Array.isArray(row.mood_tags) && row.mood_tags.length > 0))
+      ) || null;
+  const simpleAlignmentStreaks = [
+    {
+      name: "Nourishment Flow",
+      progress: calculateSimpleDailyStreak(
+        historyData,
+        (row) => (Array.isArray(row.meals) ? row.meals.length : 0) > 0
+      ),
+      unit: "days",
+    },
+    {
+      name: "Medicine Moon",
+      progress: calculateSimpleDailyStreak(
+        historyData,
+        (row) => row.meds_taken || (Array.isArray(row.meds) ? row.meds.length : 0) > 0
+      ),
+      unit: "days",
+    },
+    {
+      name: "Movement Orbit",
+      progress: calculateSimpleDailyStreak(
+        historyData,
+        (row) =>
+          row.exercise_done || (Array.isArray(row.exercise_logs) ? row.exercise_logs.length : 0) > 0
+      ),
+      unit: "days",
+    },
+  ].filter((item) => item.progress > 0);
+  const nextRewardGoal =
+    goals
+      .filter((goal) => !goal.completed)
+      .sort(
+        (a, b) =>
+          b.currentStreakProgress / b.streakLength -
+          a.currentStreakProgress / a.streakLength
+      )[0] || null;
+  const recentActivityItems = [
+    mood != null && {
+      label: "Mood logged",
+      detail: `${mood}/5${moodTags.length > 0 ? ` · ${moodTags.join(", ")}` : ""}`,
+    },
+    meals.length > 0 && {
+      label: "Meal added",
+      detail: `${meals[meals.length - 1].text} · ${meals[meals.length - 1].time}`,
+    },
+    meds.length > 0 && {
+      label: "Medication logged",
+      detail: `${meds[meds.length - 1].name}${meds[meds.length - 1].dose ? ` - ${meds[meds.length - 1].dose}` : ""}`,
+    },
+    showered && {
+      label: "Shower checked",
+      detail: showeredTime || "Marked today",
+    },
+    brushedTeeth && {
+      label: "Teeth brushed",
+      detail: brushedTeethTime || "Marked today",
+    },
+    skincare && {
+      label: "Skincare done",
+      detail: skincareTime || "Marked today",
+    },
+    (exerciseLogs.length > 0 || exerciseDone) && {
+      label: "Exercise tracked",
+      detail:
+        exerciseLogs.length > 0
+          ? `${exerciseLogs[exerciseLogs.length - 1].type || "Movement"} · ${exerciseLogs[exerciseLogs.length - 1].time || "Today"}`
+          : exerciseTime || "Marked today",
+    },
+    (bedTime || wakeTime) && {
+      label: "Sleep updated",
+      detail: `${bedTime || "No bed time"} to ${wakeTime || "No wake time"}`,
+    },
+  ]
+    .filter(Boolean)
+    .slice(0, 5);
+  const outsiderEnvironmentLabel =
+    selectedOutsider?.themeFamily === "underwater"
+      ? "Submarine view"
+      : selectedOutsider?.themeFamily === "forest"
+      ? "Cabin view"
+      : "Spaceship view";
+  const selectedOutsiderPermissions = normalizeConnectionPermissions(
+    selectedOutsider?.permissions
+  );
+  const selectedOutsiderHistory = selectedOutsider?.history || [];
+  const selectedOutsiderChartData = useMemo(
+    () => buildRecentChartData(selectedOutsiderHistory, 7),
+    [selectedOutsiderHistory, today]
+  );
+  const outsiderMoodLabel =
+    selectedOutsider?.moodScore >= 4
+      ? "good"
+      : selectedOutsider?.moodScore >= 3
+      ? "neutral"
+      : "low";
+  const trackerLabels = getThemeLanguage(themeFamily).tracker;
+  const observerLabels = getThemeLanguage(selectedOutsider?.themeFamily || themeFamily).observer;
   const renderSectionHeader = (title, subtitle, solarAccent, galaxyAccent) => (
     <>
       <div style={cardHeaderRowStyle}>
         <div>
-          <div style={emojiStyle}>{pageAccent(solarAccent, galaxyAccent)}</div>
+          <div style={{ ...emojiStyle, ...getAccentBadgeStyle(theme) }}>
+            {getSectionAccentLabel(
+              theme.themeFamily,
+              darkMode ? galaxyAccent || solarAccent : solarAccent || galaxyAccent
+            )}
+          </div>
           <h2 style={sectionTitleStyle(theme)}>{title}</h2>
         </div>
       </div>
@@ -975,845 +2522,586 @@ function App() {
     </>
   );
 
+  const sharedPageProps = {
+    theme,
+    darkMode,
+    setDarkMode,
+    today,
+    renderSectionHeader,
+    gridStyle,
+    chartsPageStyle,
+    chartStackStyle,
+    chartCardStyle,
+    chartToolbarStyle,
+    chartRangeOptions,
+    chartRange,
+    setChartRange,
+    rangeChipStyle,
+    summaryCardStyle,
+    summaryLabelStyle,
+    summaryValueStyle,
+    summaryNoteStyle,
+    countTextStyle,
+    rewardCardStyle,
+    rewardTitleStyle,
+    goalMetaStyle,
+    smallInfoStyle,
+    emptyTextStyle,
+    primaryButtonStyle,
+    softButtonStyle,
+    successButtonStyle,
+    quickJumpButtonStyle,
+    quickLinkGridStyle,
+    labelStyle,
+    inputStyle,
+    mealListStyle,
+    mealItemStyle,
+    smallRemoveButtonStyle,
+    rowStyle,
+    buttonWrapStyle,
+    sleepGridStyle,
+    rangeStyle,
+    sliderValueStyle,
+    tagGroupLabelStyle,
+    moodTagGridStyle,
+    goalFormGridStyle,
+    goalSuggestionHeaderStyle,
+    goalSuggestionButtonStyle,
+    goalCardItemStyle,
+    goalProgressTrackStyle,
+    goalProgressFillStyle,
+    rewardGridStyle,
+    feedbackMessageStyle,
+    renderFeedbackMessage,
+    dashboardKickerStyle,
+    dashboardHeadingStyle,
+    subtitleStyle,
+  };
+
+  const trackerPageProps = {
+    ...sharedPageProps,
+    themeFamily,
+    sectionCardStyle,
+    trackerLabels,
+    mood,
+    focus,
+    energy,
+    moodTags,
+    moodTagGroups,
+    moodTagButtonStyle,
+    recentMoodSummary,
+    energyFlowCards,
+    simpleAlignmentStreaks,
+    recentActivityItems,
+    dashboardHeroStyle,
+    dashboardPulseStyle,
+    dashboardPulseRingStyle,
+    dashboardPulseCoreStyle,
+    dashboardStatsGridStyle,
+    dashboardStats,
+    setActivePage,
+    goals,
+    nextRewardGoal,
+    rewards,
+    recentChartData,
+    maxMeals,
+    maxMeds,
+    maxHygiene,
+    maxExercise,
+    medTaken,
+    medsTime,
+    meds,
+    medName,
+    setMedName,
+    medDose,
+    setMedDose,
+    medSymptoms,
+    setMedSymptoms,
+    medNotes,
+    setMedNotes,
+    toggleMed,
+    addMedication,
+    removeMedication,
+    mealText,
+    setMealText,
+    addMeal,
+    meals,
+    removeMeal,
+    bedTime,
+    wakeTime,
+    sleepRoutine,
+    usedScreensBeforeBed,
+    sleepQuality,
+    handleBedTimeChange,
+    handleWakeTimeChange,
+    handleSleepRoutineChange,
+    toggleUsedScreensBeforeBed,
+    handleSleepQualityChange,
+    showered,
+    showeredTime,
+    brushedTeeth,
+    brushedTeethTime,
+    skincare,
+    skincareTime,
+    toggleShowered,
+    toggleBrushedTeeth,
+    toggleSkincare,
+    laundryDone,
+    laundryTime,
+    bedsheetsDone,
+    bedsheetsTime,
+    roomCleaned,
+    roomCleanedTime,
+    cleaningMinutes,
+    cleaningWorthIt,
+    toggleLaundry,
+    toggleBedsheets,
+    toggleRoomCleaned,
+    handleCleaningMinutesChange,
+    handleCleaningWorthItChange,
+    exerciseDone,
+    exerciseTime,
+    exerciseType,
+    exerciseMinutes,
+    exerciseFeeling,
+    extraWalk,
+    afterExerciseState,
+    exerciseLogs,
+    toggleExerciseDone,
+    toggleExtraWalk,
+    handleExerciseTimeChange,
+    handleExerciseTypeChange,
+    handleExerciseMinutesChange,
+    handleExerciseFeelingChange,
+    handleAfterExerciseStateChange,
+    addExerciseLog,
+    removeExerciseLog,
+    handleMoodChange,
+    toggleMoodTag,
+    goalName,
+    setGoalName,
+    goalCategory,
+    setGoalCategory,
+    goalCategories,
+    goalCheckType,
+    setGoalCheckType,
+    goalTargetAmount,
+    setGoalTargetAmount,
+    goalStreakLength,
+    setGoalStreakLength,
+    goalSuggestions,
+    refreshGoalSuggestions,
+    applyGoalSuggestion,
+    createGoal,
+    removeGoal,
+    connectionsLoading,
+    connectionsMessage,
+    generateInviteCode,
+    generateInviteLink,
+    loadConnectionsData,
+    inviteCode,
+    inviteLink,
+    pendingRequests,
+    requestApproval,
+    rejectRequest,
+    connectedOutsiders,
+    updateOutsiderSetting,
+    permissionsGridStyle,
+    normalizeConnectionPermissions,
+    permissionItemStyle,
+    updateOutsiderPermission,
+    revokeOutsider,
+    joinCodeInput,
+    setJoinCodeInput,
+    joinByCode,
+    joinLinkInput,
+    setJoinLinkInput,
+    joinByLink,
+    displayName,
+    setDisplayName,
+    secondaryDisplayName,
+    setSecondaryDisplayName,
+    setThemeFamily,
+    themeToggleStyle,
+    saveProfileSettings,
+    currentPinInput,
+    setCurrentPinInput,
+    newPinInput,
+    setNewPinInput,
+    confirmNewPinInput,
+    setConfirmNewPinInput,
+    changePin,
+    settingsMessage,
+    resetPinPassword,
+    setResetPinPassword,
+    resetNewPinInput,
+    setResetNewPinInput,
+    resetConfirmNewPinInput,
+    setResetConfirmNewPinInput,
+    resetPinWithPassword,
+    handleLogout,
+  };
+
+  const outsiderPageProps = {
+    ...sharedPageProps,
+    observerSectionCardStyle,
+    observerHeroStyle,
+    observerLabels,
+    outsiderTrackers,
+    selectedOutsider,
+    selectedOutsiderPermissions,
+    selectedOutsiderHistory,
+    selectedOutsiderChartData,
+    outsiderEnvironmentLabel,
+    outsiderMoodLabel,
+    outsiderMessage,
+    outsiderCooldownUntil,
+    connectionsMessage,
+    renderFeedbackMessage,
+    goalFormGridStyle,
+    labelStyle,
+    inputStyle,
+    joinCodeInput,
+    setJoinCodeInput,
+    joinByCode,
+    joinLinkInput,
+    setJoinLinkInput,
+    joinByLink,
+    sendSupportMessage,
+    setSelectedOutsiderId,
+    setOutsiderPage,
+    setShowOutsiderChooser,
+  };
+
+  const outsiderPageContent = (() => {
+    if (outsiderLoading) {
+      return (
+        <section className="galaxy-panel" style={observerSectionCardStyle(theme, "dashboard")}>
+          {renderSectionHeader(
+            observerLabels.dashboard,
+            "Loading approved tracker connections.",
+            "Overview",
+            "Overview"
+          )}
+          <p style={smallInfoStyle(theme)}>Loading connected trackers...</p>
+        </section>
+      );
+    }
+
+    switch (outsiderPage) {
+      case "outsiderData":
+        return <OutsiderTrackerDataPage app={outsiderPageProps} />;
+      case "outsiderSupport":
+        return <OutsiderSupportPage app={outsiderPageProps} />;
+      case "outsiderGoals":
+        return <OutsiderGoalsPage app={outsiderPageProps} />;
+      case "outsiderOverview":
+      default:
+        return <OutsiderOverviewPage app={outsiderPageProps} />;
+    }
+  })();
+
   const currentPageContent = (() => {
     switch (activePage) {
+      case "mission":
       case "dashboard":
-        return (
-          <div style={chartsPageStyle}>
-            <section className="galaxy-panel" style={sectionCardStyle(theme, "dashboard")}>
-              {renderSectionHeader(
-                "Guide to the Galaxies",
-                "A calm navigation panel for today.",
-                "Sun",
-                "Star"
-              )}
-              <div style={dashboardHeroStyle(theme)}>
-                <div>
-                  <p style={dashboardKickerStyle(theme)}>Today's coordinates</p>
-                  <h3 style={dashboardHeadingStyle(theme)}>Steady, supportive, and easy to read.</h3>
-                  <p style={subtitleStyle(theme)}>
-                    Use each page like a constellation map: one small step at a time.
-                  </p>
-                </div>
-                <div style={dashboardPulseStyle(theme)}>
-                  <div style={dashboardPulseRingStyle(theme)} />
-                  <div style={dashboardPulseCoreStyle(theme)}>{mood}/5</div>
-                </div>
-              </div>
-
-              <div style={dashboardStatsGridStyle}>
-                {dashboardStats.map((item) => (
-                  <div key={item.label} style={summaryCardStyle(theme)}>
-                    <div style={summaryLabelStyle(theme)}>{item.label}</div>
-                    <div style={summaryValueStyle(theme)}>{item.value}</div>
-                    <div style={summaryNoteStyle(theme)}>{item.note}</div>
-                  </div>
-                ))}
-              </div>
-            </section>
-
-            <div style={gridStyle}>
-              <section className="galaxy-panel" style={sectionCardStyle(theme, "signals")}>
-                {renderSectionHeader(
-                  "Daily Signals",
-                  "Quick readouts for how the day is moving.",
-                  "Spark",
-                  "Spark"
-                )}
-                <p style={smallInfoStyle(theme)}>Mood / Focus / Energy: {mood}/5, {focus}/5, {energy}/5</p>
-                <p style={smallInfoStyle(theme)}>Sleep: {bedTime || "No bedtime"} to {wakeTime || "No wake time"}</p>
-                <p style={smallInfoStyle(theme)}>Screens before bed: {usedScreensBeforeBed ? "Yes" : "No"}</p>
-                <p style={smallInfoStyle(theme)}>Last action: {lastAction}</p>
-              </section>
-
-              <section className="galaxy-panel" style={sectionCardStyle(theme, "jump")}>
-                {renderSectionHeader(
-                  "Jump To",
-                  "Fast links for the pages you may want on hard days.",
-                  "Comet",
-                  "Comet"
-                )}
-                <div style={quickLinkGridStyle}>
-                  {[
-                    { key: "goals", label: "Goals" },
-                    { key: "meds", label: "Meds" },
-                    { key: "food", label: "Food" },
-                    { key: "sleep", label: "Sleep" },
-                    { key: "mood", label: "Mood" },
-                    { key: "maintenance", label: "Maintenance" },
-                    { key: "cleaning", label: "Cleaning" },
-                    { key: "exercise", label: "Exercise" },
-                  ].map((item) => (
-                    <button
-                      key={item.key}
-                      style={quickJumpButtonStyle(theme)}
-                      onClick={() => setActivePage(item.key)}
-                    >
-                      {item.label}
-                    </button>
-                  ))}
-                </div>
-              </section>
-            </div>
-          </div>
-        );
-      case "goals":
-        return (
-          <div style={chartsPageStyle}>
-            <section className="galaxy-panel" style={sectionCardStyle(theme, "goals")}>
-              {renderSectionHeader(
-                "Goals",
-                "Create streak goals that read from your tracker automatically.",
-                "Quest",
-                "Quest"
-              )}
-
-              <div style={goalFormGridStyle}>
-                <div>
-                  <label style={labelStyle(theme)}>Goal name</label>
-                  <input
-                    style={inputStyle(theme)}
-                    type="text"
-                    placeholder="Golden Ritual"
-                    value={goalName}
-                    onChange={(e) => setGoalName(e.target.value)}
-                  />
-                </div>
-
-                <div>
-                  <label style={labelStyle(theme)}>Category</label>
-                  <select
-                    style={inputStyle(theme)}
-                    value={goalCategory}
-                    onChange={(e) => setGoalCategory(e.target.value)}
-                  >
-                    {goalCategories.map((category) => (
-                      <option key={category} value={category}>
-                        {category}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label style={labelStyle(theme)}>Check type</label>
-                  <select
-                    style={inputStyle(theme)}
-                    value={goalCheckType}
-                    onChange={(e) => setGoalCheckType(e.target.value)}
-                  >
-                    <option value="daily">Daily</option>
-                    <option value="weekly">Weekly</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label style={labelStyle(theme)}>Target amount</label>
-                  <input
-                    style={inputStyle(theme)}
-                    type="number"
-                    min="1"
-                    value={goalTargetAmount}
-                    onChange={(e) => setGoalTargetAmount(e.target.value)}
-                  />
-                </div>
-
-                <div>
-                  <label style={labelStyle(theme)}>
-                    {goalCheckType === "weekly" ? "Streak length (weeks)" : "Streak length (days)"}
-                  </label>
-                  <input
-                    style={inputStyle(theme)}
-                    type="number"
-                    min="1"
-                    value={goalStreakLength}
-                    onChange={(e) => setGoalStreakLength(e.target.value)}
-                  />
-                </div>
-              </div>
-
-              <div style={{ marginTop: "18px" }}>
-                <div style={goalSuggestionHeaderStyle}>
-                  <p style={tagGroupLabelStyle(theme)}>Suggested names</p>
-                  <button style={smallRemoveButtonStyle(theme)} onClick={refreshGoalSuggestions}>
-                    Refresh Suggestions
-                  </button>
-                </div>
-                <div style={moodTagGridStyle}>
-                  {goalSuggestions.map((suggestion) => (
-                    <button
-                      key={suggestion}
-                      style={goalSuggestionButtonStyle(theme)}
-                      onClick={() => applyGoalSuggestion(suggestion)}
-                    >
-                      {suggestion}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div style={{ marginTop: "18px" }}>
-                <button style={primaryButtonStyle(theme)} onClick={createGoal}>
-                  Create Goal
-                </button>
-              </div>
-            </section>
-
-            <section className="galaxy-panel" style={sectionCardStyle(theme, "signals")}>
-              {renderSectionHeader(
-                "Active Goals",
-                "If a streak misses its target, it resets and starts again.",
-                "Glow",
-                "Orbit"
-              )}
-
-              {goals.filter((goal) => !goal.completed).length === 0 ? (
-                <p style={emptyTextStyle(theme)}>No active goals yet.</p>
-              ) : (
-                <ul style={mealListStyle}>
-                  {goals
-                    .filter((goal) => !goal.completed)
-                    .map((goal) => (
-                      <li key={goal.id} style={goalCardItemStyle(theme)}>
-                        <div style={{ flex: 1 }}>
-                          <div style={{ fontWeight: "bold" }}>{goal.name}</div>
-                          <div style={goalMetaStyle(theme)}>
-                            {goal.category} · {goal.checkType} · target {goal.targetAmount}
-                          </div>
-                          <div style={goalMetaStyle(theme)}>
-                            Streak: {goal.currentStreakProgress}/{goal.streakLength}{" "}
-                            {goal.checkType === "weekly" ? "weeks" : "days"}
-                          </div>
-                          <div style={goalProgressTrackStyle(theme)}>
-                            <div
-                              style={{
-                                ...goalProgressFillStyle(theme),
-                                width: `${Math.min(
-                                  100,
-                                  (goal.currentStreakProgress / goal.streakLength) * 100
-                                )}%`,
-                              }}
-                            />
-                          </div>
-                        </div>
-
-                        <button
-                          style={smallRemoveButtonStyle(theme)}
-                          onClick={() => removeGoal(goal.id)}
-                        >
-                          Remove
-                        </button>
-                      </li>
-                    ))}
-                </ul>
-              )}
-            </section>
-
-            <div style={gridStyle}>
-              <section className="galaxy-panel" style={sectionCardStyle(theme, "care")}>
-                {renderSectionHeader(
-                  "Completed Goals",
-                  "Finished streaks stay here like little celestial landmarks.",
-                  "Halo",
-                  "Nebula"
-                )}
-
-                {goals.filter((goal) => goal.completed).length === 0 ? (
-                  <p style={emptyTextStyle(theme)}>No completed goals yet.</p>
-                ) : (
-                  <ul style={mealListStyle}>
-                    {goals
-                      .filter((goal) => goal.completed)
-                      .map((goal) => (
-                        <li key={goal.id} style={mealItemStyle(theme)}>
-                          <div>
-                            <div style={{ fontWeight: "bold" }}>{goal.name}</div>
-                            <div style={goalMetaStyle(theme)}>
-                              Completed with {goal.currentStreakProgress}/{goal.streakLength}{" "}
-                              {goal.checkType === "weekly" ? "weeks" : "days"}
-                            </div>
-                            <div style={goalMetaStyle(theme)}>
-                              Reward: {goal.rewardEarned || "Reward unlocked"}
-                            </div>
-                          </div>
-                        </li>
-                      ))}
-                  </ul>
-                )}
-              </section>
-
-              <section className="galaxy-panel" style={sectionCardStyle(theme, "dashboard")}>
-                {renderSectionHeader(
-                  darkMode ? "Collected Constellations" : "Collected Sunbursts",
-                  "Every completed goal adds a themed reward to your collection.",
-                  "Dawn",
-                  "Starlight"
-                )}
-
-                {rewards.length === 0 ? (
-                  <p style={emptyTextStyle(theme)}>No rewards collected yet.</p>
-                ) : (
-                  <div style={rewardGridStyle}>
-                    {rewards.map((reward) => (
-                      <div key={reward.id} style={rewardCardStyle(theme)}>
-                        <div style={rewardTitleStyle(theme)}>{reward.title}</div>
-                        <div style={goalMetaStyle(theme)}>{reward.goalName}</div>
-                        <div style={goalMetaStyle(theme)}>Earned {reward.earnedAt}</div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </section>
-            </div>
-          </div>
-        );
+        return <TrackerOverviewPage app={trackerPageProps} />;
       case "mood":
-        return (
-          <section className="galaxy-panel" style={sectionCardStyle(theme, "mood")}>
-            {renderSectionHeader(
-              "Mood",
-              "Keep the slider, then add up to 3 words that fit today.",
-              "Glow",
-              "Nova"
-            )}
-            <p style={sliderValueStyle(theme)}>Current mood: {mood}/5</p>
-            <input
-              style={rangeStyle}
-              type="range"
-              min="1"
-              max="5"
-              value={mood}
-              onChange={(e) => handleMoodChange(e.target.value)}
-            />
-
-            <div style={{ marginTop: "18px", display: "grid", gap: "14px" }}>
-              {moodTagGroups.map((group) => (
-                <div key={group.label}>
-                  <p style={tagGroupLabelStyle(theme)}>{group.label}</p>
-                  <div style={moodTagGridStyle}>
-                    {group.tags.map((tag) => {
-                      const selected = moodTags.includes(tag);
-
-                      return (
-                        <button
-                          key={tag}
-                          style={moodTagButtonStyle(selected, theme)}
-                          onClick={() => toggleMoodTag(tag)}
-                        >
-                          {tag}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <p style={smallInfoStyle(theme)}>
-              Selected mood words: {moodTags.length > 0 ? moodTags.join(", ") : "None yet"}
-            </p>
-          </section>
-        );
+        return <TrackerMoodPage app={trackerPageProps} />;
       case "meds":
-        return (
-          <section className="galaxy-panel" style={sectionCardStyle(theme, "meds")}>
-            {renderSectionHeader("Meds", "Track each medication separately.", "Sun", "Star")}
-
-            <div style={{ display: "grid", gap: "10px" }}>
-              <input
-                style={inputStyle(theme)}
-                type="text"
-                placeholder="Medication name"
-                value={medName}
-                onChange={(e) => setMedName(e.target.value)}
-              />
-
-              <input
-                style={inputStyle(theme)}
-                type="text"
-                placeholder="Dose"
-                value={medDose}
-                onChange={(e) => setMedDose(e.target.value)}
-              />
-
-              <input
-                style={inputStyle(theme)}
-                type="text"
-                placeholder="Symptoms / side effects"
-                value={medSymptoms}
-                onChange={(e) => setMedSymptoms(e.target.value)}
-              />
-
-              <input
-                style={inputStyle(theme)}
-                type="text"
-                placeholder="Notes"
-                value={medNotes}
-                onChange={(e) => setMedNotes(e.target.value)}
-              />
-
-              <button style={primaryButtonStyle(theme)} onClick={addMedication}>
-                Add Medication
-              </button>
-            </div>
-
-            <p style={countTextStyle(theme)}>Meds logged today: {meds.length}</p>
-            <p style={smallInfoStyle(theme)}>
-              Quick toggle: {medTaken ? `Taken at ${medsTime}` : "Not marked"}
-            </p>
-
-            <div style={{ marginTop: "10px" }}>
-              <button
-                style={medTaken ? successButtonStyle : softButtonStyle(theme)}
-                onClick={toggleMed}
-              >
-                {medTaken ? "Taken" : "Not Taken"}
-              </button>
-            </div>
-
-            {meds.length === 0 ? (
-              <p style={emptyTextStyle(theme)}>No medications logged yet.</p>
-            ) : (
-              <ul style={mealListStyle}>
-                {meds.map((med, index) => (
-                  <li key={index} style={mealItemStyle(theme)}>
-                    <div>
-                      <div style={{ fontWeight: "bold" }}>
-                        {med.name} {med.dose ? `- ${med.dose}` : ""}
-                      </div>
-                      <div style={{ fontSize: "0.85rem", opacity: 0.7 }}>
-                        Taken at {med.time}
-                      </div>
-                      {med.symptoms && (
-                        <div style={{ fontSize: "0.85rem", opacity: 0.8 }}>
-                          Symptoms: {med.symptoms}
-                        </div>
-                      )}
-                      {med.notes && (
-                        <div style={{ fontSize: "0.85rem", opacity: 0.8 }}>
-                          Notes: {med.notes}
-                        </div>
-                      )}
-                    </div>
-
-                    <button
-                      style={smallRemoveButtonStyle(theme)}
-                      onClick={() => removeMedication(index)}
-                    >
-                      Remove
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </section>
-        );
       case "food":
-        return (
-          <section className="galaxy-panel" style={sectionCardStyle(theme, "food")}>
-            {renderSectionHeader("Food", "Track what you ate and when.", "Glow", "Spark")}
-
-            <div style={rowStyle}>
-              <input
-                style={inputStyle(theme)}
-                type="text"
-                placeholder="What did you eat?"
-                value={mealText}
-                onChange={(e) => setMealText(e.target.value)}
-              />
-              <button style={primaryButtonStyle(theme)} onClick={addMeal}>
-                Add
-              </button>
-            </div>
-
-            <p style={countTextStyle(theme)}>Meals today: {meals.length}</p>
-
-            {meals.length === 0 ? (
-              <p style={emptyTextStyle(theme)}>No meals added yet.</p>
-            ) : (
-              <ul style={mealListStyle}>
-                {meals.map((meal, index) => (
-                  <li key={index} style={mealItemStyle(theme)}>
-                    <div>
-                      <div style={{ fontWeight: "bold" }}>{meal.text}</div>
-                      <div style={{ fontSize: "0.85rem", opacity: 0.7 }}>
-                        {meal.time}
-                      </div>
-                    </div>
-
-                    <button
-                      style={smallRemoveButtonStyle(theme)}
-                      onClick={() => removeMeal(index)}
-                    >
-                      Remove
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </section>
-        );
       case "sleep":
-        return (
-          <section className="galaxy-panel" style={sectionCardStyle(theme, "sleep")}>
-            {renderSectionHeader("Sleep", "Track bedtime and wake time.", "Moon", "Moon")}
-
-            <div style={sleepGridStyle}>
-              <div>
-                <label style={labelStyle(theme)}>Bedtime</label>
-                <input
-                  style={inputStyle(theme)}
-                  type="time"
-                  value={bedTime}
-                  onChange={(e) => handleBedTimeChange(e.target.value)}
-                />
-              </div>
-
-              <div>
-                <label style={labelStyle(theme)}>Wake time</label>
-                <input
-                  style={inputStyle(theme)}
-                  type="time"
-                  value={wakeTime}
-                  onChange={(e) => handleWakeTimeChange(e.target.value)}
-                />
-              </div>
-            </div>
-
-            <div style={{ marginTop: "16px" }}>
-              <label style={labelStyle(theme)}>Sleep routine</label>
-              <textarea
-                style={{ ...inputStyle(theme), minHeight: "90px", resize: "vertical" }}
-                placeholder="What helped you wind down before bed?"
-                value={sleepRoutine}
-                onChange={(e) => handleSleepRoutineChange(e.target.value)}
-              />
-            </div>
-
-            <div style={{ marginTop: "16px" }}>
-              <button
-                style={usedScreensBeforeBed ? successButtonStyle : softButtonStyle(theme)}
-                onClick={toggleUsedScreensBeforeBed}
-              >
-                {usedScreensBeforeBed ? "Screens Before Bed Done" : "Used Screens Before Bed"}
-              </button>
-            </div>
-
-            <div style={{ marginTop: "16px" }}>
-              <p style={sliderValueStyle(theme)}>Sleep quality: {sleepQuality}/5</p>
-              <input
-                style={rangeStyle}
-                type="range"
-                min="1"
-                max="5"
-                value={sleepQuality}
-                onChange={(e) => handleSleepQualityChange(e.target.value)}
-              />
-            </div>
-          </section>
-        );
       case "maintenance":
-        return (
-          <section className="galaxy-panel" style={sectionCardStyle(theme, "maintenance")}>
-            {renderSectionHeader("Maintenance", "Quick check-off tasks.", "Star", "Star")}
-
-            <div style={buttonWrapStyle}>
-              <button
-                style={showered ? successButtonStyle : softButtonStyle(theme)}
-                onClick={toggleShowered}
-              >
-                {showered ? "Showered Done" : "Shower"}
-              </button>
-
-              <button
-                style={brushedTeeth ? successButtonStyle : softButtonStyle(theme)}
-                onClick={toggleBrushedTeeth}
-              >
-                {brushedTeeth ? "Brushed Teeth Done" : "Brush Teeth"}
-              </button>
-
-              <button
-                style={skincare ? successButtonStyle : softButtonStyle(theme)}
-                onClick={toggleSkincare}
-              >
-                {skincare ? "Skincare Done" : "Skincare"}
-              </button>
-            </div>
-
-            <div style={{ marginTop: "14px" }}>
-              <p style={smallInfoStyle(theme)}>Shower: {showeredTime || "Not recorded"}</p>
-              <p style={smallInfoStyle(theme)}>Brush teeth: {brushedTeethTime || "Not recorded"}</p>
-              <p style={smallInfoStyle(theme)}>Skincare: {skincareTime || "Not recorded"}</p>
-            </div>
-          </section>
-        );
       case "cleaning":
-        return (
-          <section className="galaxy-panel" style={sectionCardStyle(theme, "cleaning")}>
-            {renderSectionHeader("Cleaning", "Track small cleaning wins.", "Comet", "Spark")}
-
-            <div style={buttonWrapStyle}>
-              <button
-                style={laundryDone ? successButtonStyle : softButtonStyle(theme)}
-                onClick={toggleLaundry}
-              >
-                {laundryDone ? "Laundry Done" : "Laundry"}
-              </button>
-
-              <button
-                style={bedsheetsDone ? successButtonStyle : softButtonStyle(theme)}
-                onClick={toggleBedsheets}
-              >
-                {bedsheetsDone ? "Bedsheets Done" : "Bedsheets"}
-              </button>
-
-              <button
-                style={roomCleaned ? successButtonStyle : softButtonStyle(theme)}
-                onClick={toggleRoomCleaned}
-              >
-                {roomCleaned ? "Room Cleaned Done" : "Room Cleaned"}
-              </button>
-            </div>
-
-            <div style={{ marginTop: "14px" }}>
-              <p style={smallInfoStyle(theme)}>Laundry: {laundryTime || "Not recorded"}</p>
-              <p style={smallInfoStyle(theme)}>Bedsheets: {bedsheetsTime || "Not recorded"}</p>
-              <p style={smallInfoStyle(theme)}>
-                Room cleaned: {roomCleanedTime || "Not recorded"}
-              </p>
-            </div>
-
-            <div style={{ marginTop: "16px" }}>
-              <label style={labelStyle(theme)}>Cleaning minutes</label>
-              <input
-                style={inputStyle(theme)}
-                type="number"
-                min="0"
-                placeholder="Minutes spent cleaning"
-                value={cleaningMinutes}
-                onChange={(e) => handleCleaningMinutesChange(e.target.value)}
-              />
-            </div>
-
-            <div style={{ marginTop: "16px" }}>
-              <p style={sliderValueStyle(theme)}>Worth it: {cleaningWorthIt}/5</p>
-              <input
-                style={rangeStyle}
-                type="range"
-                min="1"
-                max="5"
-                value={cleaningWorthIt}
-                onChange={(e) => handleCleaningWorthItChange(e.target.value)}
-              />
-            </div>
-          </section>
-        );
       case "exercise":
-        return (
-          <section className="galaxy-panel" style={sectionCardStyle(theme, "exercise")}>
-            {renderSectionHeader("Exercise", "Track movement and how it felt.", "Orbit", "Star")}
-
-            <div style={buttonWrapStyle}>
-              <button
-                style={exerciseDone ? successButtonStyle : softButtonStyle(theme)}
-                onClick={toggleExerciseDone}
-              >
-                {exerciseDone ? "Exercise Done" : "Mark Exercise"}
-              </button>
-
-              <button
-                style={extraWalk ? successButtonStyle : softButtonStyle(theme)}
-                onClick={toggleExtraWalk}
-              >
-                {extraWalk ? "Extra Walk Done" : "Extra Walk"}
-              </button>
-            </div>
-
-            <div style={{ marginTop: "14px" }}>
-              <p style={smallInfoStyle(theme)}>Exercise time: {exerciseTime || "Not recorded"}</p>
-            </div>
-
-            <div style={{ display: "grid", gap: "12px", marginTop: "16px" }}>
-              <div>
-                <label style={labelStyle(theme)}>Exercise time</label>
-                <input
-                  style={inputStyle(theme)}
-                  type="text"
-                  placeholder="2:30 PM"
-                  value={exerciseTime}
-                  onChange={(e) => handleExerciseTimeChange(e.target.value)}
-                />
-              </div>
-
-              <div>
-                <label style={labelStyle(theme)}>Exercise type</label>
-                <input
-                  style={inputStyle(theme)}
-                  type="text"
-                  placeholder="Walk, stretch, yoga, etc."
-                  value={exerciseType}
-                  onChange={(e) => handleExerciseTypeChange(e.target.value)}
-                />
-              </div>
-
-              <div>
-                <label style={labelStyle(theme)}>Exercise minutes</label>
-                <input
-                  style={inputStyle(theme)}
-                  type="number"
-                  min="0"
-                  placeholder="Minutes exercised"
-                  value={exerciseMinutes}
-                  onChange={(e) => handleExerciseMinutesChange(e.target.value)}
-                />
-              </div>
-
-              <div>
-                <label style={labelStyle(theme)}>How I felt after</label>
-                <input
-                  style={inputStyle(theme)}
-                  type="text"
-                  placeholder="Calm, stronger, sweaty, etc."
-                  value={exerciseFeeling}
-                  onChange={(e) => handleExerciseFeelingChange(e.target.value)}
-                />
-              </div>
-
-              <div>
-                <label style={labelStyle(theme)}>After exercise state</label>
-                <input
-                  style={inputStyle(theme)}
-                  type="text"
-                  placeholder="Productive, tired, zombie, etc."
-                  value={afterExerciseState}
-                  onChange={(e) => handleAfterExerciseStateChange(e.target.value)}
-                />
-              </div>
-            </div>
-
-            <div style={{ marginTop: "16px" }}>
-              <button style={primaryButtonStyle(theme)} onClick={addExerciseLog}>
-                Add Exercise Log
-              </button>
-            </div>
-
-            {exerciseLogs.length === 0 ? (
-              <p style={emptyTextStyle(theme)}>No exercise logs yet.</p>
-            ) : (
-              <ul style={mealListStyle}>
-                {exerciseLogs.map((log, index) => (
-                  <li key={index} style={mealItemStyle(theme)}>
-                    <div>
-                      <div style={{ fontWeight: "bold" }}>{log.type || "Unnamed exercise"}</div>
-                      <div style={{ fontSize: "0.85rem", opacity: 0.7 }}>
-                        Time: {log.time || "Not recorded"}
-                      </div>
-                      <div style={{ fontSize: "0.85rem", opacity: 0.8 }}>
-                        Minutes: {log.minutes === "" || log.minutes == null ? "Not recorded" : log.minutes}
-                      </div>
-                      <div style={{ fontSize: "0.85rem", opacity: 0.8 }}>
-                        Felt after: {log.feeling || "Not recorded"}
-                      </div>
-                      <div style={{ fontSize: "0.85rem", opacity: 0.8 }}>
-                        Extra walk: {log.extraWalk ? "Yes" : "No"}
-                      </div>
-                      <div style={{ fontSize: "0.85rem", opacity: 0.8 }}>
-                        State after: {log.afterState || "Not recorded"}
-                      </div>
-                    </div>
-
-                    <button
-                      style={smallRemoveButtonStyle(theme)}
-                      onClick={() => removeExerciseLog(index)}
-                    >
-                      Remove
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </section>
-        );
+        return <TrackerTrackingPage app={trackerPageProps} pageKey={activePage} />;
       case "charts":
-        return (
-          <div style={chartsPageStyle}>
-            <section className="galaxy-panel" style={sectionCardStyle(theme, "charts")}>
-              {renderSectionHeader(
-                "Celestial Charts",
-                "Look for patterns across the last few days without overload.",
-                "Sun",
-                "Star"
-              )}
-              <div style={chartToolbarStyle}>
-                {chartRangeOptions.map((days) => (
-                  <button
-                    key={days}
-                    style={rangeChipStyle(chartRange === days, theme)}
-                    onClick={() => setChartRange(days)}
-                  >
-                    Last {days} days
-                  </button>
-                ))}
-              </div>
-
-              {recentChartData.length === 0 ? (
-                <p style={emptyTextStyle(theme)}>No chart data yet.</p>
-              ) : (
-                <div style={chartStackStyle}>
-                  <LineTrendChart
-                    title="Wellbeing trends"
-                    subtitle="Mood, focus, and energy traveling together across time."
-                    data={recentChartData}
-                    yMax={5}
-                    theme={theme}
-                    series={[
-                      { key: "mood", label: "Mood", color: theme.chartPalette.mood },
-                      { key: "focus", label: "Focus", color: theme.chartPalette.focus },
-                      { key: "energy", label: "Energy", color: theme.chartPalette.energy },
-                    ]}
-                  />
-                </div>
-              )}
-            </section>
-
-            <section className="galaxy-panel" style={sectionCardStyle(theme, "care")}>
-              {renderSectionHeader(
-                "Care Habits",
-                "Meals, meds, maintenance, and movement across recent days.",
-                "Comet",
-                "Spark"
-              )}
-
-              {recentChartData.length === 0 ? (
-                <p style={emptyTextStyle(theme)}>No chart data yet.</p>
-              ) : (
-                <div style={chartStackStyle}>
-                  <LineTrendChart
-                    title="Care habits chart"
-                    subtitle="Counts for nourishment, meds, hygiene, and exercise logs."
-                    data={recentChartData}
-                    yMax={Math.max(maxMeals, maxMeds, maxHygiene, maxExercise, 3)}
-                    theme={theme}
-                    series={[
-                      { key: "mealsCount", label: "Meals", color: theme.chartPalette.meals },
-                      { key: "medsCount", label: "Meds", color: theme.chartPalette.meds },
-                      { key: "hygieneCount", label: "Maintenance", color: theme.chartPalette.hygiene },
-                      { key: "exerciseCount", label: "Exercise", color: theme.chartPalette.exercise },
-                    ]}
-                  />
-                </div>
-              )}
-            </section>
-          </div>
-        );
+        return <TrackerChartsPage app={trackerPageProps} />;
+      case "settings":
+        return <TrackerSettingsPage app={trackerPageProps} />;
+      case "goals":
+        return <TrackerGoalsPage app={trackerPageProps} />;
+      case "connections":
+        return <TrackerConnectionsPage app={trackerPageProps} />;
       default:
         return null;
     }
   })();
 
+  if (authLoading) {
+    return (
+      <div className="app-shell" style={pageStyle(theme)}>
+        <div style={containerStyle}>
+          <div style={heroCardStyle(theme)}>
+            <h1 style={titleStyle(theme)}>Loading your stars...</h1>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (session && profileSyncLoading) {
+    return (
+      <div className="app-shell" style={pageStyle(theme)}>
+        <div style={containerStyle}>
+          <div style={heroCardStyle(theme)}>
+            <h1 style={titleStyle(theme)}>Syncing your profile...</h1>
+            <p style={subtitleStyle(theme)}>Making sure your account is ready before loading the tracker.</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!session) {
+    const authTheme = getAppTheme(signupMode === "dark", signupThemeFamily);
+
+    return (
+      <div className="app-shell" style={pageStyle(authTheme)}>
+        <style>{`
+          .app-shell,
+          .app-shell *,
+          .app-shell *::before,
+          .app-shell *::after {
+            box-sizing: border-box;
+            min-width: 0;
+          }
+        `}</style>
+        <div style={containerStyle}>
+          <div style={heroCardStyle(authTheme)}>
+            <div>
+              <p style={tinyLabelStyle(authTheme)}>Guide to the Galaxies</p>
+              <h1 style={titleStyle(authTheme)}>
+                {authMode === "login" ? "Welcome back" : "Create your cosmos"}
+              </h1>
+              <p style={subtitleStyle(authTheme)}>
+                {authMode === "login"
+                  ? "Sign in to continue your tracker."
+                  : "Choose your theme first, then finish your account in a few calm steps."}
+              </p>
+            </div>
+
+            <div style={headerControlsStyle}>
+              <button
+                style={navButtonStyle(authMode === "login", authTheme)}
+                onClick={() => {
+                  setAuthMode("login");
+                  setAuthMessage("");
+                }}
+              >
+                Login
+              </button>
+              <button
+                style={navButtonStyle(authMode === "signup", authTheme)}
+                onClick={() => {
+                  setAuthMode("signup");
+                  setAuthMessage("");
+                }}
+              >
+                Sign Up
+              </button>
+            </div>
+          </div>
+
+          <section className="galaxy-panel" style={sectionCardStyle(authTheme, "dashboard")}>
+            <div style={{ display: "grid", gap: "12px", marginBottom: "18px" }}>
+              <div>
+                <label style={labelStyle(authTheme)}>Open after login</label>
+                <div style={moodTagGridStyle}>
+                  {[
+                    { id: "tracker", label: "Tracker" },
+                    { id: "outsider", label: "Outsider" },
+                  ].map((option) => (
+                    <button
+                      key={option.id}
+                      style={moodTagButtonStyle(selectedExperience === option.id, authTheme)}
+                      onClick={() => setSelectedExperience(option.id)}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <p style={smallInfoStyle(authTheme)}>
+                Tracker opens the full self-tracking app. Outsider opens the support-focused app.
+              </p>
+            </div>
+            {authMode === "login" ? (
+              <div style={goalFormGridStyle}>
+                <div>
+                  <label style={labelStyle(authTheme)}>Email</label>
+                  <input
+                    style={inputStyle(authTheme)}
+                    type="email"
+                    value={authEmail}
+                    onChange={(e) => setAuthEmail(e.target.value)}
+                    placeholder="you@example.com"
+                  />
+                </div>
+                <div>
+                  <label style={labelStyle(authTheme)}>Password</label>
+                  <input
+                    style={inputStyle(authTheme)}
+                    type="password"
+                    value={authPassword}
+                    onChange={(e) => setAuthPassword(e.target.value)}
+                    placeholder="Password"
+                  />
+                </div>
+                <div style={{ gridColumn: "1 / -1" }}>
+                  <button style={primaryButtonStyle(authTheme)} onClick={handleLogin}>
+                    Login
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div style={{ display: "grid", gap: "18px" }}>
+                {signupStep === 1 && (
+                  <div style={{ display: "grid", gap: "18px" }}>
+                    <div>
+                      <label style={labelStyle(authTheme)}>Theme family</label>
+                      <div style={moodTagGridStyle}>
+                        {["galaxy", "underwater", "forest"].map((option) => (
+                          <button
+                            key={option}
+                            style={moodTagButtonStyle(signupThemeFamily === option, authTheme)}
+                            onClick={() => setSignupThemeFamily(option)}
+                          >
+                            {option}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <div>
+                      <label style={labelStyle(authTheme)}>Starting mode</label>
+                      <div style={moodTagGridStyle}>
+                        {["dark", "light"].map((option) => (
+                          <button
+                            key={option}
+                            style={moodTagButtonStyle(signupMode === option, authTheme)}
+                            onClick={() => setSignupMode(option)}
+                          >
+                            {option}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <button style={primaryButtonStyle(authTheme)} onClick={() => setSignupStep(2)}>
+                      Continue to account
+                    </button>
+                  </div>
+                )}
+
+                {signupStep === 2 && (
+                  <div style={goalFormGridStyle}>
+                    <div>
+                      <label style={labelStyle(authTheme)}>Email</label>
+                      <input
+                        style={inputStyle(authTheme)}
+                        type="email"
+                        value={authEmail}
+                        onChange={(e) => setAuthEmail(e.target.value)}
+                        placeholder="you@example.com"
+                      />
+                    </div>
+                    <div>
+                      <label style={labelStyle(authTheme)}>Password</label>
+                      <input
+                        style={inputStyle(authTheme)}
+                        type="password"
+                        value={authPassword}
+                        onChange={(e) => setAuthPassword(e.target.value)}
+                        placeholder="Password"
+                      />
+                    </div>
+                    <div>
+                      <label style={labelStyle(authTheme)}>Confirm password</label>
+                      <input
+                        style={inputStyle(authTheme)}
+                        type="password"
+                        value={authConfirmPassword}
+                        onChange={(e) => setAuthConfirmPassword(e.target.value)}
+                        placeholder="Confirm password"
+                      />
+                    </div>
+                    <div style={{ gridColumn: "1 / -1", display: "flex", gap: "10px", flexWrap: "wrap" }}>
+                      <button style={softButtonStyle(authTheme)} onClick={() => setSignupStep(1)}>
+                        Back
+                      </button>
+                      <button style={primaryButtonStyle(authTheme)} onClick={() => setSignupStep(3)}>
+                        Continue to profile
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {signupStep === 3 && (
+                  <div style={goalFormGridStyle}>
+                    <div>
+                      <label style={labelStyle(authTheme)}>Display name</label>
+                      <input
+                        style={inputStyle(authTheme)}
+                        type="text"
+                        value={displayName}
+                        onChange={(e) => setDisplayName(e.target.value)}
+                        placeholder="Your name"
+                      />
+                    </div>
+                    <div>
+                      <label style={labelStyle(authTheme)}>Secondary display name</label>
+                      <input
+                        style={inputStyle(authTheme)}
+                        type="text"
+                        value={secondaryDisplayName}
+                        onChange={(e) => setSecondaryDisplayName(e.target.value)}
+                        placeholder="Optional"
+                      />
+                    </div>
+                    <div>
+                      <label style={labelStyle(authTheme)}>PIN</label>
+                      <input
+                        style={inputStyle(authTheme)}
+                        type="password"
+                        inputMode="numeric"
+                        value={pin}
+                        onChange={(e) => setPin(e.target.value.replace(/\D/g, ""))}
+                        placeholder="4 to 8 digits"
+                      />
+                    </div>
+                    <div>
+                      <label style={labelStyle(authTheme)}>Confirm PIN</label>
+                      <input
+                        style={inputStyle(authTheme)}
+                        type="password"
+                        inputMode="numeric"
+                        value={confirmPin}
+                        onChange={(e) => setConfirmPin(e.target.value.replace(/\D/g, ""))}
+                        placeholder="Confirm PIN"
+                      />
+                    </div>
+                    <div style={{ gridColumn: "1 / -1", display: "flex", gap: "10px", flexWrap: "wrap" }}>
+                      <button style={softButtonStyle(authTheme)} onClick={() => setSignupStep(2)}>
+                        Back
+                      </button>
+                      <button style={primaryButtonStyle(authTheme)} onClick={handleSignup}>
+                        Create account
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {renderFeedbackMessage(authMessage, authTheme)}
+          </section>
+        </div>
+      </div>
+    );
+  }
+
   if (loading) {
     return (
-      <div style={pageStyle(theme)}>
+      <div className="app-shell" style={pageStyle(theme)}>
         <div style={containerStyle}>
           <div style={heroCardStyle(theme)}>
             <h1 style={titleStyle(theme)}>Loading your tracker...</h1>
@@ -1824,10 +3112,21 @@ function App() {
   }
 
   return (
-    <div style={pageStyle(theme)}>
+    <div className="app-shell" style={pageStyle(theme)}>
       <style>{`
+        .app-shell,
+        .app-shell *,
+        .app-shell *::before,
+        .app-shell *::after {
+          box-sizing: border-box;
+          min-width: 0;
+        }
+
         .galaxy-panel {
           transition: transform 180ms ease, box-shadow 220ms ease, filter 220ms ease;
+          min-width: 0;
+          width: 100%;
+          max-width: 100%;
         }
 
         .galaxy-panel:hover {
@@ -1835,10 +3134,19 @@ function App() {
           filter: brightness(1.015);
         }
 
+        .app-shell svg,
+        .app-shell canvas,
+        .app-shell img {
+          max-width: 100%;
+          height: auto;
+        }
+
         button,
         input,
-        textarea {
+        textarea,
+        select {
           transition: transform 160ms ease, box-shadow 200ms ease, filter 200ms ease, border-color 200ms ease, background 220ms ease;
+          max-width: 100%;
         }
 
         button:hover {
@@ -1851,16 +3159,42 @@ function App() {
         }
 
         input:focus,
-        textarea:focus {
+        textarea:focus,
+        select:focus {
           outline: none;
           filter: brightness(1.015);
+        }
+
+        @media (max-width: 639px) {
+          .app-shell {
+            overflow-x: hidden;
+          }
+
+          .app-shell button,
+          .app-shell input,
+          .app-shell textarea,
+          .app-shell select {
+            width: 100%;
+          }
+        }
+
+        @media (min-width: 640px) {
+          .galaxy-panel {
+            width: auto;
+          }
+        }
+
+        @media (min-width: 1024px) {
+          .galaxy-panel:hover {
+            transform: translateY(-2px);
+          }
         }
       `}</style>
       {rewardPopup ? (
         <div style={popupOverlayStyle}>
           <div style={popupCardStyle(theme)}>
             <p style={tinyLabelStyle(theme)}>
-              {darkMode ? "Constellation Found" : "Sunburst Unlocked"}
+              {`${getThemeRewardCopy(themeFamily).singular} Unlocked`}
             </p>
             <h2 style={sectionTitleStyle(theme)}>{rewardPopup.message}</h2>
             <p style={subtitleStyle(theme)}>{rewardPopup.reward.title}</p>
@@ -1876,89 +3210,134 @@ function App() {
           </div>
         </div>
       ) : null}
-      <div style={containerStyle}>
-        <div style={heroCardStyle(theme)}>
-          <div>
-            <p style={tinyLabelStyle(theme)}>Guide to the Galaxies</p>
-            <h1 style={titleStyle(theme)}>Daily Navigation Console</h1>
-            <p style={subtitleStyle(theme)}>Celestial, calm, and built for gentle progress.</p>
-            <p style={dateStyle(theme)}>{today}</p>
-            <p style={lastActionStyle(theme)}>Last action: {lastAction}</p>
-          </div>
+      {appExperience === "outsider" ? (
+        <OutsiderLayout
+          theme={theme}
+          title="Outsider Support App"
+          subtitle="A calmer support-focused experience for connected trackers."
+          today={today}
+          selectedTrackerName={selectedOutsider?.name || ""}
+          outsiderPage={outsiderPage}
+          setOutsiderPage={setOutsiderPage}
+          darkMode={darkMode}
+          setDarkMode={setDarkMode}
+          handleLogout={handleLogout}
+          loadOutsiderTrackers={loadOutsiderTrackers}
+          setAppExperience={setAppExperience}
+          outsiderMessage={outsiderMessage}
+          containerStyle={containerStyle}
+          heroCardStyle={heroCardStyle}
+          tinyLabelStyle={tinyLabelStyle}
+          titleStyle={titleStyle}
+          subtitleStyle={subtitleStyle}
+          dateStyle={dateStyle}
+          lastActionStyle={lastActionStyle}
+          headerControlsStyle={headerControlsStyle}
+          navButtonStyle={navButtonStyle}
+          themeToggleStyle={themeToggleStyle}
+          softButtonStyle={softButtonStyle}
+        >
+          {outsiderPageContent}
+        </OutsiderLayout>
+      ) : (
+        <TrackerLayout
+          theme={theme}
+          title="Daily Navigation Console"
+          subtitle={
+            themeFamily === "underwater"
+              ? "Fluid, calm, and built for steady progress."
+              : themeFamily === "forest"
+              ? "Grounded, gentle, and built for steady progress."
+              : "Layered, calm, and built for gentle progress."
+          }
+          today={today}
+          lastAction={lastAction}
+          status={status}
+          activePage={activePage}
+          setActivePage={setActivePage}
+          darkMode={darkMode}
+          setDarkMode={setDarkMode}
+          handleLogout={handleLogout}
+          setAppExperience={setAppExperience}
+          containerStyle={containerStyle}
+          heroCardStyle={heroCardStyle}
+          tinyLabelStyle={tinyLabelStyle}
+          titleStyle={titleStyle}
+          subtitleStyle={subtitleStyle}
+          dateStyle={dateStyle}
+          lastActionStyle={lastActionStyle}
+          headerControlsStyle={headerControlsStyle}
+          navButtonStyle={navButtonStyle}
+          themeToggleStyle={themeToggleStyle}
+          softButtonStyle={softButtonStyle}
+          statusBadgeStyle={statusBadgeStyle}
+        >
+          {currentPageContent}
+        </TrackerLayout>
+      )}
 
-          <div style={headerControlsStyle}>
-            <button
-              style={navButtonStyle(activePage === "dashboard", theme)}
-              onClick={() => setActivePage("dashboard")}
-            >
-              Dashboard
-            </button>
-            <button
-              style={navButtonStyle(activePage === "goals", theme)}
-              onClick={() => setActivePage("goals")}
-            >
-              Goals
-            </button>
-            <button
-              style={navButtonStyle(activePage === "mood", theme)}
-              onClick={() => setActivePage("mood")}
-            >
-              Mood
-            </button>
-            <button
-              style={navButtonStyle(activePage === "meds", theme)}
-              onClick={() => setActivePage("meds")}
-            >
-              Meds
-            </button>
-            <button
-              style={navButtonStyle(activePage === "food", theme)}
-              onClick={() => setActivePage("food")}
-            >
-              Food
-            </button>
-            <button
-              style={navButtonStyle(activePage === "sleep", theme)}
-              onClick={() => setActivePage("sleep")}
-            >
-              Sleep
-            </button>
-            <button
-              style={navButtonStyle(activePage === "maintenance", theme)}
-              onClick={() => setActivePage("maintenance")}
-            >
-              Maintenance
-            </button>
-            <button
-              style={navButtonStyle(activePage === "cleaning", theme)}
-              onClick={() => setActivePage("cleaning")}
-            >
-              Cleaning
-            </button>
-            <button
-              style={navButtonStyle(activePage === "exercise", theme)}
-              onClick={() => setActivePage("exercise")}
-            >
-              Exercise
-            </button>
-            <button
-              style={navButtonStyle(activePage === "charts", theme)}
-              onClick={() => setActivePage("charts")}
-            >
-              Charts
-            </button>
-            <button
-              style={themeToggleStyle(theme)}
-              onClick={() => setDarkMode(!darkMode)}
-            >
-              {darkMode ? "Solar Mode" : "Galaxy Mode"}
-            </button>
-            <div style={statusBadgeStyle(status, theme)}>{status || "Ready"}</div>
+      {showOutsiderChooser && outsiderPeople.length > 0 ? (
+        <div style={popupOverlayStyle}>
+          <div style={popupCardStyle(theme)}>
+            <p style={tinyLabelStyle(theme)}>Select Tracker</p>
+            <div style={{ display: "grid", gap: "10px", marginTop: "14px" }}>
+              {outsiderPeople.map((person) => (
+                <button
+                  key={person.id}
+                  style={person.id === selectedOutsiderId ? primaryButtonStyle(theme) : softButtonStyle(theme)}
+                  onClick={() => {
+                    setSelectedOutsiderId(person.id);
+                    setShowOutsiderChooser(false);
+                  }}
+                >
+                  {person.name}
+                </button>
+              ))}
+            </div>
+            <div style={{ marginTop: "14px" }}>
+              <button
+                style={smallRemoveButtonStyle(theme)}
+                onClick={() => setShowOutsiderChooser(false)}
+              >
+                Close
+              </button>
+            </div>
           </div>
         </div>
+      ) : null}
 
-        {currentPageContent}
-      </div>
+      {pinApprovalTarget ? (
+        <div style={popupOverlayStyle}>
+          <div style={popupCardStyle(theme)}>
+            <p style={tinyLabelStyle(theme)}>PIN Confirmation</p>
+            <p style={smallInfoStyle(theme)}>Enter your current PIN to approve this request.</p>
+            <div style={{ marginTop: "14px" }}>
+              <input
+                style={inputStyle(theme)}
+                type="password"
+                inputMode="numeric"
+                value={approvalPinInput}
+                onChange={(e) => setApprovalPinInput(e.target.value.replace(/\D/g, ""))}
+                placeholder="Current PIN"
+              />
+            </div>
+            <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", marginTop: "14px" }}>
+              <button style={primaryButtonStyle(theme)} onClick={confirmApproveRequest}>
+                Approve Request
+              </button>
+              <button
+                style={softButtonStyle(theme)}
+                onClick={() => {
+                  setPinApprovalTarget(null);
+                  setApprovalPinInput("");
+                }}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -2051,10 +3430,349 @@ const mellowDarkTheme = {
   },
 };
 
+const themeFamilyOverrides = {
+  galaxy: {
+    light: {
+      themeFamily: "galaxy",
+      pageBackground:
+        "radial-gradient(circle at 12% 18%, rgba(255,236,182,0.78) 0%, rgba(255,236,182,0) 18%), radial-gradient(circle at 78% 16%, rgba(191,210,255,0.46) 0%, rgba(191,210,255,0) 26%), radial-gradient(circle at 66% 72%, rgba(228,199,255,0.32) 0%, rgba(228,199,255,0) 28%), radial-gradient(circle at 50% 50%, rgba(255,255,255,0.28) 0%, rgba(255,255,255,0) 42%), linear-gradient(180deg, #fff8e7 0%, #f6effd 38%, #ece7fb 72%, #e6e1f6 100%)",
+      heroBackground:
+        "radial-gradient(circle at 80% 20%, rgba(255,235,173,0.24) 0%, rgba(255,235,173,0) 26%), linear-gradient(145deg, rgba(255,249,236,0.98) 0%, rgba(246,239,255,0.94) 55%, rgba(238,232,252,0.92) 100%)",
+      cardBackground:
+        "radial-gradient(circle at 14% 16%, rgba(255,224,154,0.18) 0%, rgba(255,224,154,0) 28%), linear-gradient(180deg, rgba(255,252,246,0.96) 0%, rgba(243,238,254,0.92) 100%)",
+      navInactive: "rgba(246,240,255,0.78)",
+      itemBackground: "rgba(249,244,255,0.82)",
+      softButtonBackground: "linear-gradient(180deg, #f9ecff 0%, #eadbff 100%)",
+      softButtonText: "#493766",
+      border: "1px solid rgba(173,156,224,0.22)",
+      shadow: "0 24px 40px rgba(151,120,214,0.16)",
+      heroShadow: "0 30px 56px rgba(152,118,214,0.18)",
+      glow: "rgba(178,144,255,0.24)",
+      heroRadius: "32px 42px 34px 46px / 34px 30px 44px 38px",
+      featureRadius: "28px 36px 30px 42px / 34px 28px 40px 32px",
+      sectionRadius: "26px 34px 28px 36px / 32px 26px 34px 30px",
+      featureClipPath: "none",
+      observerHeroBackground:
+        "linear-gradient(180deg, rgba(247,244,255,0.98) 0%, rgba(236,232,248,0.94) 100%)",
+      observerCardBackground:
+        "linear-gradient(180deg, rgba(249,247,255,0.96) 0%, rgba(238,233,248,0.92) 100%)",
+      observerBorder: "1px solid rgba(159,145,214,0.2)",
+      observerShadow: "0 18px 30px rgba(126,105,176,0.12)",
+      observerRadius: "20px",
+    },
+    dark: {
+      themeFamily: "galaxy",
+      pageBackground:
+        "radial-gradient(circle at 14% 16%, rgba(118,92,255,0.26) 0%, rgba(118,92,255,0) 20%), radial-gradient(circle at 84% 18%, rgba(74,165,255,0.18) 0%, rgba(74,165,255,0) 22%), radial-gradient(circle at 60% 76%, rgba(232,100,255,0.1) 0%, rgba(232,100,255,0) 26%), linear-gradient(180deg, #050913 0%, #0a1024 26%, #111733 58%, #141a39 100%)",
+      heroBackground:
+        "radial-gradient(circle at 82% 20%, rgba(115,102,255,0.18) 0%, rgba(115,102,255,0) 24%), linear-gradient(145deg, rgba(16,22,45,0.97) 0%, rgba(24,31,61,0.94) 55%, rgba(31,39,74,0.92) 100%)",
+      cardBackground:
+        "radial-gradient(circle at 18% 18%, rgba(109,96,255,0.12) 0%, rgba(109,96,255,0) 24%), linear-gradient(180deg, rgba(14,19,38,0.95) 0%, rgba(22,28,54,0.91) 100%)",
+      heroRadius: "34px 42px 36px 46px / 36px 32px 42px 38px",
+      featureRadius: "30px 38px 30px 42px / 34px 30px 40px 34px",
+      sectionRadius: "28px 34px 28px 38px / 32px 28px 36px 30px",
+      featureClipPath: "none",
+      observerHeroBackground:
+        "linear-gradient(180deg, rgba(18,24,44,0.98) 0%, rgba(25,33,58,0.94) 100%)",
+      observerCardBackground:
+        "linear-gradient(180deg, rgba(17,22,40,0.94) 0%, rgba(25,31,54,0.9) 100%)",
+      observerBorder: "1px solid rgba(112,130,204,0.18)",
+      observerShadow: "0 20px 34px rgba(4,8,25,0.32)",
+      observerRadius: "20px",
+    },
+  },
+  underwater: {
+    light: {
+      themeFamily: "underwater",
+      pageBackground:
+        "radial-gradient(circle at 16% 20%, rgba(169,232,244,0.76) 0%, rgba(169,232,244,0) 20%), radial-gradient(circle at 78% 18%, rgba(146,198,255,0.42) 0%, rgba(146,198,255,0) 26%), radial-gradient(circle at 60% 74%, rgba(214,249,255,0.46) 0%, rgba(214,249,255,0) 28%), radial-gradient(circle at 36% 88%, rgba(196,241,255,0.26) 0%, rgba(196,241,255,0) 22%), linear-gradient(180deg, #edfafd 0%, #dcf2fb 34%, #d7ecf7 68%, #e7f8fc 100%)",
+      heroBackground:
+        "radial-gradient(circle at 20% 18%, rgba(255,255,255,0.24) 0%, rgba(255,255,255,0) 22%), linear-gradient(145deg, rgba(238,252,255,0.98) 0%, rgba(223,244,250,0.94) 55%, rgba(214,235,247,0.94) 100%)",
+      cardBackground:
+        "radial-gradient(circle at 82% 24%, rgba(179,235,246,0.22) 0%, rgba(179,235,246,0) 26%), linear-gradient(180deg, rgba(242,253,255,0.95) 0%, rgba(226,246,251,0.92) 100%)",
+      text: "#1f3d48",
+      subtleText: "#426675",
+      faintText: "#628291",
+      inputBackground: "rgba(247,254,255,0.9)",
+      inputBorder: "#b6dbe7",
+      itemBackground: "rgba(228,248,252,0.86)",
+      softButtonBackground: "linear-gradient(180deg, #d6f5f9 0%, #beeaf2 100%)",
+      softButtonText: "#25596a",
+      navInactive: "rgba(224,246,250,0.78)",
+      navActive: "linear-gradient(135deg, #58c6d8 0%, #4f9fe6 100%)",
+      navText: "#1f5364",
+      toggleText: "#0f4856",
+      primary: "linear-gradient(135deg, #58c6d8 0%, #4f9fe6 100%)",
+      toggleBackground: "linear-gradient(135deg, #66d8e6 0%, #4f9fe6 100%)",
+      border: "1px solid rgba(112,184,205,0.22)",
+      shadow: "0 22px 36px rgba(93,165,198,0.16)",
+      heroShadow: "0 28px 48px rgba(92,160,194,0.18)",
+      glow: "rgba(88, 198, 216, 0.28)",
+      track: "#c9eaf2",
+      chartSurface: "rgba(239,252,255,0.78)",
+      chartGrid: "rgba(84,139,158,0.14)",
+      chartLabel: "#4d7281",
+      heroRadius: "38px 28px 40px 26px / 28px 38px 30px 42px",
+      featureRadius: "36px 26px 38px 24px / 28px 40px 30px 42px",
+      sectionRadius: "34px 24px 36px 24px / 26px 38px 28px 40px",
+      featureClipPath: "none",
+      observerHeroBackground:
+        "linear-gradient(180deg, rgba(234,249,252,0.98) 0%, rgba(218,241,247,0.94) 100%)",
+      observerCardBackground:
+        "linear-gradient(180deg, rgba(241,252,255,0.96) 0%, rgba(223,242,248,0.92) 100%)",
+      observerBorder: "1px solid rgba(113,178,197,0.18)",
+      observerShadow: "0 18px 28px rgba(91,152,181,0.14)",
+      observerRadius: "18px",
+    },
+    dark: {
+      themeFamily: "underwater",
+      pageBackground:
+        "radial-gradient(circle at 14% 18%, rgba(47,148,179,0.3) 0%, rgba(47,148,179,0) 22%), radial-gradient(circle at 82% 16%, rgba(63,124,201,0.26) 0%, rgba(63,124,201,0) 22%), radial-gradient(circle at 58% 76%, rgba(63,197,191,0.16) 0%, rgba(63,197,191,0) 28%), radial-gradient(circle at 30% 86%, rgba(135,223,255,0.08) 0%, rgba(135,223,255,0) 18%), linear-gradient(180deg, #06141d 0%, #0b202d 30%, #0d2938 56%, #103344 100%)",
+      heroBackground:
+        "radial-gradient(circle at 82% 20%, rgba(88,210,215,0.16) 0%, rgba(88,210,215,0) 24%), linear-gradient(145deg, rgba(11,34,46,0.96) 0%, rgba(15,48,63,0.93) 55%, rgba(22,61,79,0.9) 100%)",
+      cardBackground:
+        "radial-gradient(circle at 18% 18%, rgba(69,175,193,0.14) 0%, rgba(69,175,193,0) 26%), linear-gradient(180deg, rgba(11,28,40,0.94) 0%, rgba(18,42,56,0.9) 100%)",
+      text: "#ecfbff",
+      subtleText: "#bedce5",
+      faintText: "#90b7c3",
+      inputBackground: "rgba(8,25,34,0.9)",
+      inputBorder: "#285267",
+      itemBackground: "rgba(14,38,50,0.84)",
+      softButtonBackground: "linear-gradient(180deg, #174359 0%, #12384c 100%)",
+      softButtonText: "#eefcff",
+      navInactive: "rgba(20,50,67,0.76)",
+      navActive: "linear-gradient(135deg, #2f8ccf 0%, #47d1c8 100%)",
+      navText: "#eafcff",
+      primary: "linear-gradient(135deg, #2f8ccf 0%, #47d1c8 100%)",
+      toggleBackground: "linear-gradient(135deg, #2f8ccf 0%, #47d1c8 100%)",
+      toggleText: "#07202a",
+      border: "1px solid rgba(90,166,190,0.16)",
+      shadow: "0 24px 42px rgba(1,14,21,0.42)",
+      heroShadow: "0 30px 58px rgba(0,12,18,0.44)",
+      glow: "rgba(71, 209, 200, 0.24)",
+      track: "#1c4759",
+      chartSurface: "rgba(8,24,34,0.76)",
+      chartGrid: "rgba(121,185,206,0.14)",
+      chartLabel: "#b6d9e4",
+      heroRadius: "40px 28px 42px 28px / 30px 42px 32px 44px",
+      featureRadius: "36px 26px 40px 26px / 28px 40px 30px 42px",
+      sectionRadius: "34px 24px 38px 24px / 26px 40px 30px 42px",
+      featureClipPath: "none",
+      observerHeroBackground:
+        "linear-gradient(180deg, rgba(10,31,43,0.98) 0%, rgba(16,43,57,0.94) 100%)",
+      observerCardBackground:
+        "linear-gradient(180deg, rgba(10,28,39,0.95) 0%, rgba(17,40,52,0.9) 100%)",
+      observerBorder: "1px solid rgba(82,149,170,0.16)",
+      observerShadow: "0 18px 30px rgba(3,13,20,0.28)",
+      observerRadius: "18px",
+    },
+  },
+  forest: {
+    light: {
+      themeFamily: "forest",
+      pageBackground:
+        "radial-gradient(circle at 14% 20%, rgba(212,235,185,0.8) 0%, rgba(212,235,185,0) 22%), radial-gradient(circle at 82% 16%, rgba(187,221,180,0.42) 0%, rgba(187,221,180,0) 24%), radial-gradient(circle at 64% 76%, rgba(241,230,196,0.46) 0%, rgba(241,230,196,0) 28%), radial-gradient(circle at 40% 88%, rgba(208,226,183,0.22) 0%, rgba(208,226,183,0) 22%), linear-gradient(180deg, #f3f1e4 0%, #ebf2e5 36%, #e5eddc 68%, #f2efe5 100%)",
+      heroBackground:
+        "radial-gradient(circle at 18% 18%, rgba(240,231,190,0.24) 0%, rgba(240,231,190,0) 24%), linear-gradient(145deg, rgba(248,248,238,0.98) 0%, rgba(236,244,230,0.94) 55%, rgba(226,237,217,0.92) 100%)",
+      cardBackground:
+        "radial-gradient(circle at 82% 22%, rgba(197,222,174,0.22) 0%, rgba(197,222,174,0) 28%), linear-gradient(180deg, rgba(249,248,240,0.96) 0%, rgba(236,243,230,0.92) 100%)",
+      text: "#2e3927",
+      subtleText: "#55634d",
+      faintText: "#77826d",
+      inputBackground: "rgba(250,251,244,0.9)",
+      inputBorder: "#cfd8bc",
+      itemBackground: "rgba(240,246,234,0.84)",
+      softButtonBackground: "linear-gradient(180deg, #e3efd9 0%, #d3e4c8 100%)",
+      softButtonText: "#3d5135",
+      navInactive: "rgba(236,244,228,0.76)",
+      navActive: "linear-gradient(135deg, #8db26f 0%, #5f9b6a 100%)",
+      navText: "#365135",
+      toggleText: "#30492a",
+      primary: "linear-gradient(135deg, #8db26f 0%, #5f9b6a 100%)",
+      toggleBackground: "linear-gradient(135deg, #9cbc78 0%, #5f9b6a 100%)",
+      border: "1px solid rgba(132,158,112,0.2)",
+      shadow: "0 20px 36px rgba(118,138,95,0.16)",
+      heroShadow: "0 28px 48px rgba(118,138,95,0.18)",
+      glow: "rgba(111, 163, 106, 0.24)",
+      track: "#d7e2c9",
+      chartSurface: "rgba(247,249,241,0.8)",
+      chartGrid: "rgba(106,126,83,0.13)",
+      chartLabel: "#65785e",
+      heroRadius: "30px 38px 28px 44px / 40px 28px 42px 30px",
+      featureRadius: "28px 36px 24px 40px / 38px 28px 40px 30px",
+      sectionRadius: "24px 34px 24px 38px / 34px 24px 38px 28px",
+      featureClipPath: "none",
+      observerHeroBackground:
+        "linear-gradient(180deg, rgba(247,248,239,0.98) 0%, rgba(235,240,226,0.94) 100%)",
+      observerCardBackground:
+        "linear-gradient(180deg, rgba(248,249,242,0.96) 0%, rgba(232,239,224,0.92) 100%)",
+      observerBorder: "1px solid rgba(133,154,110,0.2)",
+      observerShadow: "0 18px 28px rgba(110,127,90,0.12)",
+      observerRadius: "18px",
+    },
+    dark: {
+      themeFamily: "forest",
+      pageBackground:
+        "radial-gradient(circle at 14% 18%, rgba(85,126,73,0.32) 0%, rgba(85,126,73,0) 22%), radial-gradient(circle at 82% 16%, rgba(124,100,59,0.2) 0%, rgba(124,100,59,0) 22%), radial-gradient(circle at 60% 76%, rgba(109,166,117,0.16) 0%, rgba(109,166,117,0) 26%), radial-gradient(circle at 30% 84%, rgba(172,138,85,0.08) 0%, rgba(172,138,85,0) 20%), linear-gradient(180deg, #11160f 0%, #182116 28%, #1d281a 56%, #243020 100%)",
+      heroBackground:
+        "radial-gradient(circle at 82% 20%, rgba(116,178,110,0.12) 0%, rgba(116,178,110,0) 22%), linear-gradient(145deg, rgba(25,34,23,0.96) 0%, rgba(30,43,29,0.93) 55%, rgba(40,53,35,0.9) 100%)",
+      cardBackground:
+        "radial-gradient(circle at 18% 18%, rgba(105,160,98,0.12) 0%, rgba(105,160,98,0) 24%), linear-gradient(180deg, rgba(24,33,21,0.94) 0%, rgba(31,42,27,0.9) 100%)",
+      text: "#edf5e8",
+      subtleText: "#c7d5c0",
+      faintText: "#95a58f",
+      inputBackground: "rgba(20,28,18,0.9)",
+      inputBorder: "#42523f",
+      itemBackground: "rgba(30,40,26,0.82)",
+      softButtonBackground: "linear-gradient(180deg, #314a32 0%, #293d29 100%)",
+      softButtonText: "#eef5ea",
+      navInactive: "rgba(41,57,39,0.74)",
+      navActive: "linear-gradient(135deg, #4f8b58 0%, #6dbb75 100%)",
+      navText: "#eef4ea",
+      primary: "linear-gradient(135deg, #4f8b58 0%, #6dbb75 100%)",
+      toggleBackground: "linear-gradient(135deg, #4f8b58 0%, #6dbb75 100%)",
+      toggleText: "#102113",
+      border: "1px solid rgba(121,149,107,0.16)",
+      shadow: "0 24px 42px rgba(10,14,8,0.42)",
+      heroShadow: "0 30px 56px rgba(8,12,7,0.44)",
+      glow: "rgba(109, 187, 117, 0.22)",
+      track: "#344332",
+      chartSurface: "rgba(20,27,18,0.78)",
+      chartGrid: "rgba(132,161,119,0.14)",
+      chartLabel: "#c3d3bc",
+      heroRadius: "32px 40px 30px 44px / 42px 30px 44px 32px",
+      featureRadius: "28px 38px 26px 42px / 38px 28px 40px 32px",
+      sectionRadius: "24px 36px 24px 40px / 34px 24px 38px 28px",
+      featureClipPath: "none",
+      observerHeroBackground:
+        "linear-gradient(180deg, rgba(24,33,21,0.98) 0%, rgba(31,42,27,0.94) 100%)",
+      observerCardBackground:
+        "linear-gradient(180deg, rgba(24,33,21,0.95) 0%, rgba(34,45,29,0.9) 100%)",
+      observerBorder: "1px solid rgba(112,138,98,0.16)",
+      observerShadow: "0 18px 30px rgba(8,12,7,0.26)",
+      observerRadius: "18px",
+    },
+  },
+};
+
+function getAppTheme(isDarkMode, family = "galaxy") {
+  const baseTheme = isDarkMode ? mellowDarkTheme : mellowLightTheme;
+  const familyOverrides =
+    themeFamilyOverrides[family]?.[isDarkMode ? "dark" : "light"] || {};
+
+  return {
+    ...baseTheme,
+    ...familyOverrides,
+    themeFamily: family,
+  };
+}
+
+const sampleOutsiderPeople = [
+  {
+    id: "aria",
+    name: "Aria",
+    themeFamily: "galaxy",
+    status: "All systems stable",
+    moodScore: 4,
+    systems: [
+      { label: "meds", value: "on track", note: "Taken this morning" },
+      { label: "food", value: "steady", note: "Three meals logged today" },
+      { label: "hygiene", value: "solid", note: "Two of three habits done" },
+      { label: "sleep", value: "logged", note: "Bed and wake times recorded" },
+      { label: "exercise", value: "moving", note: "One walk logged today" },
+    ],
+    alignments: [
+      { label: "Meds streak", summary: "10 days in a row" },
+      { label: "Exercise streak", summary: "3 days in a row" },
+    ],
+    activity: [
+      "Mood logged as good",
+      "Lunch added at 1:10 PM",
+      "Medication recorded at 8:05 AM",
+    ],
+  },
+  {
+    id: "river",
+    name: "River",
+    themeFamily: "underwater",
+    status: "Attention needed",
+    moodScore: 3,
+    systems: [
+      { label: "meds", value: "pending", note: "No med check yet" },
+      { label: "food", value: "light", note: "One meal logged today" },
+      { label: "hygiene", value: "partial", note: "One hygiene habit checked" },
+      { label: "sleep", value: "open", note: "Wake time missing" },
+      { label: "exercise", value: "quiet", note: "No movement logged yet" },
+    ],
+    alignments: [
+      { label: "Food streak", summary: "4 days with meals logged" },
+      { label: "Sleep streak", summary: "1 day with full sleep data" },
+    ],
+    activity: [
+      "Breakfast added at 9:12 AM",
+      "Mood logged as neutral",
+      "Shower checked at 7:40 AM",
+    ],
+  },
+  {
+    id: "sage",
+    name: "Sage",
+    themeFamily: "forest",
+    status: "All systems stable",
+    moodScore: 2,
+    systems: [
+      { label: "meds", value: "on track", note: "Medication logged today" },
+      { label: "food", value: "steady", note: "Two meals logged today" },
+      { label: "hygiene", value: "complete", note: "All three hygiene habits done" },
+      { label: "sleep", value: "logged", note: "Sleep quality recorded" },
+      { label: "exercise", value: "complete", note: "Exercise session logged" },
+    ],
+    alignments: [
+      { label: "Hygiene streak", summary: "6 days in a row" },
+      { label: "Cleaning streak", summary: "2 days in a row" },
+    ],
+    activity: [
+      "Exercise logged at 4:20 PM",
+      "Mood logged as low",
+      "Sleep quality set to 4 out of 5",
+    ],
+  },
+];
+
+const samplePendingRequests = [
+  {
+    id: "req-1",
+    name: "Morgan",
+    note: "Requested outsider access by code.",
+  },
+  {
+    id: "req-2",
+    name: "Jules",
+    note: "Requested outsider access by link.",
+  },
+];
+
+const sampleConnectedOutsiders = [
+  {
+    id: "out-1",
+    name: "Casey",
+    nameVisibility: "display",
+    notificationCap: "3 per day",
+    cooldownLength: "15 minutes",
+  },
+  {
+    id: "out-2",
+    name: "Robin",
+    nameVisibility: "secondary",
+    notificationCap: "1 per day",
+    cooldownLength: "30 minutes",
+  },
+];
+
 const pageStyle = (theme) => ({
   minHeight: "100vh",
   background: theme.pageBackground,
-  padding: "24px",
+  padding: "clamp(12px, 4vw, 24px)",
   fontFamily: "'Trebuchet MS', 'Segoe UI', sans-serif",
   color: theme.text,
   position: "relative",
@@ -2064,62 +3782,70 @@ const pageStyle = (theme) => ({
 const containerStyle = {
   maxWidth: "1100px",
   margin: "0 auto",
+  width: "100%",
+  minWidth: 0,
 };
 
 const heroCardStyle = (theme) => ({
   background: theme.heroBackground,
-  borderRadius: "28px",
-  padding: "24px",
+  borderRadius: theme.heroRadius || "28px",
+  padding: "clamp(16px, 4vw, 24px)",
   boxShadow: theme.heroShadow,
-  marginBottom: "20px",
+  marginBottom: "24px",
   display: "flex",
   justifyContent: "space-between",
-  alignItems: "center",
-  gap: "16px",
+  alignItems: "stretch",
+  gap: "18px",
   flexWrap: "wrap",
   border: theme.border,
   position: "relative",
   overflow: "hidden",
+  width: "100%",
+  minWidth: 0,
+  isolation: "isolate",
 });
 
 const featureCardStyle = (theme) => ({
   background: theme.cardBackground,
-  borderRadius: "26px",
-  padding: "22px",
+  borderRadius: theme.featureRadius || "26px",
+  padding: "clamp(18px, 4vw, 24px)",
   boxShadow: theme.shadow,
   border: theme.border,
-  clipPath:
-    "polygon(0 14px, 14px 0, calc(100% - 18px) 0, 100% 10px, 100% calc(100% - 14px), calc(100% - 10px) 100%, 12px 100%, 0 calc(100% - 18px))",
+  clipPath: theme.featureClipPath || "none",
   position: "relative",
   overflow: "hidden",
+  width: "100%",
+  minWidth: 0,
+  maxWidth: "100%",
+  isolation: "isolate",
 });
 
 const sectionCardStyle = (theme, section) => {
   const sectionThemes = {
     dashboard: {
-      glow: darkModeSafe(theme, "rgba(124, 112, 255, 0.24)", "rgba(242, 183, 92, 0.26)"),
+      glow: darkModeSafe(theme, "rgba(155, 145, 255, 0.18)", "rgba(216, 176, 255, 0.16)"),
       tint: darkModeSafe(
         theme,
-        "radial-gradient(circle at 16% 18%, rgba(124,112,255,0.14) 0%, rgba(124,112,255,0) 34%)",
-        "radial-gradient(circle at 14% 16%, rgba(255,206,120,0.2) 0%, rgba(255,206,120,0) 32%)"
+        "radial-gradient(circle at 16% 18%, rgba(140,126,255,0.12) 0%, rgba(140,126,255,0) 34%)",
+        "radial-gradient(circle at 14% 16%, rgba(214,182,255,0.15) 0%, rgba(214,182,255,0) 32%)"
       ),
       tilt: "-0.35deg",
     },
     signals: {
-      glow: darkModeSafe(theme, "rgba(116, 207, 255, 0.18)", "rgba(255, 187, 133, 0.18)"),
+      glow: darkModeSafe(theme, "rgba(128, 193, 255, 0.15)", "rgba(184, 176, 255, 0.14)"),
       tint: darkModeSafe(
         theme,
-        "radial-gradient(circle at 78% 18%, rgba(94,181,255,0.14) 0%, rgba(94,181,255,0) 28%)",
-        "radial-gradient(circle at 76% 18%, rgba(255,175,126,0.18) 0%, rgba(255,175,126,0) 28%)"
+        "radial-gradient(circle at 78% 18%, rgba(108,170,255,0.12) 0%, rgba(108,170,255,0) 28%)",
+        "radial-gradient(circle at 76% 18%, rgba(191,183,255,0.15) 0%, rgba(191,183,255,0) 28%)"
       ),
       tilt: "0.2deg",
     },
     jump: {
-      glow: darkModeSafe(theme, "rgba(173, 142, 255, 0.18)", "rgba(255, 211, 132, 0.2)"),
+      glow: darkModeSafe(theme, "rgba(176, 145, 255, 0.16)", "rgba(214, 192, 255, 0.15)"),
       tint: darkModeSafe(
         theme,
-        "radial-gradient(circle at 82% 72%, rgba(160,126,255,0.15) 0%, rgba(160,126,255,0) 30%)",
-        "radial-gradient(circle at 84% 70%, rgba(255,214,132,0.2) 0%, rgba(255,214,132,0) 30%)"
+        "radial-gradient(circle at 82% 72%, rgba(166,136,255,0.13) 0%, rgba(166,136,255,0) 30%)",
+        "radial-gradient(circle at 84% 70%, rgba(201,188,255,0.14) 0%, rgba(201,188,255,0) 30%)"
       ),
       tilt: "-0.15deg",
     },
@@ -2160,11 +3886,11 @@ const sectionCardStyle = (theme, section) => {
       tilt: "0.18deg",
     },
     goals: {
-      glow: darkModeSafe(theme, "rgba(120, 190, 255, 0.18)", "rgba(255, 196, 98, 0.22)"),
+      glow: darkModeSafe(theme, "rgba(134, 168, 255, 0.16)", "rgba(200, 183, 255, 0.15)"),
       tint: darkModeSafe(
         theme,
-        "radial-gradient(circle at 82% 20%, rgba(120,190,255,0.14) 0%, rgba(120,190,255,0) 30%)",
-        "radial-gradient(circle at 82% 20%, rgba(255,204,123,0.18) 0%, rgba(255,204,123,0) 30%)"
+        "radial-gradient(circle at 82% 20%, rgba(126,170,255,0.12) 0%, rgba(126,170,255,0) 30%)",
+        "radial-gradient(circle at 82% 20%, rgba(205,189,255,0.14) 0%, rgba(205,189,255,0) 30%)"
       ),
       tilt: "-0.2deg",
     },
@@ -2205,42 +3931,64 @@ const sectionCardStyle = (theme, section) => {
       tilt: "-0.1deg",
     },
     care: {
-      glow: darkModeSafe(theme, "rgba(245, 163, 255, 0.16)", "rgba(240, 168, 104, 0.16)"),
+      glow: darkModeSafe(theme, "rgba(207, 150, 255, 0.15)", "rgba(198, 180, 255, 0.14)"),
       tint: darkModeSafe(
         theme,
-        "radial-gradient(circle at 84% 18%, rgba(245,163,255,0.12) 0%, rgba(245,163,255,0) 28%)",
-        "radial-gradient(circle at 84% 18%, rgba(240,168,104,0.16) 0%, rgba(240,168,104,0) 28%)"
+        "radial-gradient(circle at 84% 18%, rgba(214,162,255,0.12) 0%, rgba(214,162,255,0) 28%)",
+        "radial-gradient(circle at 84% 18%, rgba(205,190,255,0.14) 0%, rgba(205,190,255,0) 28%)"
       ),
       tilt: "0.12deg",
     },
   };
 
   const accent = sectionThemes[section] || sectionThemes.dashboard;
+  const frame = getSectionFrameStyle(theme, section, false);
 
   return {
     ...featureCardStyle(theme),
-    background: `${accent.tint}, ${theme.cardBackground}`,
-    boxShadow: `${theme.shadow}, 0 0 0 1px rgba(255,255,255,0.03), 0 18px 34px ${accent.glow}`,
-    transform: `rotate(${accent.tilt})`,
+    background: `${frame.backgroundOverlay}, ${accent.tint}, ${theme.cardBackground}`,
+    boxShadow: `${theme.shadow}, ${frame.boxShadow}, 0 18px 34px ${accent.glow}`,
+    borderRadius: theme.sectionRadius || theme.featureRadius || "26px",
+  };
+};
+
+const observerSectionCardStyle = (theme, section) => {
+  const observerAccents = {
+    dashboard: "radial-gradient(circle at 16% 18%, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0) 26%)",
+    signals: "radial-gradient(circle at 82% 18%, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0) 24%)",
+    jump: "radial-gradient(circle at 18% 82%, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0) 24%)",
+    care: "radial-gradient(circle at 76% 74%, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0) 24%)",
+    goals: "radial-gradient(circle at 20% 18%, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0) 22%)",
+  };
+  const frame = getSectionFrameStyle(theme, section, true);
+
+  return {
+    ...featureCardStyle(theme),
+    background: `${frame.backgroundOverlay}, ${observerAccents[section] || observerAccents.dashboard}, ${theme.observerCardBackground || theme.cardBackground}`,
+    border: theme.observerBorder || theme.border,
+    boxShadow: `${theme.observerShadow || theme.shadow}, ${frame.boxShadow}`,
+    borderRadius: theme.observerRadius || "18px",
+    clipPath: "none",
   };
 };
 
 const gridStyle = {
   display: "grid",
-  gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
-  gap: "18px",
+  gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 220px), 1fr))",
+  gap: "20px",
 };
 
 const chartsPageStyle = {
   display: "grid",
-  gap: "18px",
+  gap: "22px",
 };
 
 const titleStyle = (theme) => ({
   margin: 0,
-  fontSize: "2.3rem",
+  fontSize: "clamp(1.75rem, 5vw, 2.3rem)",
   color: theme.text,
   letterSpacing: "0.02em",
+  overflowWrap: "anywhere",
 });
 
 const tinyLabelStyle = (theme) => ({
@@ -2253,55 +4001,66 @@ const tinyLabelStyle = (theme) => ({
 });
 
 const subtitleStyle = (theme) => ({
-  margin: "6px 0 4px 0",
+  margin: "8px 0 6px 0",
   color: theme.subtleText,
+  lineHeight: 1.5,
 });
 
 const dateStyle = (theme) => ({
   margin: 0,
   color: theme.faintText,
   fontSize: "0.95rem",
+  lineHeight: 1.45,
 });
 
 const lastActionStyle = (theme) => ({
-  marginTop: "8px",
+  marginTop: "10px",
   color: theme.subtleText,
   fontSize: "0.95rem",
+  lineHeight: 1.45,
 });
 
 const headerControlsStyle = {
   display: "flex",
   gap: "12px",
-  alignItems: "center",
+  alignItems: "stretch",
   flexWrap: "wrap",
+  width: "100%",
+  minWidth: 0,
 };
 
 const cardHeaderRowStyle = {
   display: "flex",
   justifyContent: "space-between",
   alignItems: "start",
-  gap: "10px",
+  gap: "12px",
+  flexWrap: "wrap",
 };
 
 const emojiStyle = {
   fontSize: "1.15rem",
-  marginBottom: "6px",
-  letterSpacing: "0.16em",
+  marginBottom: "10px",
+  letterSpacing: "0.14em",
   textTransform: "uppercase",
   fontWeight: "bold",
+  width: "fit-content",
 };
 
 const sectionTitleStyle = (theme) => ({
   marginTop: 0,
-  marginBottom: "8px",
+  marginBottom: "10px",
   color: theme.text,
-  fontSize: "1.35rem",
+  fontSize: "clamp(1.15rem, 4vw, 1.35rem)",
+  overflowWrap: "anywhere",
+  lineHeight: 1.25,
 });
 
 const helperTextStyle = (theme) => ({
   marginTop: 0,
   color: theme.faintText,
   fontSize: "0.95rem",
+  overflowWrap: "anywhere",
+  lineHeight: 1.55,
 });
 
 const countTextStyle = (theme) => ({
@@ -2316,38 +4075,44 @@ const emptyTextStyle = (theme) => ({
 
 const labelStyle = (theme) => ({
   display: "block",
-  marginBottom: "8px",
+  marginBottom: "10px",
   fontWeight: "bold",
   color: theme.subtleText,
 });
 
 const smallInfoStyle = (theme) => ({
-  margin: "8px 0 0 0",
+  margin: "10px 0 0 0",
   color: theme.faintText,
   fontSize: "0.9rem",
+  overflowWrap: "anywhere",
+  lineHeight: 1.55,
 });
 
 const rowStyle = {
   display: "flex",
-  gap: "10px",
-  alignItems: "center",
+  gap: "12px",
+  alignItems: "stretch",
   flexWrap: "wrap",
+  flexDirection: "column",
+  width: "100%",
 };
 
 const buttonWrapStyle = {
   display: "flex",
-  gap: "10px",
+  gap: "12px",
   flexWrap: "wrap",
+  alignItems: "stretch",
+  width: "100%",
 };
 
 const sleepGridStyle = {
   display: "grid",
-  gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
-  gap: "14px",
+  gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 160px), 1fr))",
+  gap: "16px",
 };
 
 const inputStyle = (theme) => ({
-  padding: "12px 14px",
+  padding: "13px 14px",
   borderRadius: "12px",
   border: `1px solid ${theme.inputBorder}`,
   color: theme.text,
@@ -2356,27 +4121,51 @@ const inputStyle = (theme) => ({
   boxSizing: "border-box",
   fontSize: "1rem",
   boxShadow: `inset 0 1px 0 ${theme.star}`,
+  minWidth: 0,
+  lineHeight: 1.4,
 });
 
 const primaryButtonStyle = (theme) => ({
   background: theme.primary,
   color: theme.primaryText,
   border: "none",
-  borderRadius: "12px",
-  padding: "12px 16px",
+  borderRadius:
+    theme.themeFamily === "underwater"
+      ? "18px 14px 18px 14px / 14px 18px 14px 18px"
+      : theme.themeFamily === "forest"
+      ? "14px 18px 14px 18px / 18px 14px 18px 16px"
+      : "999px",
+  padding: "13px 16px",
   cursor: "pointer",
   fontWeight: "bold",
   boxShadow: `0 10px 22px ${theme.glow}`,
+  minHeight: "48px",
+  maxWidth: "100%",
+  whiteSpace: "normal",
+  overflowWrap: "anywhere",
+  lineHeight: 1.35,
+  textAlign: "center",
 });
 
 const softButtonStyle = (theme) => ({
   background: theme.softButtonBackground,
   color: theme.softButtonText,
   border: "none",
-  borderRadius: "12px",
-  padding: "12px 16px",
+  borderRadius:
+    theme.themeFamily === "underwater"
+      ? "18px 14px 18px 14px / 14px 18px 14px 18px"
+      : theme.themeFamily === "forest"
+      ? "14px 18px 14px 18px / 18px 14px 18px 16px"
+      : "999px",
+  padding: "13px 16px",
   cursor: "pointer",
   fontWeight: "bold",
+  minHeight: "48px",
+  maxWidth: "100%",
+  whiteSpace: "normal",
+  overflowWrap: "anywhere",
+  lineHeight: 1.35,
+  textAlign: "center",
 });
 
 const successButtonStyle = {
@@ -2384,30 +4173,51 @@ const successButtonStyle = {
   color: "#fffaf2",
   border: "none",
   borderRadius: "12px",
-  padding: "12px 16px",
+  padding: "13px 16px",
   cursor: "pointer",
   fontWeight: "bold",
+  minHeight: "48px",
+  maxWidth: "100%",
+  whiteSpace: "normal",
+  overflowWrap: "anywhere",
+  lineHeight: 1.35,
+  textAlign: "center",
 };
 
 const smallRemoveButtonStyle = (theme) => ({
   backgroundColor: theme.softButtonBackground,
   color: theme.softButtonText,
   border: "none",
-  borderRadius: "10px",
+  borderRadius: theme.themeFamily === "galaxy" ? "999px" : "12px",
   padding: "8px 10px",
   cursor: "pointer",
   fontWeight: "bold",
+  maxWidth: "100%",
+  whiteSpace: "normal",
+  overflowWrap: "anywhere",
 });
 
 const navButtonStyle = (active, theme) => ({
   background: active ? theme.navActive : theme.navInactive,
   color: active ? theme.primaryText : theme.navText,
   border: "none",
-  borderRadius: "999px",
-  padding: "10px 14px",
+  borderRadius:
+    theme.themeFamily === "underwater"
+      ? "22px 18px 22px 18px / 18px 22px 18px 22px"
+      : theme.themeFamily === "forest"
+      ? "18px 24px 18px 22px / 22px 18px 22px 20px"
+      : "999px",
+  padding: "12px 14px",
   cursor: "pointer",
   fontWeight: "bold",
   boxShadow: active ? `0 12px 24px ${theme.glow}` : "none",
+  minHeight: "48px",
+  flex: "1 1 140px",
+  maxWidth: "100%",
+  whiteSpace: "normal",
+  overflowWrap: "anywhere",
+  lineHeight: 1.35,
+  textAlign: "center",
 });
 
 const mealListStyle = {
@@ -2419,12 +4229,14 @@ const mealListStyle = {
 const mealItemStyle = (theme) => ({
   display: "flex",
   justifyContent: "space-between",
-  alignItems: "center",
-  gap: "10px",
+  alignItems: "flex-start",
+  gap: "12px",
+  flexWrap: "wrap",
   backgroundColor: theme.itemBackground,
-  padding: "10px 12px",
+  padding: "14px",
   borderRadius: "12px",
-  marginBottom: "8px",
+  marginBottom: "10px",
+  minWidth: 0,
 });
 
 const rangeStyle = {
@@ -2441,15 +4253,27 @@ const themeToggleStyle = (theme) => ({
   background: theme.toggleBackground,
   color: theme.toggleText,
   border: "none",
-  borderRadius: "999px",
-  padding: "10px 14px",
+  borderRadius:
+    theme.themeFamily === "underwater"
+      ? "22px 18px 22px 18px / 18px 22px 18px 22px"
+      : theme.themeFamily === "forest"
+      ? "18px 24px 18px 22px / 22px 18px 22px 20px"
+      : "999px",
+  padding: "12px 14px",
   cursor: "pointer",
   fontWeight: "bold",
   boxShadow: `0 12px 24px ${theme.glow}`,
+  minHeight: "48px",
+  flex: "1 1 160px",
+  maxWidth: "100%",
+  whiteSpace: "normal",
+  overflowWrap: "anywhere",
+  lineHeight: 1.35,
+  textAlign: "center",
 });
 
 const statusBadgeStyle = (status, theme) => ({
-  padding: "10px 14px",
+  padding: "12px 14px",
   borderRadius: "999px",
   fontWeight: "bold",
   backgroundColor:
@@ -2459,19 +4283,48 @@ const statusBadgeStyle = (status, theme) => ({
       ? "rgba(201,107,107,0.22)"
       : theme.itemBackground,
   color: theme.text,
+  width: "100%",
+  boxSizing: "border-box",
+  textAlign: "center",
+  lineHeight: 1.4,
+});
+
+const feedbackMessageStyle = (tone, theme) => ({
+  marginTop: "14px",
+  padding: "12px 14px",
+  borderRadius: "14px",
+  border: theme.border,
+  backgroundColor:
+    tone === "error"
+      ? "rgba(201,107,107,0.16)"
+      : tone === "info"
+      ? theme.itemBackground
+      : "rgba(105,201,178,0.16)",
+  color: theme.text,
+  fontSize: "0.95rem",
+  lineHeight: 1.45,
 });
 
 const dashboardHeroStyle = (theme) => ({
   display: "flex",
   justifyContent: "space-between",
-  alignItems: "center",
-  gap: "20px",
-  padding: "18px 20px",
+  alignItems: "stretch",
+  flexDirection: "column",
+  gap: "22px",
+  padding: "20px",
   borderRadius: "22px",
   background: `linear-gradient(145deg, ${theme.itemBackground} 0%, rgba(255,255,255,0.03) 100%)`,
-  marginBottom: "18px",
+  marginBottom: "20px",
   flexWrap: "wrap",
   boxShadow: `inset 0 1px 0 ${theme.star}, 0 14px 28px ${theme.glow}`,
+});
+
+const observerHeroStyle = (theme) => ({
+  ...dashboardHeroStyle(theme),
+  background: theme.observerHeroBackground || theme.heroBackground,
+  border: theme.observerBorder || theme.border,
+  borderRadius: theme.observerRadius || "18px",
+  boxShadow: theme.observerShadow || theme.shadow,
 });
 
 const dashboardKickerStyle = (theme) => ({
@@ -2485,16 +4338,18 @@ const dashboardKickerStyle = (theme) => ({
 
 const dashboardHeadingStyle = (theme) => ({
   margin: 0,
-  fontSize: "1.5rem",
+  fontSize: "clamp(1.25rem, 4vw, 1.5rem)",
   color: theme.text,
+  overflowWrap: "anywhere",
 });
 
 const dashboardPulseStyle = (theme) => ({
   position: "relative",
-  width: "112px",
-  height: "112px",
+  width: "clamp(88px, 28vw, 112px)",
+  aspectRatio: "1 / 1",
   display: "grid",
   placeItems: "center",
+  alignSelf: "center",
 });
 
 const dashboardPulseRingStyle = (theme) => ({
@@ -2506,8 +4361,8 @@ const dashboardPulseRingStyle = (theme) => ({
 });
 
 const dashboardPulseCoreStyle = (theme) => ({
-  width: "68px",
-  height: "68px",
+  width: "clamp(56px, 18vw, 68px)",
+  aspectRatio: "1 / 1",
   borderRadius: "50%",
   display: "grid",
   placeItems: "center",
@@ -2520,16 +4375,21 @@ const dashboardPulseCoreStyle = (theme) => ({
 
 const dashboardStatsGridStyle = {
   display: "grid",
-  gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
-  gap: "14px",
+  gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 160px), 1fr))",
+  gap: "16px",
 };
 
 const summaryCardStyle = (theme) => ({
-  background: `linear-gradient(155deg, ${theme.itemBackground} 0%, rgba(255,255,255,0.03) 100%)`,
-  borderRadius: "20px",
-  padding: "16px",
+  background:
+    theme.themeFamily === "underwater"
+      ? `radial-gradient(circle at 18% 18%, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0) 22%), linear-gradient(155deg, ${theme.itemBackground} 0%, rgba(255,255,255,0.03) 100%)`
+      : theme.themeFamily === "forest"
+      ? `radial-gradient(circle at 82% 18%, rgba(229,237,204,0.18) 0%, rgba(229,237,204,0) 22%), linear-gradient(155deg, ${theme.itemBackground} 0%, rgba(255,255,255,0.03) 100%)`
+      : `radial-gradient(circle at 18% 18%, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0) 20%), linear-gradient(155deg, ${theme.itemBackground} 0%, rgba(255,255,255,0.03) 100%)`,
+  borderRadius: theme.themeFamily === "underwater" ? "24px 18px 24px 18px / 18px 24px 18px 24px" : theme.themeFamily === "forest" ? "18px 24px 18px 28px / 24px 18px 24px 20px" : "20px 28px 20px 26px / 24px 20px 24px 22px",
+  padding: "18px",
   border: theme.border,
-  boxShadow: `0 16px 32px ${theme.glow}`,
+  boxShadow: `0 16px 32px ${theme.glow}, inset 0 1px 0 rgba(255,255,255,0.06)`,
 });
 
 const summaryLabelStyle = (theme) => ({
@@ -2542,41 +4402,61 @@ const summaryLabelStyle = (theme) => ({
 
 const summaryValueStyle = (theme) => ({
   color: theme.text,
-  fontSize: "1.5rem",
+  fontSize: "clamp(1.2rem, 4vw, 1.5rem)",
   fontWeight: "bold",
   marginTop: "8px",
+  overflowWrap: "anywhere",
 });
 
 const summaryNoteStyle = (theme) => ({
   color: theme.subtleText,
   fontSize: "0.9rem",
-  marginTop: "8px",
+  marginTop: "10px",
+  overflowWrap: "anywhere",
+  lineHeight: 1.5,
 });
 
 const quickLinkGridStyle = {
   display: "grid",
-  gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))",
-  gap: "10px",
+  gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 130px), 1fr))",
+  gap: "12px",
 };
 
 const goalFormGridStyle = {
   display: "grid",
-  gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
-  gap: "14px",
+  gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 160px), 1fr))",
+  gap: "16px",
 };
 
 const goalSuggestionHeaderStyle = {
   display: "flex",
   justifyContent: "space-between",
   alignItems: "center",
-  gap: "12px",
+  gap: "14px",
   flexWrap: "wrap",
 };
+
+const permissionsGridStyle = {
+  display: "grid",
+  gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 120px), 1fr))",
+  gap: "10px",
+};
+
+const permissionItemStyle = (theme) => ({
+  display: "flex",
+  alignItems: "center",
+  gap: "8px",
+  padding: "10px 12px",
+  borderRadius: "12px",
+  background: theme.itemBackground,
+  color: theme.text,
+  fontSize: "0.92rem",
+});
 
 const moodTagGridStyle = {
   display: "flex",
   flexWrap: "wrap",
-  gap: "10px",
+  gap: "12px",
 };
 
 const tagGroupLabelStyle = (theme) => ({
@@ -2614,18 +4494,27 @@ const quickJumpButtonStyle = (theme) => ({
   background: theme.softButtonBackground,
   color: theme.softButtonText,
   border: "none",
-  borderRadius: "18px",
-  padding: "12px 14px",
+  borderRadius:
+    theme.themeFamily === "underwater"
+      ? "22px 16px 22px 16px / 16px 22px 16px 22px"
+      : theme.themeFamily === "forest"
+      ? "18px 24px 18px 22px / 22px 18px 22px 20px"
+      : "22px",
+  padding: "13px 14px",
   cursor: "pointer",
   fontWeight: "bold",
   boxShadow: `0 10px 20px ${theme.glow}`,
+  minHeight: "48px",
+  width: "100%",
+  lineHeight: 1.35,
+  textAlign: "center",
 });
 
 const chartToolbarStyle = {
   display: "flex",
-  gap: "10px",
+  gap: "12px",
   flexWrap: "wrap",
-  marginBottom: "14px",
+  marginBottom: "16px",
 };
 
 const rangeChipStyle = (active, theme) => ({
@@ -2640,13 +4529,13 @@ const rangeChipStyle = (active, theme) => ({
 
 const chartStackStyle = {
   display: "grid",
-  gap: "18px",
+  gap: "20px",
 };
 
 const chartCardStyle = (theme) => ({
   background: `linear-gradient(160deg, ${theme.chartSurface} 0%, rgba(255,255,255,0.03) 100%)`,
   borderRadius: "22px",
-  padding: "16px",
+  padding: "18px",
   border: theme.border,
   boxShadow: `${theme.shadow}, 0 16px 30px ${theme.glow}`,
 });
@@ -2660,6 +4549,7 @@ const goalMetaStyle = (theme) => ({
   color: theme.subtleText,
   fontSize: "0.88rem",
   marginTop: "6px",
+  overflowWrap: "anywhere",
 });
 
 const goalProgressTrackStyle = (theme) => ({
@@ -2680,22 +4570,28 @@ const goalProgressFillStyle = (theme) => ({
 
 const rewardGridStyle = {
   display: "grid",
-  gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
-  gap: "12px",
+  gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 160px), 1fr))",
+  gap: "14px",
 };
 
 const rewardCardStyle = (theme) => ({
-  background: `linear-gradient(160deg, ${theme.itemBackground} 0%, rgba(255,255,255,0.04) 100%)`,
-  borderRadius: "18px",
-  padding: "14px",
+  background:
+    theme.themeFamily === "underwater"
+      ? `radial-gradient(circle at 84% 20%, rgba(211,247,252,0.14) 0%, rgba(211,247,252,0) 22%), linear-gradient(160deg, ${theme.itemBackground} 0%, rgba(255,255,255,0.04) 100%)`
+      : theme.themeFamily === "forest"
+      ? `radial-gradient(circle at 18% 20%, rgba(220,231,191,0.14) 0%, rgba(220,231,191,0) 22%), linear-gradient(160deg, ${theme.itemBackground} 0%, rgba(255,255,255,0.04) 100%)`
+      : `radial-gradient(circle at 18% 18%, rgba(145,130,255,0.08) 0%, rgba(145,130,255,0) 20%), linear-gradient(160deg, ${theme.itemBackground} 0%, rgba(255,255,255,0.04) 100%)`,
+  borderRadius: theme.themeFamily === "underwater" ? "22px 16px 22px 16px / 18px 24px 18px 24px" : theme.themeFamily === "forest" ? "18px 24px 18px 26px / 24px 18px 22px 20px" : "18px 24px 18px 24px / 22px 18px 22px 20px",
+  padding: "16px",
   border: theme.border,
-  boxShadow: `0 14px 28px ${theme.glow}`,
+  boxShadow: `0 14px 28px ${theme.glow}, inset 0 1px 0 rgba(255,255,255,0.06)`,
 });
 
 const rewardTitleStyle = (theme) => ({
   color: theme.text,
   fontWeight: "bold",
   marginBottom: "6px",
+  overflowWrap: "anywhere",
 });
 
 const popupOverlayStyle = {
@@ -2711,7 +4607,7 @@ const popupOverlayStyle = {
 const popupCardStyle = (theme) => ({
   width: "min(460px, 100%)",
   background: theme.heroBackground,
-  borderRadius: "24px",
+  borderRadius: theme.observerRadius || theme.heroRadius || "24px",
   padding: "22px",
   border: theme.border,
   boxShadow: theme.heroShadow,
@@ -2722,163 +4618,309 @@ function darkModeSafe(theme, galaxyValue, solarValue) {
   return theme.modeName === "Galaxy" ? galaxyValue : solarValue;
 }
 
-function formatShortDate(value) {
-  const date = new Date(`${value}T00:00:00`);
-  if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleDateString([], { month: "short", day: "numeric" });
+function getFeedbackTone(message = "") {
+  return /error|failed|could not|incorrect|not found/i.test(message) ? "error" : "success";
 }
 
-function buildLinePath(points) {
-  if (points.length === 0) return "";
-  if (points.length === 1) return `M ${points[0].x} ${points[0].y}`;
-  return points.map((point, index) => `${index === 0 ? "M" : "L"} ${point.x} ${point.y}`).join(" ");
+function renderFeedbackMessage(message, theme) {
+  if (!message) return null;
+
+  return <div style={feedbackMessageStyle(getFeedbackTone(message), theme)}>{message}</div>;
 }
 
-function LineTrendChart({ title, subtitle, data, yMax, series, theme }) {
-  const width = 640;
-  const height = 260;
-  const padding = { top: 24, right: 18, bottom: 40, left: 40 };
-  const chartWidth = width - padding.left - padding.right;
-  const chartHeight = height - padding.top - padding.bottom;
-  const safeMax = Math.max(yMax, 1);
+function normalizeConnectionPermissions(permissions) {
+  return {
+    ...DEFAULT_CONNECTION_PERMISSIONS,
+    ...(permissions && typeof permissions === "object" ? permissions : {}),
+  };
+}
 
-  const getX = (index) => {
-    if (data.length <= 1) return padding.left + chartWidth / 2;
-    return padding.left + (index / (data.length - 1)) * chartWidth;
+function getThemeLanguage(family = "galaxy") {
+  const tracker =
+    family === "underwater"
+      ? {
+          dashboard: "Current Overview",
+          actions: "Daily Currents",
+          progress: "Flow",
+          streaks: "Tides",
+          rewards: "Reefs",
+          activity: "Drift Log",
+          status: "Waters Today",
+          mood: "Depth",
+          support: "Pings",
+          greeting: "Welcome back",
+          dashboardSubtitle: "A calm reading of today's waters.",
+          dashboardKicker: "Today's current",
+          dashboardBody: "Follow the flow a little at a time and keep the day feeling manageable.",
+          emptyStreaks: "No active tides yet.",
+          emptyActivity: "No drift log entries yet.",
+          emptyRewards: "No reefs collected yet.",
+          nextReward: "finish an active tide to grow another reef.",
+          actionsSubtitle: "Open the spaces you may want to check first.",
+          progressSubtitle: "A clear readout of what has been logged so far.",
+          streaksSubtitle: "Current patterns stay visible here as a quiet source of momentum.",
+          rewardsSubtitle: "Your reward collection grows as goals complete.",
+          activitySubtitle: "A lightweight log to help you reorient.",
+          moodSubtitle: "A quick emotional snapshot without opening the full mood page.",
+        }
+      : family === "forest"
+      ? {
+          dashboard: "Grove Overview",
+          actions: "Daily Paths",
+          progress: "Growth",
+          streaks: "Trails",
+          rewards: "Blooms",
+          activity: "Path Log",
+          status: "Conditions Today",
+          mood: "Weather",
+          support: "Calls",
+          greeting: "Welcome back",
+          dashboardSubtitle: "A gentle clearing for today's progress.",
+          dashboardKicker: "Today's grove",
+          dashboardBody: "Take one steady step at a time and let the day settle into place.",
+          emptyStreaks: "No active trails yet.",
+          emptyActivity: "No path log entries yet.",
+          emptyRewards: "No blooms collected yet.",
+          nextReward: "finish an active trail to open another bloom.",
+          actionsSubtitle: "Open the tracker spaces you may want to visit first.",
+          progressSubtitle: "A grounded readout of what has been logged so far.",
+          streaksSubtitle: "Current patterns stay visible here as a quiet source of momentum.",
+          rewardsSubtitle: "Your reward collection grows as goals complete.",
+          activitySubtitle: "A lightweight log to help you reorient.",
+          moodSubtitle: "A quick emotional snapshot without opening the full mood page.",
+        }
+      : {
+          dashboard: "Cosmic Overview",
+          actions: "Daily Rituals",
+          progress: "Energy Flow",
+          streaks: "Alignments",
+          rewards: "Constellations",
+          activity: "Signal Log",
+          status: "Current State",
+          mood: "Emotional Orbit",
+          support: "Signals",
+          greeting: "Welcome back, stargazer",
+          dashboardSubtitle: "A gentle sky map for today.",
+          dashboardKicker: "Today's sky",
+          dashboardBody: "Take one soft step at a time and let the day unfold with a little more ease.",
+          emptyStreaks: "No active alignments yet.",
+          emptyActivity: "No signal log entries yet.",
+          emptyRewards: "No constellations collected yet.",
+          nextReward: "finish an active alignment to unlock another constellation.",
+          actionsSubtitle: "Open the tracker spaces you may want to visit first.",
+          progressSubtitle: "A gentle readout of what has been logged so far.",
+          streaksSubtitle: "Current goal patterns stay visible here as a quiet source of momentum.",
+          rewardsSubtitle: "Your reward collection grows as goals complete.",
+          activitySubtitle: "A lightweight activity note to help you reorient.",
+          moodSubtitle: "A quick emotional snapshot without opening the full mood page.",
+        };
+
+  const observer =
+    family === "underwater"
+      ? {
+          dashboard: "Submarine Panel",
+          status: "Systems Status",
+          activity: "Dive Log",
+          support: "Pings",
+          mood: "Depth",
+          streaks: "Tides",
+          rewards: "Reefs",
+          systems: "Systems Status",
+          empty: "Approved tracker connections will appear here once available.",
+          emptyBody: "No approved trackers are connected to this outsider account yet.",
+        }
+      : family === "forest"
+      ? {
+          dashboard: "Cabin Panel",
+          status: "Conditions",
+          activity: "Field Notes",
+          support: "Calls",
+          mood: "Weather",
+          streaks: "Trails",
+          rewards: "Blooms",
+          systems: "Conditions",
+          empty: "Approved tracker connections will appear here once available.",
+          emptyBody: "No approved trackers are connected to this outsider account yet.",
+        }
+      : {
+          dashboard: "Control Panel",
+          status: "Systems Status",
+          activity: "Activity Log",
+          support: "Signals",
+          mood: "Emotional Orbit",
+          streaks: "Alignments",
+          rewards: "Constellations",
+          systems: "Systems Status",
+          empty: "Approved tracker connections will appear here once available.",
+          emptyBody: "No approved trackers are connected to this outsider account yet.",
+        };
+
+  return { tracker, observer };
+}
+
+function getThemeRewardCopy(family = "galaxy") {
+  if (family === "underwater") {
+    return { singular: "Reef", plural: "Reefs" };
+  }
+
+  if (family === "forest") {
+    return { singular: "Bloom", plural: "Blooms" };
+  }
+
+  return { singular: "Constellation", plural: "Constellations" };
+}
+
+function getSectionAccentLabel(family = "galaxy", token = "Overview") {
+  const tokenGroups = {
+    dashboard: ["Overview", "Halo", "Starlight", "Sun", "Dawn"],
+    orbit: ["Moon", "Orbit", "Nova", "Mood", "Status"],
+    signal: ["Signal", "Spark", "Aurora", "Activity", "Requests"],
+    mission: ["Mission", "Quest", "Join", "Tracker", "Support", "Cooldown", "Connected"],
+    cluster: ["Bloom", "Constellation", "Nebula", "Cluster", "Rewards", "Glow", "Comet"],
   };
 
-  const getY = (value) => {
-    const normalized = Math.max(0, Math.min(value, safeMax)) / safeMax;
-    return padding.top + chartHeight - normalized * chartHeight;
+  const underwaterLabels = {
+    dashboard: "Current",
+    orbit: "Depth",
+    signal: "Drift",
+    mission: "Tide",
+    cluster: "Reef",
   };
 
-  const gridLines = Array.from({ length: 5 }, (_, index) => {
-    const value = (safeMax / 4) * index;
-    const y = getY(value);
-    return { value, y };
-  });
+  const forestLabels = {
+    dashboard: "Grove",
+    orbit: "Canopy",
+    signal: "Trail",
+    mission: "Root",
+    cluster: "Clearing",
+  };
 
-  return (
-    <div style={chartCardStyle(theme)}>
-      <div style={{ marginBottom: "12px" }}>
-        <h3 style={{ margin: 0, color: theme.text }}>{title}</h3>
-        <p style={{ margin: "6px 0 0 0", color: theme.subtleText, fontSize: "0.92rem" }}>{subtitle}</p>
-      </div>
+  const galaxyLabels = {
+    dashboard: "Overview",
+    orbit: "Orbit",
+    signal: "Signal",
+    mission: "Mission",
+    cluster: "Cluster",
+  };
 
-      <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", marginBottom: "12px" }}>
-        {series.map((item) => (
-          <div
-            key={item.key}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "8px",
-              padding: "7px 10px",
-              borderRadius: "999px",
-              background: theme.itemBackground,
-              color: theme.subtleText,
-              fontSize: "0.88rem",
-              fontWeight: "bold",
-            }}
-          >
-            <span
-              style={{
-                width: "10px",
-                height: "10px",
-                borderRadius: "50%",
-                backgroundColor: item.color,
-                boxShadow: `0 0 10px ${item.color}`,
-              }}
-            />
-            {item.label}
-          </div>
-        ))}
-      </div>
+  const groupKey =
+    Object.entries(tokenGroups).find(([, values]) => values.includes(token))?.[0] || "dashboard";
 
-      <svg viewBox={`0 0 ${width} ${height}`} style={{ width: "100%", height: "auto", display: "block" }}>
-        {gridLines.map((line) => (
-          <g key={line.value}>
-            <line
-              x1={padding.left}
-              y1={line.y}
-              x2={width - padding.right}
-              y2={line.y}
-              stroke={theme.chartGrid}
-              strokeWidth="1"
-            />
-            <text
-              x={padding.left - 10}
-              y={line.y + 4}
-              textAnchor="end"
-              fill={theme.chartLabel}
-              fontSize="11"
-            >
-              {Math.round(line.value)}
-            </text>
-          </g>
-        ))}
+  if (family === "underwater") return underwaterLabels[groupKey];
+  if (family === "forest") return forestLabels[groupKey];
+  return galaxyLabels[groupKey];
+}
 
-        {data.map((item, index) => (
-          <text
-            key={item.date}
-            x={getX(index)}
-            y={height - 12}
-            textAnchor="middle"
-            fill={theme.chartLabel}
-            fontSize="11"
-          >
-            {formatShortDate(item.date)}
-          </text>
-        ))}
+function getSectionFrameStyle(theme, section, observer = false) {
+  const family = theme.themeFamily || "galaxy";
 
-        {series.map((item) => {
-          const points = data.map((entry, index) => ({
-            x: getX(index),
-            y: getY(Number(entry[item.key] ?? 0)),
-            value: Number(entry[item.key] ?? 0),
-          }));
-          const path = buildLinePath(points);
+  const familyFrames = {
+    galaxy: observer
+      ? {
+          insetGlow: "inset 0 1px 0 rgba(255,255,255,0.08), inset 0 0 0 1px rgba(138,158,255,0.08)",
+          edge: "0 0 0 1px rgba(120,140,220,0.14)",
+          overlay:
+            "radial-gradient(circle at 18% 18%, rgba(144,130,255,0.08) 0%, rgba(144,130,255,0) 24%), radial-gradient(circle at 82% 16%, rgba(90,190,255,0.07) 0%, rgba(90,190,255,0) 24%)",
+        }
+      : {
+          insetGlow: "inset 0 1px 0 rgba(255,255,255,0.1), inset 0 0 0 1px rgba(173,156,224,0.08)",
+          edge: "0 0 0 1px rgba(157,138,222,0.16)",
+          overlay:
+            "radial-gradient(circle at 12% 14%, rgba(255,228,155,0.09) 0%, rgba(255,228,155,0) 22%), radial-gradient(circle at 84% 18%, rgba(155,138,255,0.08) 0%, rgba(155,138,255,0) 24%), radial-gradient(circle at 62% 78%, rgba(114,208,255,0.06) 0%, rgba(114,208,255,0) 24%)",
+        },
+    underwater: observer
+      ? {
+          insetGlow: "inset 0 1px 0 rgba(255,255,255,0.06), inset 0 0 0 1px rgba(124,216,228,0.08)",
+          edge: "0 0 0 1px rgba(90,182,203,0.12)",
+          overlay:
+            "radial-gradient(circle at 18% 20%, rgba(175,241,245,0.08) 0%, rgba(175,241,245,0) 22%), radial-gradient(circle at 80% 74%, rgba(90,182,228,0.07) 0%, rgba(90,182,228,0) 22%)",
+        }
+      : {
+          insetGlow: "inset 0 1px 0 rgba(255,255,255,0.08), inset 0 0 0 1px rgba(111,204,215,0.08)",
+          edge: "0 0 0 1px rgba(101,186,208,0.14)",
+          overlay:
+            "radial-gradient(circle at 14% 18%, rgba(198,245,251,0.1) 0%, rgba(198,245,251,0) 24%), radial-gradient(circle at 86% 24%, rgba(119,214,224,0.08) 0%, rgba(119,214,224,0) 22%), radial-gradient(circle at 70% 80%, rgba(112,168,232,0.07) 0%, rgba(112,168,232,0) 22%)",
+        },
+    forest: observer
+      ? {
+          insetGlow: "inset 0 1px 0 rgba(255,255,255,0.05), inset 0 0 0 1px rgba(146,175,120,0.06)",
+          edge: "0 0 0 1px rgba(122,149,101,0.12)",
+          overlay:
+            "radial-gradient(circle at 18% 18%, rgba(185,210,149,0.07) 0%, rgba(185,210,149,0) 22%), radial-gradient(circle at 80% 76%, rgba(156,128,92,0.06) 0%, rgba(156,128,92,0) 22%)",
+        }
+      : {
+          insetGlow: "inset 0 1px 0 rgba(255,255,255,0.08), inset 0 0 0 1px rgba(145,168,118,0.08)",
+          edge: "0 0 0 1px rgba(133,154,110,0.14)",
+          overlay:
+            "radial-gradient(circle at 14% 18%, rgba(215,229,181,0.1) 0%, rgba(215,229,181,0) 24%), radial-gradient(circle at 86% 20%, rgba(171,207,141,0.08) 0%, rgba(171,207,141,0) 24%), radial-gradient(circle at 70% 82%, rgba(179,154,106,0.06) 0%, rgba(179,154,106,0) 22%)",
+        },
+  };
 
-          return (
-            <g key={item.key}>
-              <path
-                d={path}
-                fill="none"
-                stroke={item.color}
-                strokeWidth="8"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                opacity="0.14"
-              />
-              <path
-                d={path}
-                fill="none"
-                stroke={item.color}
-                strokeWidth="3"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-              {points.map((point, index) => (
-                <g key={`${item.key}-${index}`}>
-                  <circle cx={point.x} cy={point.y} r="5" fill={item.color} opacity="0.22" />
-                  <circle
-                    cx={point.x}
-                    cy={point.y}
-                    r="2.8"
-                    fill={item.color}
-                    stroke={theme.chartSurface}
-                    strokeWidth="1.5"
-                  />
-                </g>
-              ))}
-            </g>
-          );
-        })}
-      </svg>
-    </div>
-  );
+  const frame = familyFrames[family] || familyFrames.galaxy;
+  const accentScale =
+    section === "dashboard"
+      ? 1.08
+      : section === "goals" || section === "care"
+      ? 1.03
+      : 1;
+
+  return {
+    backgroundOverlay: frame.overlay,
+    boxShadow: `${frame.edge}, ${frame.insetGlow}`,
+    borderWidth: accentScale,
+  };
+}
+
+function getAccentBadgeStyle(theme) {
+  const family = theme.themeFamily || "galaxy";
+
+  if (family === "underwater") {
+    return {
+      display: "inline-flex",
+      alignItems: "center",
+      padding: "0.38rem 0.78rem",
+      borderRadius: "999px 999px 18px 999px",
+      background:
+        "linear-gradient(135deg, rgba(198,244,250,0.92) 0%, rgba(174,231,241,0.82) 100%)",
+      border: "1px solid rgba(99,178,198,0.24)",
+      boxShadow: "0 10px 20px rgba(84,164,183,0.12)",
+      color: theme.softButtonText,
+    };
+  }
+
+  if (family === "forest") {
+    return {
+      display: "inline-flex",
+      alignItems: "center",
+      padding: "0.38rem 0.78rem",
+      borderRadius: "18px 999px 18px 999px",
+      background:
+        "linear-gradient(135deg, rgba(228,239,214,0.94) 0%, rgba(206,226,189,0.84) 100%)",
+      border: "1px solid rgba(129,156,109,0.24)",
+      boxShadow: "0 10px 18px rgba(109,127,87,0.12)",
+      color: theme.softButtonText,
+    };
+  }
+
+  return {
+    display: "inline-flex",
+    alignItems: "center",
+    padding: "0.38rem 0.78rem",
+    borderRadius: "999px",
+    background:
+      theme.modeName === "Galaxy"
+        ? "linear-gradient(135deg, rgba(82,101,201,0.44) 0%, rgba(122,103,255,0.3) 100%)"
+        : "linear-gradient(135deg, rgba(255,236,177,0.88) 0%, rgba(237,213,255,0.68) 100%)",
+    border:
+      theme.modeName === "Galaxy"
+        ? "1px solid rgba(128,148,255,0.18)"
+        : "1px solid rgba(198,168,234,0.22)",
+    boxShadow:
+      theme.modeName === "Galaxy"
+        ? "0 10px 24px rgba(88,106,212,0.16)"
+        : "0 10px 18px rgba(193,163,232,0.14)",
+    color: theme.modeName === "Galaxy" ? "#eef2ff" : theme.softButtonText,
+  };
 }
 
 export default App;
-
-
