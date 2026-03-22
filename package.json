@@ -6,10 +6,23 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "build:mobile": "vite build",
+    "assets:mobile": "powershell -ExecutionPolicy Bypass -File ./scripts/generate-mobile-assets.ps1",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "cap:sync": "npx cap sync android",
+    "cap:open:android": "npx cap open android",
+    "cap:sync:ios": "npx cap sync ios",
+    "cap:open:ios": "npx cap open ios",
+    "android": "npm run build:mobile && npx cap sync android",
+    "ios": "npm run build:mobile && npx cap sync ios"
   },
   "dependencies": {
+    "@capacitor/android": "^8.2.0",
+    "@capacitor/app": "^8.0.1",
+    "@capacitor/cli": "^8.2.0",
+    "@capacitor/core": "^8.2.0",
+    "@capacitor/push-notifications": "^8.0.2",
     "@supabase/supabase-js": "^2.99.3",
     "react": "^19.2.4",
     "react-dom": "^19.2.4"

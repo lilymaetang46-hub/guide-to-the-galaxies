@@ -26,10 +26,7 @@ function TrackerOverviewPage({ app }) {
     energy,
     moodTags,
     today,
-    quickLinkGridStyle,
-    quickJumpButtonStyle,
     setActivePage,
-    energyFlowCards,
     goals,
     simpleAlignmentStreaks,
     emptyTextStyle,
@@ -43,6 +40,7 @@ function TrackerOverviewPage({ app }) {
     recentActivityItems,
     supportInbox,
     unreadSupportCount,
+    connectedOutsiders,
   } = app;
 
   return (
@@ -68,11 +66,20 @@ function TrackerOverviewPage({ app }) {
 
         <div style={dashboardStatsGridStyle}>
           {dashboardStats.map((item) => (
-            <div key={item.label} style={summaryCardStyle(theme)}>
+            <button
+              key={item.label}
+              style={{
+                ...summaryCardStyle(theme),
+                textAlign: "left",
+                cursor: "pointer",
+                width: "100%",
+              }}
+              onClick={() => setActivePage(item.key)}
+            >
               <div style={summaryLabelStyle(theme)}>{item.label}</div>
               <div style={summaryValueStyle(theme)}>{item.value}</div>
               <div style={summaryNoteStyle(theme)}>{item.note}</div>
-            </div>
+            </button>
           ))}
         </div>
       </section>
@@ -94,43 +101,28 @@ function TrackerOverviewPage({ app }) {
           </p>
           <p style={smallInfoStyle(theme)}>Logged on: {recentMoodSummary?.entry_date || today}</p>
         </section>
-
-        <section className="galaxy-panel" style={sectionCardStyle(theme, "jump")}>
-          {renderSectionHeader(trackerLabels.actions, trackerLabels.actionsSubtitle, "Dawn", "Nebula")}
-          <div style={quickLinkGridStyle}>
-            {[
-              { key: "meds", label: "Meds" },
-              { key: "food", label: "Food" },
-              { key: "sleep", label: "Sleep" },
-              { key: "maintenance", label: "Hygiene" },
-              { key: "exercise", label: "Exercise" },
-            ].map((item) => (
-              <button
-                key={item.key}
-                style={quickJumpButtonStyle(theme)}
-                onClick={() => setActivePage(item.key)}
-              >
-                {item.label}
-              </button>
-            ))}
-          </div>
-        </section>
       </div>
 
-      <div style={gridStyle}>
-        <section className="galaxy-panel" style={sectionCardStyle(theme, "care")}>
-          {renderSectionHeader(trackerLabels.progress, trackerLabels.progressSubtitle, "Glow", "Aurora")}
-          <div style={dashboardStatsGridStyle}>
-            {energyFlowCards.map((item) => (
-              <div key={item.label} style={summaryCardStyle(theme)}>
-                <div style={summaryLabelStyle(theme)}>{item.label}</div>
-                <div style={summaryValueStyle(theme)}>{item.value}</div>
-                <div style={summaryNoteStyle(theme)}>{item.note}</div>
+      <section className="galaxy-panel" style={sectionCardStyle(theme, "signals")}>
+        {renderSectionHeader("Connected Outsiders", "People currently approved on your tracker account.", "Connected", "Connected")}
+        {connectedOutsiders.length === 0 ? (
+          <p style={smallInfoStyle(theme)}>No connected outsiders yet.</p>
+        ) : (
+          <div style={{ display: "grid", gap: "10px" }}>
+            {connectedOutsiders.slice(0, 4).map((outsider) => (
+              <div key={outsider.id} style={summaryCardStyle(theme)}>
+                <div style={summaryLabelStyle(theme)}>Connected outsider</div>
+                <div style={summaryValueStyle(theme)}>{outsider.name}</div>
+                <div style={summaryNoteStyle(theme)}>
+                  {outsider.notificationCap} notifications per day, {outsider.cooldownLength} minute cooldown
+                </div>
               </div>
             ))}
           </div>
-        </section>
+        )}
+      </section>
 
+      <div style={gridStyle}>
         <section className="galaxy-panel" style={sectionCardStyle(theme, "goals")}>
           {renderSectionHeader(trackerLabels.streaks, trackerLabels.streaksSubtitle, "Bloom", "Constellation")}
           {goals.filter((goal) => !goal.completed).length === 0 && simpleAlignmentStreaks.length === 0 ? (

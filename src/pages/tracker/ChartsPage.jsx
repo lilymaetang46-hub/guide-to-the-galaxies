@@ -55,7 +55,7 @@ function TrackerChartsPage({ app }) {
       </section>
 
       <section className="galaxy-panel" style={sectionCardStyle(theme, "care")}>
-        {renderSectionHeader("Care Habits", "Meals, meds, maintenance, and movement across recent days.", "Comet", "Spark")}
+        {renderSectionHeader("Care Habits", "Meals, meds, hygiene, and movement across recent days.", "Comet", "Spark")}
         {recentChartData.length === 0 ? (
           <p style={emptyTextStyle(theme)}>No chart data yet.</p>
         ) : (
@@ -70,7 +70,7 @@ function TrackerChartsPage({ app }) {
               series={[
                 { key: "mealsCount", label: "Meals", color: theme.chartPalette.meals },
                 { key: "medsCount", label: "Meds", color: theme.chartPalette.meds },
-                { key: "hygieneCount", label: "Maintenance", color: theme.chartPalette.hygiene },
+                { key: "hygieneCount", label: "Hygiene", color: theme.chartPalette.hygiene },
                 { key: "exerciseCount", label: "Exercise", color: theme.chartPalette.exercise },
               ]}
             />

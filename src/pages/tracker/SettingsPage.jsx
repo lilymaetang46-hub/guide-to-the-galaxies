@@ -36,6 +36,21 @@ function TrackerSettingsPage({ app }) {
     resetConfirmNewPinInput,
     setResetConfirmNewPinInput,
     resetPinWithPassword,
+    pushNotificationsSupported,
+    pushPermissionStatus,
+    pushToken,
+    pushStatusMessage,
+    pushSyncing,
+    enableNativePushNotifications,
+    disableNativePushNotifications,
+    selectedTrackingAreaOptions,
+    inactiveTrackingAreaOptions,
+    showAddTrackingAreaPicker,
+    setShowAddTrackingAreaPicker,
+    trackingAreaToAdd,
+    setTrackingAreaToAdd,
+    addTrackedArea,
+    trackingAreasMessage,
   } = app;
 
   return (
@@ -89,9 +104,98 @@ function TrackerSettingsPage({ app }) {
         </div>
         <div style={{ marginTop: "18px", display: "flex", gap: "10px", flexWrap: "wrap" }}>
           <button style={primaryButtonStyle(theme)} onClick={changePin}>Update PIN</button>
-          <button style={softButtonStyle(theme)} onClick={handleLogout}>Logout</button>
         </div>
         {renderFeedbackMessage(settingsMessage, theme)}
+      </section>
+
+      <section className="galaxy-panel" style={sectionCardStyle(theme, "jump")}>
+        {renderSectionHeader("Tracking Areas", "Add more tracker sections later without repeating the first-time chooser.", "Areas", "Areas")}
+        <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+          {selectedTrackingAreaOptions.map((area) => (
+            <div
+              key={area.id}
+              style={{
+                ...softButtonStyle(theme),
+                width: "auto",
+                minHeight: "unset",
+                cursor: "default",
+              }}
+            >
+              {area.label}
+            </div>
+          ))}
+        </div>
+        {inactiveTrackingAreaOptions.length > 0 ? (
+          <div style={{ marginTop: "18px", display: "grid", gap: "12px" }}>
+            <button style={softButtonStyle(theme)} onClick={() => setShowAddTrackingAreaPicker((current) => !current)}>
+              {showAddTrackingAreaPicker ? "Hide Add Area" : "Add Another Area"}
+            </button>
+            {showAddTrackingAreaPicker ? (
+              <div style={goalFormGridStyle}>
+                <div>
+                  <label style={labelStyle(theme)}>Available area</label>
+                  <select style={inputStyle(theme)} value={trackingAreaToAdd} onChange={(e) => setTrackingAreaToAdd(e.target.value)}>
+                    <option value="">Choose an area</option>
+                    {inactiveTrackingAreaOptions.map((area) => (
+                      <option key={area.id} value={area.id}>
+                        {area.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label style={labelStyle(theme)}>What it covers</label>
+                  <div style={{ ...inputStyle(theme), minHeight: "48px", display: "flex", alignItems: "center" }}>
+                    {inactiveTrackingAreaOptions.find((area) => area.id === trackingAreaToAdd)?.description || "Choose an area to preview it."}
+                  </div>
+                </div>
+              </div>
+            ) : null}
+            {showAddTrackingAreaPicker ? (
+              <div>
+                <button style={primaryButtonStyle(theme)} onClick={addTrackedArea}>Add Area To Tracker</button>
+              </div>
+            ) : null}
+          </div>
+        ) : (
+          <p style={{ color: theme.subtleText }}>All available tracking areas are already enabled.</p>
+        )}
+        {renderFeedbackMessage(trackingAreasMessage, theme)}
+      </section>
+
+      <section className="galaxy-panel" style={sectionCardStyle(theme, "care")}>
+        {renderSectionHeader(
+          "Native Push",
+          "Turn on device notifications for the native app shell while keeping the shared web app flow intact.",
+          "Signal",
+          "Signal"
+        )}
+        <p style={{ margin: "0 0 12px 0", color: theme.subtleText, lineHeight: 1.6 }}>
+          {pushNotificationsSupported
+            ? `Permission status: ${pushPermissionStatus}.`
+            : "Native push controls appear when this account is opened inside the Android or iPhone app shell."}
+        </p>
+        {pushToken ? (
+          <p
+            style={{
+              margin: "0 0 12px 0",
+              color: theme.faintText,
+              fontSize: "0.85rem",
+              overflowWrap: "anywhere",
+            }}
+          >
+            Device token saved: {pushToken}
+          </p>
+        ) : null}
+        <div style={{ marginTop: "18px", display: "flex", gap: "10px", flexWrap: "wrap" }}>
+          <button style={primaryButtonStyle(theme)} onClick={enableNativePushNotifications} disabled={pushSyncing}>
+            {pushSyncing ? "Working..." : "Enable Native Push"}
+          </button>
+          <button style={softButtonStyle(theme)} onClick={disableNativePushNotifications} disabled={pushSyncing || !pushToken}>
+            Turn Off On This Device
+          </button>
+        </div>
+        {renderFeedbackMessage(pushStatusMessage, theme)}
       </section>
 
       <section className="galaxy-panel" style={sectionCardStyle(theme, "care")}>
@@ -114,6 +218,11 @@ function TrackerSettingsPage({ app }) {
           <button style={primaryButtonStyle(theme)} onClick={resetPinWithPassword}>Reset PIN</button>
         </div>
         {renderFeedbackMessage(settingsMessage, theme)}
+      </section>
+
+      <section className="galaxy-panel" style={sectionCardStyle(theme, "signals")}>
+        {renderSectionHeader("Session", "Account actions stay at the bottom so the main settings are easier to scan.", "Session", "Session")}
+        <button style={softButtonStyle(theme)} onClick={handleLogout}>Logout</button>
       </section>
     </div>
   );

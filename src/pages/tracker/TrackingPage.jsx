@@ -195,10 +195,10 @@ function TrackerTrackingPage({ app, pageKey }) {
     );
   }
 
-  if (pageKey === "maintenance") {
+  if (pageKey === "hygiene") {
     return (
       <section className="galaxy-panel" style={sectionCardStyle(theme, "maintenance")}>
-        {renderSectionHeader("Maintenance", "Quick check-off tasks.", "Star", "Star")}
+        {renderSectionHeader("Hygiene", "Quick check-off hygiene tasks.", "Star", "Star")}
         <div style={buttonWrapStyle}>
           <button style={showered ? successButtonStyle : softButtonStyle(theme)} onClick={toggleShowered}>
             {showered ? "Showered Done" : "Shower"}

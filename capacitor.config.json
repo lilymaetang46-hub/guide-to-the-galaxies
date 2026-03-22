@@ -1,0 +1,9 @@
+{
+  "appId": "app.guidetothegalaxies",
+  "appName": "Guide to the Galaxies",
+  "webDir": "dist",
+  "bundledWebRuntime": false,
+  "server": {
+    "androidScheme": "https"
+  }
+}

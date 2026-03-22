@@ -1,5 +1,12 @@
 ﻿import { useEffect, useMemo, useState } from "react";
 import { supabase } from "./supabase";
+import { App as CapacitorApp } from "@capacitor/app";
+import { Capacitor } from "@capacitor/core";
+import {
+  checkNativePushAvailability,
+  registerForNativePush,
+  unregisterFromNativePush,
+} from "./pushNotifications";
 import TrackerLayout from "./layouts/TrackerLayout";
 import OutsiderLayout from "./layouts/OutsiderLayout";
 import TrackerOverviewPage from "./pages/tracker/OverviewPage";
@@ -15,9 +22,12 @@ import OutsiderTrackerDataPage from "./pages/outsider/TrackerDataPage";
 import OutsiderSupportPage from "./pages/outsider/SupportPage";
 import OutsiderGoalsPage from "./pages/outsider/GoalsPage";
 
+/* eslint-disable react-hooks/exhaustive-deps */
+
 const PENDING_SIGNUP_PROFILE_KEY = "pendingSignupProfile";
 const PREFERRED_APP_EXPERIENCE_KEY = "preferredAppExperience";
 const DEFAULT_PUBLIC_APP_URL = "https://guide-to-the-galaxies.app";
+const NATIVE_PUSH_TARGET_PAGE = "support";
 const DEFAULT_CONNECTION_PERMISSIONS = {
   meds: true,
   food: true,
@@ -30,6 +40,212 @@ const DEFAULT_CONNECTION_PERMISSIONS = {
   activity: true,
   alerts: true,
 };
+const TRACKING_AREA_OPTIONS = [
+  {
+    id: "meds",
+    label: "Meds",
+    description: "Medication, doses, and symptom notes.",
+    pageKey: "meds",
+  },
+  {
+    id: "food",
+    label: "Food",
+    description: "Meals, snacks, and quick fuel check-ins.",
+    pageKey: "food",
+  },
+  {
+    id: "hygiene",
+    label: "Hygiene",
+    description: "Shower, teeth, skincare, and care basics.",
+    pageKey: "hygiene",
+  },
+  {
+    id: "sleep",
+    label: "Sleep",
+    description: "Bedtime, wake time, and sleep quality.",
+    pageKey: "sleep",
+  },
+  {
+    id: "cleaning",
+    label: "Cleaning",
+    description: "Laundry, room resets, and cleaning effort.",
+    pageKey: "cleaning",
+  },
+  {
+    id: "exercise",
+    label: "Exercise",
+    description: "Exercise, walks, and energy after moving.",
+    pageKey: "exercise",
+  },
+  {
+    id: "mood",
+    label: "Mood",
+    description: "Mood tags, focus, and energy snapshots.",
+    pageKey: "mood",
+  },
+];
+
+function makeConnectionCode() {
+  return `STAR-${crypto.randomUUID().replace(/-/g, "").slice(0, 6).toUpperCase()}`;
+}
+
+function makeConnectionToken() {
+  return crypto.randomUUID().replace(/-/g, "") + crypto.randomUUID().replace(/-/g, "");
+}
+
+function makeGoalSuggestions(mode, isDarkVariant = false) {
+  const solarWords = [
+    "Sun",
+    "Sunrise",
+    "Sunburst",
+    "Glow",
+    "Radiant",
+    "Golden",
+    "Halo",
+    "Flare",
+    "Dawn",
+    "Ember",
+    "Light",
+    "Aurora",
+  ];
+  const galaxyWords = [
+    "Orbit",
+    "Nova",
+    "Constellation",
+    "Comet",
+    "Starlight",
+    "Lunar",
+    "Cosmic",
+    "Nebula",
+    "Eclipse",
+    "Meteor",
+    "Galaxy",
+    "Celestial",
+  ];
+  const underwaterWords = [
+    "Current",
+    "Tidal",
+    "Coral",
+    "Deep",
+    "Pearl",
+    "Blue",
+    "Drift",
+    "Wave",
+    "Harbor",
+    "Reef",
+    "Sea",
+    "Lagoon",
+  ];
+  const forestWords = [
+    "Grove",
+    "Fern",
+    "Moss",
+    "Cedar",
+    "Bloom",
+    "Trail",
+    "Canopy",
+    "Meadow",
+    "Wild",
+    "Oak",
+    "Leaf",
+    "Thicket",
+  ];
+  const actionWords = [
+    "Ritual",
+    "Journey",
+    "Streak",
+    "Path",
+    "Quest",
+    "Drift",
+    "Reset",
+    "Bloom",
+    "Rise",
+    "Flow",
+    "Boost",
+    "Check-In",
+  ];
+
+  const themeWords =
+    mode === "underwater"
+      ? underwaterWords
+      : mode === "forest"
+      ? forestWords
+      : isDarkVariant
+      ? galaxyWords
+      : solarWords;
+  const suggestions = [];
+
+  while (suggestions.length < 3) {
+    const themeWord = themeWords[suggestions.length % themeWords.length];
+    const actionWord = actionWords[(suggestions.length + themeWords.length) % actionWords.length];
+    const candidate = `${themeWord} ${actionWord}`;
+
+    if (!suggestions.includes(candidate)) {
+      suggestions.push(candidate);
+    }
+  }
+
+  return suggestions;
+}
+
+function makeRewardName(mode) {
+  const galaxyRewards = ["Nova", "Celestial", "Lunar", "Comet", "Nebula", "Starlight"];
+  const underwaterRewards = ["Coral", "Tidal", "Pearl", "Blue", "Deep", "Drift"];
+  const forestRewards = ["Moss", "Fern", "Grove", "Cedar", "Meadow", "Wild"];
+  const rewardType = getThemeRewardCopy(mode).singular;
+  const baseWords =
+    mode === "underwater"
+      ? underwaterRewards
+      : mode === "forest"
+      ? forestRewards
+      : galaxyRewards;
+
+  return `${baseWords[0]} ${rewardType}`;
+}
+
+function createGoalId() {
+  return crypto.randomUUID();
+}
+
+function getInviteTokenFromUrl(urlLike) {
+  if (!urlLike) return "";
+
+  const url = typeof urlLike === "string" ? new URL(urlLike) : urlLike;
+  const segments = url.pathname.split("/").filter(Boolean);
+  const connectIndex = segments.findIndex((segment) => segment === "connect");
+
+  if (connectIndex >= 0 && segments[connectIndex + 1]) {
+    return segments[connectIndex + 1];
+  }
+
+  const trailingSegment = segments[segments.length - 1];
+  return trailingSegment && !trailingSegment.includes(".") ? trailingSegment : "";
+}
+
+function normalizeTrackedAreas(areas) {
+  const validAreaIds = new Set(TRACKING_AREA_OPTIONS.map((area) => area.id));
+  const normalizedAreas = Array.isArray(areas) ? areas : [];
+
+  return [...new Set(normalizedAreas.map((area) => (area === "maintenance" ? "hygiene" : area)))]
+    .filter((area) => validAreaIds.has(area));
+}
+
+function getTrackingAreaOption(areaId) {
+  return TRACKING_AREA_OPTIONS.find((area) => area.id === areaId) || null;
+}
+
+function getNativePushOptOutKey(userId) {
+  return `nativePushDisabled:${userId}`;
+}
+
+function getTrackedAreasStorageKey(userId) {
+  return `trackedAreas:${userId}`;
+}
+
+function isTrackedAreasColumnError(error) {
+  const message = `${error?.message || ""} ${error?.details || ""} ${error?.hint || ""}`;
+  return /tracked_areas/i.test(message);
+}
 
 function App() {
   const today = getLocalDateKey(new Date());
@@ -74,6 +290,12 @@ function App() {
   const [resetConfirmNewPinInput, setResetConfirmNewPinInput] = useState("");
   const [activePage, setActivePage] = useState("mission");
   const [outsiderPage, setOutsiderPage] = useState("outsiderOverview");
+  const [trackedAreas, setTrackedAreas] = useState([]);
+  const [pendingTrackedAreas, setPendingTrackedAreas] = useState([]);
+  const [showTrackingAreaPicker, setShowTrackingAreaPicker] = useState(false);
+  const [trackingAreasMessage, setTrackingAreasMessage] = useState("");
+  const [showAddTrackingAreaPicker, setShowAddTrackingAreaPicker] = useState(false);
+  const [trackingAreaToAdd, setTrackingAreaToAdd] = useState("");
   const [showOutsiderChooser, setShowOutsiderChooser] = useState(false);
   const [selectedOutsiderId, setSelectedOutsiderId] = useState("aria");
   const [outsiderTrackers, setOutsiderTrackers] = useState([]);
@@ -93,6 +315,13 @@ function App() {
   const [supportInboxMessage, setSupportInboxMessage] = useState("");
   const [pinApprovalTarget, setPinApprovalTarget] = useState(null);
   const [approvalPinInput, setApprovalPinInput] = useState("");
+  const [pushNotificationsSupported, setPushNotificationsSupported] = useState(false);
+  const [pushPermissionStatus, setPushPermissionStatus] = useState("prompt");
+  const [pushToken, setPushToken] = useState("");
+  const [pushStatusMessage, setPushStatusMessage] = useState("");
+  const [pushSyncing, setPushSyncing] = useState(false);
+  const [pushRegistrationHandle, setPushRegistrationHandle] = useState(null);
+  const [pushOptedOutLocally, setPushOptedOutLocally] = useState(false);
 
   const [medTaken, setMedTaken] = useState(false);
   const [medsTime, setMedsTime] = useState("");
@@ -184,181 +413,42 @@ function App() {
   const goalCategories = [
     "Meds",
     "Food",
-    "Maintenance",
+    "Hygiene",
     "Sleep",
     "Cleaning",
     "Exercise",
   ];
 
-  useEffect(() => {
-    let subscribed = true;
+  function applyIncomingUrl(incomingUrl) {
+    if (!incomingUrl || typeof window === "undefined") return;
 
-    supabase.auth.getSession().then(({ data }) => {
-      if (!subscribed) return;
-      setSession(data.session ?? null);
-      setUser(data.session?.user ?? null);
-      setAuthLoading(false);
-    });
+    let parsedUrl;
 
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (_event, nextSession) => {
-      setSession(nextSession ?? null);
-      setUser(nextSession?.user ?? null);
-      setAuthLoading(false);
-    });
-
-    return () => {
-      subscribed = false;
-      subscription.unsubscribe();
-    };
-  }, []);
-
-  useEffect(() => {
-    if (!user) {
-      setLoading(false);
-      setEntryId(null);
-      setHistoryData([]);
+    try {
+      parsedUrl = new URL(incomingUrl);
+    } catch {
       return;
     }
 
-    setLoading(true);
-    setProfileSyncLoading(true);
+    const nextLocation = `${parsedUrl.pathname}${parsedUrl.search}${parsedUrl.hash}`;
 
-    (async () => {
-      const profileSync = await ensureProfileExists(user);
-
-      if (!profileSync.ok) {
-        setAuthMessage(profileSync.error || "Could not sync your profile.");
-      }
-
-      await loadProfile(user.id);
-      await loadEntry();
-      await loadHistory();
-      setProfileSyncLoading(false);
-    })();
-  }, [user]);
-
-  useEffect(() => {
-    if (user && activePage === "settings") {
-      loadProfile(user.id);
-    }
-  }, [activePage, user]);
-
-  useEffect(() => {
-    if (user) {
-      loadConnectionsData();
-      loadOutsiderTrackers();
-      loadSupportInbox();
-    }
-  }, [user]);
-
-  useEffect(() => {
-    if (user && activePage === "connections") {
-      loadConnectionsData();
-    }
-  }, [activePage, user]);
-
-  useEffect(() => {
-    if (user && (activePage === "support" || activePage === "mission" || activePage === "dashboard")) {
-      loadSupportInbox();
-    }
-  }, [activePage, user]);
-
-  useEffect(() => {
-    if (!user || activePage !== "connections") return undefined;
-
-    const intervalId = window.setInterval(() => {
-      loadConnectionsData();
-    }, 10000);
-
-    return () => {
-      window.clearInterval(intervalId);
-    };
-  }, [activePage, user]);
-
-  useEffect(() => {
-    if (user && appExperience === "outsider") {
-      loadOutsiderTrackers();
-    }
-  }, [appExperience, outsiderPage, user]);
-
-  useEffect(() => {
-    localStorage.setItem("darkMode", darkMode);
-  }, [darkMode]);
-
-  useEffect(() => {
-    localStorage.setItem(PREFERRED_APP_EXPERIENCE_KEY, appExperience);
-    setSelectedExperience(appExperience);
-  }, [appExperience]);
-
-  useEffect(() => {
-    setGoalSuggestions(makeGoalSuggestions(themeFamily, darkMode));
-  }, [darkMode, themeFamily]);
-
-  useEffect(() => {
-    if (!entryId || historyData.length === 0 || goals.length === 0) return;
-
-    const computedGoals = goals.map((goal) => computeGoalProgress(goal, historyData));
-    const updatedRewards = [...rewards];
-    let hasGoalChanges = false;
-    let hasRewardChanges = false;
-    let latestPopup = null;
-
-    computedGoals.forEach((goal, index) => {
-      const previous = goals[index];
-      const justCompleted = goal.completed && !previous.completed;
-
-      if (
-        goal.currentStreakProgress !== previous.currentStreakProgress ||
-        goal.completed !== previous.completed
-      ) {
-        hasGoalChanges = true;
-      }
-
-      if (justCompleted) {
-        const rewardMode = themeFamily;
-        const rewardTitle = makeRewardName(rewardMode);
-        const rewardType = getThemeRewardCopy(themeFamily).singular;
-
-        goal.rewardEarned = rewardTitle;
-        goal.completedAt = today;
-        hasGoalChanges = true;
-
-        const reward = {
-          id: `${goal.id}-reward`,
-          title: rewardTitle,
-          goalName: goal.name,
-          rewardType,
-          earnedAt: today,
-          mode: rewardMode,
-        };
-
-        updatedRewards.unshift(reward);
-        hasRewardChanges = true;
-        latestPopup = {
-          message: `${goal.name} complete! You unlocked a ${rewardType}.`,
-          reward,
-        };
-      }
-    });
-
-    if (hasGoalChanges) {
-      setGoals(computedGoals);
+    if (window.location.pathname + window.location.search + window.location.hash !== nextLocation) {
+      window.history.replaceState({}, "", nextLocation);
     }
 
-    if (hasRewardChanges) {
-      setRewards(updatedRewards);
-      setRewardPopup(latestPopup);
-    }
+    const inviteToken = getInviteTokenFromUrl(parsedUrl);
 
-    if (hasGoalChanges || hasRewardChanges) {
-      saveEntry({
-        goals: computedGoals,
-        rewards: updatedRewards,
-      });
+    if (inviteToken) {
+      const normalizedInviteLink = `${DEFAULT_PUBLIC_APP_URL}/connect/${inviteToken}`;
+      setSelectedExperience("outsider");
+      setAppExperience("outsider");
+      setOutsiderPage("outsiderOverview");
+      setJoinLinkInput(normalizedInviteLink);
+      setConnectionsMessage(
+        "Invite link detected. Log in or create an outsider account, then tap Request by Link."
+      );
     }
-  }, [historyData, goals, rewards, entryId, darkMode, today, themeFamily]);
+  }
 
   async function loadProfile(userId) {
     const { data, error } = await supabase
@@ -373,11 +463,28 @@ function App() {
     }
 
     if (data) {
+      let fallbackAreas = [];
+
+      if (typeof window !== "undefined") {
+        try {
+          fallbackAreas = normalizeTrackedAreas(
+            JSON.parse(localStorage.getItem(getTrackedAreasStorageKey(userId)) || "[]")
+          );
+        } catch {
+          fallbackAreas = [];
+        }
+      }
       setDisplayName(data.display_name || "");
       setSecondaryDisplayName(data.secondary_display_name || "");
       setProfilePin(data.pin || "");
       setThemeFamily(data.tracker_theme_family || "galaxy");
       setDarkMode((data.tracker_mode || "dark") === "dark");
+      const normalizedAreas = normalizeTrackedAreas(data.tracked_areas).length
+        ? normalizeTrackedAreas(data.tracked_areas)
+        : fallbackAreas;
+      setTrackedAreas(normalizedAreas);
+      setPendingTrackedAreas(normalizedAreas);
+      setShowTrackingAreaPicker(normalizedAreas.length === 0);
     }
   }
 
@@ -406,7 +513,7 @@ function App() {
 
     try {
       pendingProfile = JSON.parse(localStorage.getItem(PENDING_SIGNUP_PROFILE_KEY) || "null");
-    } catch (error) {
+    } catch {
       pendingProfile = null;
     }
 
@@ -474,6 +581,91 @@ function App() {
     }
 
     setSettingsMessage("Settings saved.");
+  }
+
+  async function saveTrackedAreas(nextAreas, successMessage) {
+    if (!user) return false;
+
+    const normalizedAreas = normalizeTrackedAreas(nextAreas);
+
+    if (normalizedAreas.length === 0) {
+      setTrackingAreasMessage("Choose at least one area to keep tracking simple but useful.");
+      return false;
+    }
+
+    const payload = {
+      id: user.id,
+      email: user.email,
+      display_name: displayName.trim() || "Stargazer",
+      secondary_display_name: secondaryDisplayName.trim() || null,
+      tracker_theme_family: themeFamily,
+      tracker_mode: darkMode ? "dark" : "light",
+      tracked_areas: normalizedAreas,
+      pin: profilePin || "0000",
+      updated_at: new Date().toISOString(),
+    };
+    const { error } = await supabase.from("profiles").upsert(payload);
+
+    if (error) {
+      if (isTrackedAreasColumnError(error) && typeof window !== "undefined") {
+        localStorage.setItem(getTrackedAreasStorageKey(user.id), JSON.stringify(normalizedAreas));
+        setTrackedAreas(normalizedAreas);
+        setPendingTrackedAreas(normalizedAreas);
+        setTrackingAreasMessage(
+          `${successMessage} This is saved locally on this device until the database migration is applied.`
+        );
+        return true;
+      }
+
+      console.error("Tracked areas save error:", error);
+      setTrackingAreasMessage("Could not save your tracking areas yet.");
+      return false;
+    }
+
+    if (typeof window !== "undefined") {
+      localStorage.setItem(getTrackedAreasStorageKey(user.id), JSON.stringify(normalizedAreas));
+    }
+    setTrackedAreas(normalizedAreas);
+    setPendingTrackedAreas(normalizedAreas);
+    setTrackingAreasMessage(successMessage);
+    return true;
+  }
+
+  function togglePendingTrackedArea(areaId) {
+    setTrackingAreasMessage("");
+    setPendingTrackedAreas((current) =>
+      current.includes(areaId)
+        ? current.filter((item) => item !== areaId)
+        : [...current, areaId]
+    );
+  }
+
+  async function completeTrackingAreaSetup() {
+    const didSave = await saveTrackedAreas(
+      pendingTrackedAreas,
+      "Tracking areas saved. You can add more later from Settings."
+    );
+
+    if (!didSave) return;
+
+    setShowTrackingAreaPicker(false);
+  }
+
+  async function addTrackedArea() {
+    if (!trackingAreaToAdd) {
+      setTrackingAreasMessage("Choose an area from the dropdown first.");
+      return;
+    }
+
+    const didSave = await saveTrackedAreas(
+      [...trackedAreas, trackingAreaToAdd],
+      `${getTrackingAreaOption(trackingAreaToAdd)?.label || "Area"} added to your tracker.`
+    );
+
+    if (!didSave) return;
+
+    setTrackingAreaToAdd("");
+    setShowAddTrackingAreaPicker(false);
   }
 
   async function changePin() {
@@ -688,16 +880,6 @@ function App() {
     setOutsiderPage("outsiderOverview");
     setGoals([]);
     setRewards([]);
-  }
-
-  function makeConnectionCode() {
-    return `STAR-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
-  }
-
-  function makeConnectionToken() {
-    return `${crypto.randomUUID().replace(/-/g, "")}${Math.random()
-      .toString(36)
-      .slice(2, 10)}`;
   }
 
   async function loadConnectionsData() {
@@ -1120,7 +1302,8 @@ function App() {
     }
 
     setOutsiderMessage(message);
-    const nextTime = new Date(Date.now() + 15 * 60 * 1000);
+    const nextTime = new Date();
+    nextTime.setMinutes(nextTime.getMinutes() + 15);
     setOutsiderCooldownUntil(
       nextTime.toLocaleTimeString([], {
         hour: "numeric",
@@ -1395,6 +1578,139 @@ function App() {
     );
   }
 
+  async function upsertPushDevice(pushTokenValue) {
+    if (!user || !pushTokenValue) return;
+
+    const { error } = await supabase.from("push_notification_devices").upsert(
+      {
+        user_id: user.id,
+        token: pushTokenValue,
+        platform: Capacitor.getPlatform(),
+        app_id: "app.guidetothegalaxies",
+        environment: "production",
+        enabled: true,
+        last_registered_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      },
+      {
+        onConflict: "user_id,token",
+      }
+    );
+
+    if (error) {
+      console.error("Push token sync error:", error);
+      setPushStatusMessage("Push permission is on, but token sync failed.");
+      return;
+    }
+
+    setPushStatusMessage("Native push notifications are ready on this device.");
+  }
+
+  async function removePushDevice(pushTokenValue) {
+    if (!user || !pushTokenValue) return;
+
+    const { error } = await supabase
+      .from("push_notification_devices")
+      .delete()
+      .eq("user_id", user.id)
+      .eq("token", pushTokenValue);
+
+    if (error) {
+      console.error("Push token delete error:", error);
+    }
+  }
+
+  async function enableNativePushNotifications() {
+    if (!user || !Capacitor.isNativePlatform()) {
+      setPushStatusMessage("Native push is only available inside the Android or iPhone app shell.");
+      return;
+    }
+
+    localStorage.removeItem(getNativePushOptOutKey(user.id));
+    setPushOptedOutLocally(false);
+    setPushSyncing(true);
+    setPushStatusMessage("Requesting native push permission...");
+
+    try {
+      if (pushRegistrationHandle) {
+        await pushRegistrationHandle();
+      }
+
+      const registrationResult = await registerForNativePush({
+        onToken: async (registeredToken) => {
+          setPushToken(registeredToken);
+          await upsertPushDevice(registeredToken);
+          setPushSyncing(false);
+        },
+        onRegistrationError: async (error) => {
+          console.error("Push registration error:", error);
+          setPushStatusMessage("Could not register this device for native push.");
+          setPushSyncing(false);
+        },
+        onNotificationReceived: async (notification) => {
+          if (notification?.data?.targetPage === NATIVE_PUSH_TARGET_PAGE) {
+            await loadSupportInbox();
+          }
+        },
+        onNotificationActionPerformed: async (notification) => {
+          if (notification?.notification?.data?.targetPage === NATIVE_PUSH_TARGET_PAGE) {
+            setAppExperience("tracker");
+            setActivePage("support");
+            await loadSupportInbox();
+          }
+        },
+      });
+
+      setPushRegistrationHandle(() => registrationResult.cleanup);
+      setPushNotificationsSupported(registrationResult.supported);
+      setPushPermissionStatus(registrationResult.permission);
+
+      if (!registrationResult.supported) {
+        setPushStatusMessage("Native push is only available inside the Android or iPhone app shell.");
+        setPushSyncing(false);
+        return;
+      }
+
+      if (registrationResult.permission !== "granted") {
+        setPushStatusMessage("Push permission was not granted on this device.");
+        setPushSyncing(false);
+      }
+    } catch (error) {
+      console.error("Push enable error:", error);
+      setPushStatusMessage("Could not turn on native push for this device.");
+      setPushSyncing(false);
+    }
+  }
+
+  async function disableNativePushNotifications() {
+    if (!Capacitor.isNativePlatform()) {
+      setPushStatusMessage("Native push is only available inside the Android or iPhone app shell.");
+      return;
+    }
+
+    setPushSyncing(true);
+
+    try {
+      if (pushRegistrationHandle) {
+        await pushRegistrationHandle();
+        setPushRegistrationHandle(null);
+      }
+
+      await unregisterFromNativePush();
+      await removePushDevice(pushToken);
+      localStorage.setItem(getNativePushOptOutKey(user.id), "true");
+      setPushOptedOutLocally(true);
+      setPushToken("");
+      setPushPermissionStatus("disabled");
+      setPushStatusMessage("Native push notifications were turned off for this device.");
+    } catch (error) {
+      console.error("Push unregister error:", error);
+      setPushStatusMessage("Could not turn off native push on this device.");
+    } finally {
+      setPushSyncing(false);
+    }
+  }
+
   async function updateOutsiderPermission(connectionId, permissionKey, enabled) {
     const connection = connectedOutsiders.find((person) => person.id === connectionId);
     const nextPermissions = normalizeConnectionPermissions({
@@ -1475,7 +1791,7 @@ function App() {
       const parsedUrl = new URL(joinLinkInput.trim());
       const segments = parsedUrl.pathname.split("/").filter(Boolean);
       inviteToken = segments[segments.length - 1] || joinLinkInput.trim();
-    } catch (error) {
+    } catch {
       const tokenMatch = joinLinkInput.trim().match(/connect\/([a-zA-Z0-9]+)/);
       inviteToken = tokenMatch ? tokenMatch[1] : joinLinkInput.trim();
     }
@@ -1867,7 +2183,7 @@ function App() {
         return Math.max(medsCount, entry.meds_taken ? 1 : 0);
       case "Food":
         return mealsCount;
-      case "Maintenance":
+      case "Hygiene":
         return maintenanceValue;
       case "Sleep":
         return entry.bed_time && entry.wake_time ? 1 : 0;
@@ -1960,118 +2276,6 @@ function App() {
       currentStreakProgress: Math.min(currentStreak, goal.streakLength),
       completed,
     };
-  }
-
-  function makeGoalSuggestions(mode, isDarkVariant = false) {
-    const solarWords = [
-      "Sun",
-      "Sunrise",
-      "Sunburst",
-      "Glow",
-      "Radiant",
-      "Golden",
-      "Halo",
-      "Flare",
-      "Dawn",
-      "Ember",
-      "Light",
-      "Aurora",
-    ];
-    const galaxyWords = [
-      "Orbit",
-      "Nova",
-      "Constellation",
-      "Comet",
-      "Starlight",
-      "Lunar",
-      "Cosmic",
-      "Nebula",
-      "Eclipse",
-      "Meteor",
-      "Galaxy",
-      "Celestial",
-    ];
-    const underwaterWords = [
-      "Current",
-      "Tidal",
-      "Coral",
-      "Deep",
-      "Pearl",
-      "Blue",
-      "Drift",
-      "Wave",
-      "Harbor",
-      "Reef",
-      "Sea",
-      "Lagoon",
-    ];
-    const forestWords = [
-      "Grove",
-      "Fern",
-      "Moss",
-      "Cedar",
-      "Bloom",
-      "Trail",
-      "Canopy",
-      "Meadow",
-      "Wild",
-      "Oak",
-      "Leaf",
-      "Thicket",
-    ];
-    const actionWords = [
-      "Ritual",
-      "Journey",
-      "Streak",
-      "Path",
-      "Quest",
-      "Drift",
-      "Reset",
-      "Bloom",
-      "Rise",
-      "Flow",
-      "Boost",
-      "Check-In",
-    ];
-
-    const themeWords =
-      mode === "underwater"
-        ? underwaterWords
-        : mode === "forest"
-        ? forestWords
-        : isDarkVariant
-        ? galaxyWords
-        : solarWords;
-    const suggestions = [];
-
-    while (suggestions.length < 3) {
-      const themeWord =
-        themeWords[Math.floor(Math.random() * themeWords.length)];
-      const actionWord =
-        actionWords[Math.floor(Math.random() * actionWords.length)];
-      const candidate = `${themeWord} ${actionWord}`;
-
-      if (!suggestions.includes(candidate)) {
-        suggestions.push(candidate);
-      }
-    }
-
-    return suggestions;
-  }
-
-  function makeRewardName(mode) {
-    const galaxyRewards = ["Nova", "Celestial", "Lunar", "Comet", "Nebula", "Starlight"];
-    const underwaterRewards = ["Coral", "Tidal", "Pearl", "Blue", "Deep", "Drift"];
-    const forestRewards = ["Moss", "Fern", "Grove", "Cedar", "Meadow", "Wild"];
-    const rewardType = getThemeRewardCopy(mode).singular;
-    const baseWords =
-      mode === "underwater"
-        ? underwaterRewards
-        : mode === "forest"
-        ? forestRewards
-        : galaxyRewards;
-    const word = baseWords[Math.floor(Math.random() * baseWords.length)];
-    return `${word} ${rewardType}`;
   }
 
   function calculateSimpleDailyStreak(rows, predicate) {
@@ -2350,7 +2554,7 @@ function App() {
   const createGoal = async () => {
     const trimmedName = goalName.trim() || goalSuggestions[0] || "Celestial Goal";
     const nextGoal = {
-      id: `${Date.now()}`,
+      id: createGoalId(),
       name: trimmedName,
       category: goalCategory,
       checkType: goalCheckType,
@@ -2377,18 +2581,6 @@ function App() {
     setGoals(updatedGoals);
     setLastAction("Removed a goal");
     await saveEntry({ goals: updatedGoals });
-  };
-
-  const handleFocusChange = async (value) => {
-    setFocus(value);
-    setLastAction(`Updated focus to ${value}/5`);
-    await saveEntry({ focus: Number(value) });
-  };
-
-  const handleEnergyChange = async (value) => {
-    setEnergy(value);
-    setLastAction(`Updated energy to ${value}/5`);
-    await saveEntry({ energy: Number(value) });
   };
 
   const handleCleaningMinutesChange = async (value) => {
@@ -2437,6 +2629,307 @@ function App() {
     await saveEntry({ after_exercise_state: value });
   };
 
+  useEffect(() => {
+    if (typeof window === "undefined") return undefined;
+
+    applyIncomingUrl(window.location.href);
+
+    if (!Capacitor.isNativePlatform()) {
+      return undefined;
+    }
+
+    const listener = CapacitorApp.addListener("appUrlOpen", ({ url }) => {
+      applyIncomingUrl(url);
+    });
+
+    return () => {
+      listener.then((handle) => handle.remove());
+    };
+  }, []);
+
+  useEffect(() => {
+    let subscribed = true;
+
+    supabase.auth.getSession().then(({ data }) => {
+      if (!subscribed) return;
+      setSession(data.session ?? null);
+      setUser(data.session?.user ?? null);
+      setAuthLoading(false);
+    });
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (_event, nextSession) => {
+      setSession(nextSession ?? null);
+      setUser(nextSession?.user ?? null);
+      setAuthLoading(false);
+    });
+
+    return () => {
+      subscribed = false;
+      subscription.unsubscribe();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!user) {
+      if (pushRegistrationHandle) {
+        pushRegistrationHandle();
+        setPushRegistrationHandle(null);
+      }
+      setLoading(false);
+      setEntryId(null);
+      setHistoryData([]);
+      setTrackedAreas([]);
+      setPendingTrackedAreas([]);
+      setShowTrackingAreaPicker(false);
+      setTrackingAreasMessage("");
+      setShowAddTrackingAreaPicker(false);
+      setTrackingAreaToAdd("");
+      setPushToken("");
+      setPushStatusMessage("");
+      setPushSyncing(false);
+      return;
+    }
+
+    setLoading(true);
+    setProfileSyncLoading(true);
+
+    (async () => {
+      const profileSync = await ensureProfileExists(user);
+
+      if (!profileSync.ok) {
+        setAuthMessage(profileSync.error || "Could not sync your profile.");
+      }
+
+      await loadProfile(user.id);
+      await loadEntry();
+      await loadHistory();
+      setProfileSyncLoading(false);
+    })();
+  }, [user]);
+
+  useEffect(() => {
+    if (user && activePage === "settings") {
+      loadProfile(user.id);
+    }
+  }, [activePage, user]);
+
+  useEffect(() => {
+    if (activePage === "maintenance") {
+      setActivePage("hygiene");
+    }
+  }, [activePage]);
+
+  useEffect(() => {
+    const selectedAreaPageKeys = normalizeTrackedAreas(trackedAreas)
+      .map((areaId) => getTrackingAreaOption(areaId))
+      .filter(Boolean)
+      .map((area) => area.pageKey);
+    const allowedPages = new Set([
+      "mission",
+      "dashboard",
+      "goals",
+      "charts",
+      "support",
+      "connections",
+      "settings",
+      ...selectedAreaPageKeys,
+    ]);
+
+    if (!allowedPages.has(activePage)) {
+      setActivePage("mission");
+    }
+  }, [activePage, trackedAreas]);
+
+  useEffect(() => {
+    if (!user || typeof window === "undefined") {
+      setPushOptedOutLocally(false);
+      return;
+    }
+
+    setPushOptedOutLocally(localStorage.getItem(getNativePushOptOutKey(user.id)) === "true");
+  }, [user]);
+
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) {
+      setPushNotificationsSupported(false);
+      setPushPermissionStatus("prompt");
+      return undefined;
+    }
+
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const pushAvailability = await checkNativePushAvailability();
+
+        if (cancelled) return;
+
+        setPushNotificationsSupported(pushAvailability.supported);
+        setPushPermissionStatus(pushAvailability.permission);
+      } catch (error) {
+        console.error("Push availability error:", error);
+
+        if (!cancelled) {
+          setPushNotificationsSupported(false);
+          setPushPermissionStatus("prompt");
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [user]);
+
+  useEffect(() => {
+    return () => {
+      if (pushRegistrationHandle) {
+        pushRegistrationHandle();
+      }
+    };
+  }, [pushRegistrationHandle]);
+
+  useEffect(() => {
+    if (
+      !user ||
+      !pushNotificationsSupported ||
+      pushPermissionStatus !== "granted" ||
+      pushToken ||
+      pushSyncing ||
+      pushRegistrationHandle ||
+      pushOptedOutLocally
+    ) {
+      return;
+    }
+
+    enableNativePushNotifications();
+  }, [
+    user,
+    pushNotificationsSupported,
+    pushPermissionStatus,
+    pushToken,
+    pushSyncing,
+    pushRegistrationHandle,
+    pushOptedOutLocally,
+  ]);
+
+  useEffect(() => {
+    if (user) {
+      loadConnectionsData();
+      loadOutsiderTrackers();
+      loadSupportInbox();
+    }
+  }, [user]);
+
+  useEffect(() => {
+    if (user && activePage === "connections") {
+      loadConnectionsData();
+    }
+  }, [activePage, user]);
+
+  useEffect(() => {
+    if (user && (activePage === "support" || activePage === "mission" || activePage === "dashboard")) {
+      loadSupportInbox();
+    }
+  }, [activePage, user]);
+
+  useEffect(() => {
+    if (!user || activePage !== "connections") return undefined;
+
+    const intervalId = window.setInterval(() => {
+      loadConnectionsData();
+    }, 10000);
+
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, [activePage, user]);
+
+  useEffect(() => {
+    if (user && appExperience === "outsider") {
+      loadOutsiderTrackers();
+    }
+  }, [appExperience, outsiderPage, user]);
+
+  useEffect(() => {
+    localStorage.setItem("darkMode", darkMode);
+  }, [darkMode]);
+
+  useEffect(() => {
+    localStorage.setItem(PREFERRED_APP_EXPERIENCE_KEY, appExperience);
+    setSelectedExperience(appExperience);
+  }, [appExperience]);
+
+  useEffect(() => {
+    setGoalSuggestions(makeGoalSuggestions(themeFamily, darkMode));
+  }, [darkMode, themeFamily]);
+
+  useEffect(() => {
+    if (!entryId || historyData.length === 0 || goals.length === 0) return;
+
+    const computedGoals = goals.map((goal) => computeGoalProgress(goal, historyData));
+    const updatedRewards = [...rewards];
+    let hasGoalChanges = false;
+    let hasRewardChanges = false;
+    let latestPopup = null;
+
+    computedGoals.forEach((goal, index) => {
+      const previous = goals[index];
+      const justCompleted = goal.completed && !previous.completed;
+
+      if (
+        goal.currentStreakProgress !== previous.currentStreakProgress ||
+        goal.completed !== previous.completed
+      ) {
+        hasGoalChanges = true;
+      }
+
+      if (justCompleted) {
+        const rewardMode = themeFamily;
+        const rewardTitle = makeRewardName(rewardMode);
+        const rewardType = getThemeRewardCopy(themeFamily).singular;
+
+        goal.rewardEarned = rewardTitle;
+        goal.completedAt = today;
+        hasGoalChanges = true;
+
+        const reward = {
+          id: `${goal.id}-reward`,
+          title: rewardTitle,
+          goalName: goal.name,
+          rewardType,
+          earnedAt: today,
+          mode: rewardMode,
+        };
+
+        updatedRewards.unshift(reward);
+        hasRewardChanges = true;
+        latestPopup = {
+          message: `${goal.name} complete! You unlocked a ${rewardType}.`,
+          reward,
+        };
+      }
+    });
+
+    if (hasGoalChanges) {
+      setGoals(computedGoals);
+    }
+
+    if (hasRewardChanges) {
+      setRewards(updatedRewards);
+      setRewardPopup(latestPopup);
+    }
+
+    if (hasGoalChanges || hasRewardChanges) {
+      saveEntry({
+        goals: computedGoals,
+        rewards: updatedRewards,
+      });
+    }
+  }, [historyData, goals, rewards, entryId, darkMode, today, themeFamily]);
+
   const chartRangeOptions = [7, 14];
   const recentChartData = useMemo(
     () => buildRecentChartData(historyData, chartRange),
@@ -2446,44 +2939,105 @@ function App() {
   const maxHygiene = Math.max(...recentChartData.map((d) => d.hygieneCount), 1);
   const maxMeds = Math.max(...recentChartData.map((d) => d.medsCount), 1);
   const maxExercise = Math.max(...recentChartData.map((d) => d.exerciseCount), 1);
-  const maintenanceCount =
+  const hygieneCount =
     (showered ? 1 : 0) + (brushedTeeth ? 1 : 0) + (skincare ? 1 : 0);
-  const dashboardStats = [
-    { label: "Meds logged", value: meds.length, note: medTaken ? `Marked at ${medsTime}` : "Not marked yet" },
-    { label: "Meals logged", value: meals.length, note: meals.length > 0 ? "Fuel recorded for today" : "No meals yet" },
-    { label: "Maintenance", value: `${maintenanceCount}/3`, note: "Shower, teeth, skincare" },
-    { label: "Goals active", value: goals.filter((goal) => !goal.completed).length, note: "Streaks update automatically" },
-    { label: "Exercise logs", value: exerciseLogs.length, note: exerciseDone ? "Movement marked today" : "No movement marked yet" },
-    { label: "Cleaning minutes", value: cleaningMinutes || "0", note: "Small resets count too" },
-    { label: "Sleep quality", value: `${sleepQuality}/5`, note: `${bedTime || "No bed"} to ${wakeTime || "No wake"}` },
+  const selectedTrackingAreaOptions = normalizeTrackedAreas(trackedAreas)
+    .map((areaId) => getTrackingAreaOption(areaId))
+    .filter(Boolean);
+  const inactiveTrackingAreaOptions = TRACKING_AREA_OPTIONS.filter(
+    (area) => !trackedAreas.includes(area.id)
+  );
+  const trackerNavItems = [
+    { key: "mission", label: "Overview" },
+    ...selectedTrackingAreaOptions.map((area) => ({
+      key: area.pageKey,
+      label: area.label,
+    })),
+    { key: "goals", label: "Goals" },
+    { key: "charts", label: "Charts" },
+    { key: "support", label: "Support" },
+    { key: "connections", label: "Connections" },
+    { key: "settings", label: "Settings" },
   ];
+  const dashboardStats = [
+    {
+      key: "meds",
+      label: "Meds logged",
+      value: meds.length,
+      note: medTaken ? `Marked at ${medsTime}` : "Not marked yet",
+    },
+    {
+      key: "food",
+      label: "Meals logged",
+      value: meals.length,
+      note: meals.length > 0 ? "Fuel recorded for today" : "No meals yet",
+    },
+    {
+      key: "hygiene",
+      label: "Hygiene",
+      value: `${hygieneCount}/3`,
+      note: "Shower, teeth, skincare",
+    },
+    {
+      key: "goals",
+      label: "Goals active",
+      value: goals.filter((goal) => !goal.completed).length,
+      note: "Streaks update automatically",
+    },
+    {
+      key: "exercise",
+      label: "Exercise logs",
+      value: exerciseLogs.length,
+      note: exerciseDone ? "Movement marked today" : "No movement marked yet",
+    },
+    {
+      key: "cleaning",
+      label: "Cleaning minutes",
+      value: cleaningMinutes || "0",
+      note: "Small resets count too",
+    },
+    {
+      key: "sleep",
+      label: "Sleep quality",
+      value: `${sleepQuality}/5`,
+      note: `${bedTime || "No bed"} to ${wakeTime || "No wake"}`,
+    },
+  ].filter((item) => {
+    if (item.key === "goals") return true;
+    return trackedAreas.includes(item.key);
+  });
   const energyFlowCards = [
     {
+      key: "meds",
       label: "Meds",
       value: medTaken ? "Complete" : "Pending",
       note: medTaken ? `Marked ${medsTime || "today"}` : "No med check yet",
     },
     {
+      key: "food",
       label: "Food",
       value: meals.length > 0 ? `${meals.length} logged` : "Pending",
       note: meals.length > 0 ? `${meals[meals.length - 1]?.text || "Meal"} added` : "No meals yet",
     },
     {
+      key: "hygiene",
       label: "Hygiene",
-      value: `${maintenanceCount}/3`,
+      value: `${hygieneCount}/3`,
       note:
-        maintenanceCount > 0
+        hygieneCount > 0
           ? `${[showered && "shower", brushedTeeth && "teeth", skincare && "skincare"]
               .filter(Boolean)
               .join(", ")}`
           : "Nothing checked yet",
     },
     {
+      key: "sleep",
       label: "Sleep",
       value: bedTime && wakeTime ? "Logged" : "Open",
       note: bedTime && wakeTime ? `${bedTime} to ${wakeTime}` : "Bedtime and wake time not both set",
     },
     {
+      key: "exercise",
       label: "Exercise",
       value: exerciseDone || exerciseLogs.length > 0 ? "Complete" : "Pending",
       note:
@@ -2493,7 +3047,7 @@ function App() {
           ? "Movement marked today"
           : "No movement yet",
     },
-  ];
+  ].filter((item) => trackedAreas.includes(item.key));
   const recentMoodSummary =
     historyData
       .slice()
@@ -2679,6 +3233,21 @@ function App() {
     themeFamily,
     sectionCardStyle,
     trackerLabels,
+    trackerNavItems,
+    trackedAreas,
+    selectedTrackingAreaOptions,
+    inactiveTrackingAreaOptions,
+    pendingTrackedAreas,
+    togglePendingTrackedArea,
+    showTrackingAreaPicker,
+    setShowTrackingAreaPicker,
+    completeTrackingAreaSetup,
+    trackingAreasMessage,
+    showAddTrackingAreaPicker,
+    setShowAddTrackingAreaPicker,
+    trackingAreaToAdd,
+    setTrackingAreaToAdd,
+    addTrackedArea,
     mood,
     focus,
     energy,
@@ -2841,6 +3410,13 @@ function App() {
     resetConfirmNewPinInput,
     setResetConfirmNewPinInput,
     resetPinWithPassword,
+    pushNotificationsSupported,
+    pushPermissionStatus,
+    pushToken,
+    pushStatusMessage,
+    pushSyncing,
+    enableNativePushNotifications,
+    disableNativePushNotifications,
     handleLogout,
   };
 
@@ -2913,7 +3489,7 @@ function App() {
       case "meds":
       case "food":
       case "sleep":
-      case "maintenance":
+      case "hygiene":
       case "cleaning":
       case "exercise":
         return <TrackerTrackingPage app={trackerPageProps} pageKey={activePage} />;
@@ -2932,9 +3508,98 @@ function App() {
     }
   })();
 
+  const appShellStyles = `
+    html, body, #root {
+      margin: 0;
+      min-height: 100%;
+      width: 100%;
+    }
+
+    body {
+      overflow-x: hidden;
+    }
+
+    .app-shell,
+    .app-shell *,
+    .app-shell *::before,
+    .app-shell *::after {
+      box-sizing: border-box;
+      min-width: 0;
+    }
+
+    .galaxy-panel {
+      transition: transform 180ms ease, box-shadow 220ms ease, filter 220ms ease;
+      min-width: 0;
+      width: 100%;
+      max-width: 100%;
+    }
+
+    .galaxy-panel:hover {
+      transform: translateY(-2px);
+      filter: brightness(1.015);
+    }
+
+    .app-shell svg,
+    .app-shell canvas,
+    .app-shell img {
+      max-width: 100%;
+      height: auto;
+    }
+
+    button,
+    input,
+    textarea,
+    select {
+      transition: transform 160ms ease, box-shadow 200ms ease, filter 200ms ease, border-color 200ms ease, background 220ms ease;
+      max-width: 100%;
+    }
+
+    button:hover {
+      transform: translateY(-1px);
+      filter: brightness(1.04);
+    }
+
+    button:active {
+      transform: translateY(1px) scale(0.99);
+    }
+
+    input:focus,
+    textarea:focus,
+    select:focus {
+      outline: none;
+      filter: brightness(1.015);
+    }
+
+    @media (max-width: 639px) {
+      .app-shell {
+        overflow-x: hidden;
+      }
+
+      .app-shell button,
+      .app-shell input,
+      .app-shell textarea,
+      .app-shell select {
+        width: 100%;
+      }
+    }
+
+    @media (min-width: 640px) {
+      .galaxy-panel {
+        width: auto;
+      }
+    }
+
+    @media (min-width: 1024px) {
+      .galaxy-panel:hover {
+        transform: translateY(-2px);
+      }
+    }
+  `;
+
   if (authLoading) {
     return (
       <div className="app-shell" style={pageStyle(theme)}>
+        <style>{appShellStyles}</style>
         <div style={containerStyle}>
           <div style={heroCardStyle(theme)}>
             <h1 style={titleStyle(theme)}>Loading your stars...</h1>
@@ -2947,6 +3612,7 @@ function App() {
   if (session && profileSyncLoading) {
     return (
       <div className="app-shell" style={pageStyle(theme)}>
+        <style>{appShellStyles}</style>
         <div style={containerStyle}>
           <div style={heroCardStyle(theme)}>
             <h1 style={titleStyle(theme)}>Syncing your profile...</h1>
@@ -2957,20 +3623,66 @@ function App() {
     );
   }
 
+  if (session && showTrackingAreaPicker) {
+    return (
+      <div className="app-shell" style={pageStyle(theme)}>
+        <style>{appShellStyles}</style>
+        <div style={containerStyle}>
+          <div style={heroCardStyle(theme)}>
+            <div style={{ flex: "1 1 320px", minWidth: 0 }}>
+              <p style={tinyLabelStyle(theme)}>Tracker Setup</p>
+              <h1 style={titleStyle(theme)}>Choose what you actually want to track</h1>
+              <p style={subtitleStyle(theme)}>
+                Pick the areas that feel useful right now. This chooser only appears until you save it once, and you can add more later in Settings.
+              </p>
+            </div>
+          </div>
+
+          <section className="galaxy-panel" style={sectionCardStyle(theme, "jump")}>
+            {renderSectionHeader("Tracking Areas", "Start lean and only keep the areas you want visible in the tracker.", "Areas", "Areas")}
+            <div style={dashboardStatsGridStyle}>
+              {TRACKING_AREA_OPTIONS.map((area) => {
+                const selected = pendingTrackedAreas.includes(area.id);
+
+                return (
+                  <button
+                    key={area.id}
+                    style={{
+                      ...summaryCardStyle(theme),
+                      textAlign: "left",
+                      cursor: "pointer",
+                      border: selected ? `2px solid ${theme.primary}` : theme.border,
+                      boxShadow: selected
+                        ? `0 18px 34px ${theme.glow}, inset 0 0 0 1px rgba(255,255,255,0.06)`
+                        : summaryCardStyle(theme).boxShadow,
+                    }}
+                    onClick={() => togglePendingTrackedArea(area.id)}
+                  >
+                    <div style={summaryLabelStyle(theme)}>{selected ? "Selected" : "Tap to add"}</div>
+                    <div style={summaryValueStyle(theme)}>{area.label}</div>
+                    <div style={summaryNoteStyle(theme)}>{area.description}</div>
+                  </button>
+                );
+              })}
+            </div>
+            {renderFeedbackMessage(trackingAreasMessage, theme)}
+            <div style={{ marginTop: "18px", display: "flex", gap: "10px", flexWrap: "wrap" }}>
+              <button style={primaryButtonStyle(theme)} onClick={completeTrackingAreaSetup}>
+                Save My Tracker Areas
+              </button>
+            </div>
+          </section>
+        </div>
+      </div>
+    );
+  }
+
   if (!session) {
     const authTheme = getAppTheme(signupMode === "dark", signupThemeFamily);
 
     return (
       <div className="app-shell" style={pageStyle(authTheme)}>
-        <style>{`
-          .app-shell,
-          .app-shell *,
-          .app-shell *::before,
-          .app-shell *::after {
-            box-sizing: border-box;
-            min-width: 0;
-          }
-        `}</style>
+        <style>{appShellStyles}</style>
         <div style={containerStyle}>
           <div style={heroCardStyle(authTheme)}>
             <div>
@@ -3217,83 +3929,7 @@ function App() {
 
   return (
     <div className="app-shell" style={pageStyle(theme)}>
-      <style>{`
-        .app-shell,
-        .app-shell *,
-        .app-shell *::before,
-        .app-shell *::after {
-          box-sizing: border-box;
-          min-width: 0;
-        }
-
-        .galaxy-panel {
-          transition: transform 180ms ease, box-shadow 220ms ease, filter 220ms ease;
-          min-width: 0;
-          width: 100%;
-          max-width: 100%;
-        }
-
-        .galaxy-panel:hover {
-          transform: translateY(-2px);
-          filter: brightness(1.015);
-        }
-
-        .app-shell svg,
-        .app-shell canvas,
-        .app-shell img {
-          max-width: 100%;
-          height: auto;
-        }
-
-        button,
-        input,
-        textarea,
-        select {
-          transition: transform 160ms ease, box-shadow 200ms ease, filter 200ms ease, border-color 200ms ease, background 220ms ease;
-          max-width: 100%;
-        }
-
-        button:hover {
-          transform: translateY(-1px);
-          filter: brightness(1.04);
-        }
-
-        button:active {
-          transform: translateY(1px) scale(0.99);
-        }
-
-        input:focus,
-        textarea:focus,
-        select:focus {
-          outline: none;
-          filter: brightness(1.015);
-        }
-
-        @media (max-width: 639px) {
-          .app-shell {
-            overflow-x: hidden;
-          }
-
-          .app-shell button,
-          .app-shell input,
-          .app-shell textarea,
-          .app-shell select {
-            width: 100%;
-          }
-        }
-
-        @media (min-width: 640px) {
-          .galaxy-panel {
-            width: auto;
-          }
-        }
-
-        @media (min-width: 1024px) {
-          .galaxy-panel:hover {
-            transform: translateY(-2px);
-          }
-        }
-      `}</style>
+      <style>{appShellStyles}</style>
       {rewardPopup ? (
         <div style={popupOverlayStyle}>
           <div style={popupCardStyle(theme)}>
@@ -3325,7 +3961,6 @@ function App() {
           setOutsiderPage={setOutsiderPage}
           darkMode={darkMode}
           setDarkMode={setDarkMode}
-          handleLogout={handleLogout}
           loadOutsiderTrackers={loadOutsiderTrackers}
           setAppExperience={setAppExperience}
           outsiderMessage={outsiderMessage}
@@ -3359,9 +3994,9 @@ function App() {
           status={status}
           activePage={activePage}
           setActivePage={setActivePage}
+          trackerNavItems={trackerNavItems}
           darkMode={darkMode}
           setDarkMode={setDarkMode}
-          handleLogout={handleLogout}
           setAppExperience={setAppExperience}
           containerStyle={containerStyle}
           heroCardStyle={heroCardStyle}
@@ -3771,111 +4406,9 @@ function getAppTheme(isDarkMode, family = "galaxy") {
   };
 }
 
-const sampleOutsiderPeople = [
-  {
-    id: "aria",
-    name: "Aria",
-    themeFamily: "galaxy",
-    status: "All systems stable",
-    moodScore: 4,
-    systems: [
-      { label: "meds", value: "on track", note: "Taken this morning" },
-      { label: "food", value: "steady", note: "Three meals logged today" },
-      { label: "hygiene", value: "solid", note: "Two of three habits done" },
-      { label: "sleep", value: "logged", note: "Bed and wake times recorded" },
-      { label: "exercise", value: "moving", note: "One walk logged today" },
-    ],
-    alignments: [
-      { label: "Meds streak", summary: "10 days in a row" },
-      { label: "Exercise streak", summary: "3 days in a row" },
-    ],
-    activity: [
-      "Mood logged as good",
-      "Lunch added at 1:10 PM",
-      "Medication recorded at 8:05 AM",
-    ],
-  },
-  {
-    id: "river",
-    name: "River",
-    themeFamily: "underwater",
-    status: "Attention needed",
-    moodScore: 3,
-    systems: [
-      { label: "meds", value: "pending", note: "No med check yet" },
-      { label: "food", value: "light", note: "One meal logged today" },
-      { label: "hygiene", value: "partial", note: "One hygiene habit checked" },
-      { label: "sleep", value: "open", note: "Wake time missing" },
-      { label: "exercise", value: "quiet", note: "No movement logged yet" },
-    ],
-    alignments: [
-      { label: "Food streak", summary: "4 days with meals logged" },
-      { label: "Sleep streak", summary: "1 day with full sleep data" },
-    ],
-    activity: [
-      "Breakfast added at 9:12 AM",
-      "Mood logged as neutral",
-      "Shower checked at 7:40 AM",
-    ],
-  },
-  {
-    id: "sage",
-    name: "Sage",
-    themeFamily: "forest",
-    status: "All systems stable",
-    moodScore: 2,
-    systems: [
-      { label: "meds", value: "on track", note: "Medication logged today" },
-      { label: "food", value: "steady", note: "Two meals logged today" },
-      { label: "hygiene", value: "complete", note: "All three hygiene habits done" },
-      { label: "sleep", value: "logged", note: "Sleep quality recorded" },
-      { label: "exercise", value: "complete", note: "Exercise session logged" },
-    ],
-    alignments: [
-      { label: "Hygiene streak", summary: "6 days in a row" },
-      { label: "Cleaning streak", summary: "2 days in a row" },
-    ],
-    activity: [
-      "Exercise logged at 4:20 PM",
-      "Mood logged as low",
-      "Sleep quality set to 4 out of 5",
-    ],
-  },
-];
-
-const samplePendingRequests = [
-  {
-    id: "req-1",
-    name: "Morgan",
-    note: "Requested outsider access by code.",
-  },
-  {
-    id: "req-2",
-    name: "Jules",
-    note: "Requested outsider access by link.",
-  },
-];
-
-const sampleConnectedOutsiders = [
-  {
-    id: "out-1",
-    name: "Casey",
-    nameVisibility: "display",
-    notificationCap: "3 per day",
-    cooldownLength: "15 minutes",
-  },
-  {
-    id: "out-2",
-    name: "Robin",
-    nameVisibility: "secondary",
-    notificationCap: "1 per day",
-    cooldownLength: "30 minutes",
-  },
-];
-
 const pageStyle = (theme) => ({
   minHeight: "100vh",
-  background: theme.pageBackground,
+  background: `${theme.pageBackground}, radial-gradient(circle at 12% 12%, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0) 18%), radial-gradient(circle at 88% 20%, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0) 18%)`,
   padding: "clamp(12px, 4vw, 24px)",
   fontFamily: "'Trebuchet MS', 'Segoe UI', sans-serif",
   color: theme.text,
@@ -3891,8 +4424,18 @@ const containerStyle = {
 };
 
 const heroCardStyle = (theme) => ({
-  background: theme.heroBackground,
-  borderRadius: theme.heroRadius || "28px",
+  background:
+    theme.themeFamily === "underwater"
+      ? `radial-gradient(circle at 82% 18%, rgba(219,247,251,0.16) 0%, rgba(219,247,251,0) 24%), radial-gradient(circle at 16% 84%, rgba(135,201,228,0.12) 0%, rgba(135,201,228,0) 22%), ${theme.heroBackground}`
+      : theme.themeFamily === "forest"
+      ? `radial-gradient(circle at 16% 18%, rgba(223,235,191,0.16) 0%, rgba(223,235,191,0) 24%), radial-gradient(circle at 82% 78%, rgba(171,146,111,0.1) 0%, rgba(171,146,111,0) 22%), ${theme.heroBackground}`
+      : `radial-gradient(circle at 84% 18%, rgba(166,150,255,0.18) 0%, rgba(166,150,255,0) 24%), radial-gradient(circle at 16% 82%, rgba(116,208,255,0.12) 0%, rgba(116,208,255,0) 22%), ${theme.heroBackground}`,
+  borderRadius:
+    theme.themeFamily === "underwater"
+      ? "34px 24px 42px 22px / 24px 34px 26px 38px"
+      : theme.themeFamily === "forest"
+      ? "28px 40px 26px 42px / 36px 24px 34px 22px"
+      : theme.heroRadius || "30px 42px 24px 40px / 24px 36px 22px 38px",
   padding: "clamp(16px, 4vw, 24px)",
   boxShadow: theme.heroShadow,
   marginBottom: "24px",
@@ -3911,7 +4454,12 @@ const heroCardStyle = (theme) => ({
 
 const featureCardStyle = (theme) => ({
   background: theme.cardBackground,
-  borderRadius: theme.featureRadius || "26px",
+  borderRadius:
+    theme.themeFamily === "underwater"
+      ? "28px 18px 30px 22px / 20px 30px 22px 32px"
+      : theme.themeFamily === "forest"
+      ? "20px 32px 22px 34px / 30px 20px 32px 22px"
+      : theme.featureRadius || "22px 32px 20px 34px / 24px 20px 32px 22px",
   padding: "clamp(18px, 4vw, 24px)",
   boxShadow: theme.shadow,
   border: theme.border,
@@ -4126,7 +4674,7 @@ const lastActionStyle = (theme) => ({
 
 const headerControlsStyle = {
   display: "flex",
-  gap: "12px",
+  gap: "10px",
   alignItems: "stretch",
   flexWrap: "wrap",
   width: "100%",
@@ -4311,17 +4859,18 @@ const navButtonStyle = (active, theme) => ({
       : theme.themeFamily === "forest"
       ? "18px 24px 18px 22px / 22px 18px 22px 20px"
       : "999px",
-  padding: "12px 14px",
+  padding: "10px 12px",
   cursor: "pointer",
   fontWeight: "bold",
   boxShadow: active ? `0 12px 24px ${theme.glow}` : "none",
-  minHeight: "48px",
-  flex: "1 1 140px",
+  minHeight: "42px",
+  flex: "0 1 auto",
   maxWidth: "100%",
   whiteSpace: "normal",
   overflowWrap: "anywhere",
   lineHeight: 1.35,
   textAlign: "center",
+  fontSize: "0.92rem",
 });
 
 const mealListStyle = {
@@ -4447,7 +4996,7 @@ const dashboardHeadingStyle = (theme) => ({
   overflowWrap: "anywhere",
 });
 
-const dashboardPulseStyle = (theme) => ({
+const dashboardPulseStyle = () => ({
   position: "relative",
   width: "clamp(88px, 28vw, 112px)",
   aspectRatio: "1 / 1",
@@ -4522,8 +5071,9 @@ const summaryNoteStyle = (theme) => ({
 
 const quickLinkGridStyle = {
   display: "grid",
-  gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 130px), 1fr))",
-  gap: "12px",
+  gridTemplateColumns: "repeat(auto-fit, minmax(110px, max-content))",
+  gap: "10px",
+  justifyContent: "start",
 };
 
 const goalFormGridStyle = {
@@ -4604,14 +5154,18 @@ const quickJumpButtonStyle = (theme) => ({
       : theme.themeFamily === "forest"
       ? "18px 24px 18px 22px / 22px 18px 22px 20px"
       : "22px",
-  padding: "13px 14px",
+  padding: "10px 14px",
   cursor: "pointer",
   fontWeight: "bold",
   boxShadow: `0 10px 20px ${theme.glow}`,
-  minHeight: "48px",
-  width: "100%",
+  minHeight: "42px",
+  width: "auto",
+  minWidth: "110px",
+  maxWidth: "160px",
   lineHeight: 1.35,
   textAlign: "center",
+  justifySelf: "start",
+  fontSize: "0.92rem",
 });
 
 const chartToolbarStyle = {
