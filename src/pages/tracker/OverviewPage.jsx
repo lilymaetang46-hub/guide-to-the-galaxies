@@ -41,6 +41,8 @@ function TrackerOverviewPage({ app }) {
     rewards,
     nextRewardGoal,
     recentActivityItems,
+    supportInbox,
+    unreadSupportCount,
   } = app;
 
   return (
@@ -199,6 +201,20 @@ function TrackerOverviewPage({ app }) {
           )}
         </section>
       </div>
+
+      <section className="galaxy-panel" style={sectionCardStyle(theme, "signals")}>
+        {renderSectionHeader("Support Inbox", "Recent nudges from connected outsiders appear here.", "Support", "Support")}
+        <p style={smallInfoStyle(theme)}>Unread messages: {unreadSupportCount}</p>
+        {supportInbox.length === 0 ? (
+          <p style={smallInfoStyle(theme)}>No support messages yet.</p>
+        ) : (
+          supportInbox.slice(0, 3).map((item) => (
+            <p key={item.id} style={smallInfoStyle(theme)}>
+              {item.outsiderName}: {item.message}
+            </p>
+          ))
+        )}
+      </section>
     </div>
   );
 }

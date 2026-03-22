@@ -98,6 +98,12 @@ function TrackerLayout({
             Charts
           </button>
           <button
+            style={navButtonStyle(activePage === "support", theme)}
+            onClick={() => setActivePage("support")}
+          >
+            Support
+          </button>
+          <button
             style={navButtonStyle(activePage === "connections", theme)}
             onClick={() => setActivePage("connections")}
           >

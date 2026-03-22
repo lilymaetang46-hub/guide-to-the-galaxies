@@ -9,6 +9,7 @@ import TrackerGoalsPage from "./pages/tracker/GoalsPage";
 import TrackerChartsPage from "./pages/tracker/ChartsPage";
 import TrackerConnectionsPage from "./pages/tracker/ConnectionsPage";
 import TrackerSettingsPage from "./pages/tracker/SettingsPage";
+import TrackerSupportPage from "./pages/tracker/SupportPage";
 import OutsiderOverviewPage from "./pages/outsider/OverviewPage";
 import OutsiderTrackerDataPage from "./pages/outsider/TrackerDataPage";
 import OutsiderSupportPage from "./pages/outsider/SupportPage";
@@ -87,6 +88,9 @@ function App() {
   const [connectionsLoading, setConnectionsLoading] = useState(false);
   const [pendingRequests, setPendingRequests] = useState([]);
   const [connectedOutsiders, setConnectedOutsiders] = useState([]);
+  const [supportInbox, setSupportInbox] = useState([]);
+  const [supportInboxLoading, setSupportInboxLoading] = useState(false);
+  const [supportInboxMessage, setSupportInboxMessage] = useState("");
   const [pinApprovalTarget, setPinApprovalTarget] = useState(null);
   const [approvalPinInput, setApprovalPinInput] = useState("");
 
@@ -245,12 +249,19 @@ function App() {
     if (user) {
       loadConnectionsData();
       loadOutsiderTrackers();
+      loadSupportInbox();
     }
   }, [user]);
 
   useEffect(() => {
     if (user && activePage === "connections") {
       loadConnectionsData();
+    }
+  }, [activePage, user]);
+
+  useEffect(() => {
+    if (user && (activePage === "support" || activePage === "mission" || activePage === "dashboard")) {
+      loadSupportInbox();
     }
   }, [activePage, user]);
 
@@ -1025,7 +1036,89 @@ function App() {
     setOutsiderLoading(false);
   }
 
-  function sendSupportMessage(message) {
+  async function loadSupportInbox() {
+    if (!user) return;
+
+    setSupportInboxLoading(true);
+
+    const { data, error } = await supabase
+      .from("support_messages")
+      .select("id, outsider_name, message, created_at, read_at")
+      .eq("tracker_id", user.id)
+      .order("created_at", { ascending: false })
+      .limit(50);
+
+    if (error) {
+      console.error("Support inbox load error:", error);
+      setSupportInboxMessage("Could not load support messages.");
+      setSupportInboxLoading(false);
+      return;
+    }
+
+    setSupportInbox(
+      (data || []).map((item) => ({
+        id: item.id,
+        outsiderName: item.outsider_name || "Connected outsider",
+        message: item.message,
+        createdAt: item.created_at,
+        createdAtLabel: new Date(item.created_at).toLocaleString([], {
+          month: "short",
+          day: "numeric",
+          hour: "numeric",
+          minute: "2-digit",
+        }),
+        readAt: item.read_at || null,
+      }))
+    );
+    setSupportInboxMessage("");
+    setSupportInboxLoading(false);
+  }
+
+  async function markSupportMessageRead(messageId) {
+    if (!user) return;
+
+    const { error } = await supabase
+      .from("support_messages")
+      .update({ read_at: new Date().toISOString() })
+      .eq("id", messageId)
+      .eq("tracker_id", user.id);
+
+    if (error) {
+      console.error("Support inbox read error:", error);
+      setSupportInboxMessage("Could not mark that message as read.");
+      return;
+    }
+
+    setSupportInbox((current) =>
+      current.map((item) =>
+        item.id === messageId
+          ? {
+              ...item,
+              readAt: new Date().toISOString(),
+            }
+          : item
+      )
+    );
+    setSupportInboxMessage("Message marked as read.");
+  }
+
+  async function sendSupportMessage(message) {
+    if (!user || !selectedOutsider) return;
+
+    const { error } = await supabase.from("support_messages").insert({
+      connection_id: selectedOutsider.id,
+      tracker_id: selectedOutsider.trackerId,
+      outsider_id: user.id,
+      outsider_name: displayName.trim() || secondaryDisplayName.trim() || "Connected outsider",
+      message,
+    });
+
+    if (error) {
+      console.error("Support message send error:", error);
+      setOutsiderMessage("Could not send support message.");
+      return;
+    }
+
     setOutsiderMessage(message);
     const nextTime = new Date(Date.now() + 15 * 60 * 1000);
     setOutsiderCooldownUntil(
@@ -2495,6 +2588,7 @@ function App() {
     selectedOutsider?.permissions
   );
   const selectedOutsiderHistory = selectedOutsider?.history || [];
+  const unreadSupportCount = supportInbox.filter((item) => !item.readAt).length;
   const selectedOutsiderChartData = useMemo(
     () => buildRecentChartData(selectedOutsiderHistory, 7),
     [selectedOutsiderHistory, today]
@@ -2595,6 +2689,12 @@ function App() {
     energyFlowCards,
     simpleAlignmentStreaks,
     recentActivityItems,
+    supportInbox,
+    supportInboxLoading,
+    supportInboxMessage,
+    unreadSupportCount,
+    loadSupportInbox,
+    markSupportMessageRead,
     dashboardHeroStyle,
     dashboardPulseStyle,
     dashboardPulseRingStyle,
@@ -2825,6 +2925,8 @@ function App() {
         return <TrackerGoalsPage app={trackerPageProps} />;
       case "connections":
         return <TrackerConnectionsPage app={trackerPageProps} />;
+      case "support":
+        return <TrackerSupportPage app={trackerPageProps} />;
       default:
         return null;
     }
