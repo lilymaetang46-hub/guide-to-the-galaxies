@@ -16,6 +16,7 @@ import OutsiderGoalsPage from "./pages/outsider/GoalsPage";
 
 const PENDING_SIGNUP_PROFILE_KEY = "pendingSignupProfile";
 const PREFERRED_APP_EXPERIENCE_KEY = "preferredAppExperience";
+const DEFAULT_PUBLIC_APP_URL = "https://guide-to-the-galaxies.app";
 const DEFAULT_CONNECTION_PERMISSIONS = {
   meds: true,
   food: true,
@@ -626,6 +627,7 @@ function App() {
       email: authEmail,
       password: authPassword,
       options: {
+        emailRedirectTo: getPublicAppUrl(),
         data: {
           display_name: displayName.trim(),
           secondary_display_name: secondaryDisplayName.trim(),
@@ -662,8 +664,8 @@ function App() {
     setConfirmPin("");
     setAuthMessage(
       data.session
-        ? "Account created. Please log in to finish setting up your profile."
-        : "Account created. Check your email if needed, then log in to finish setting up your profile."
+        ? "Account created. Check your email to confirm it, then log in to finish setting up your profile."
+        : "Confirmation email sent. Open the email, tap the link, then come back and log in."
     );
   }
 
@@ -727,7 +729,7 @@ function App() {
       setInviteCode(inviteRow?.invite_code || "");
       setInviteLink(
         inviteRow?.invite_token
-          ? `https://guide-to-the-galaxies.app/connect/${inviteRow.invite_token}`
+          ? `${getPublicAppUrl()}/connect/${inviteRow.invite_token}`
           : ""
       );
     }
@@ -1054,7 +1056,7 @@ function App() {
     }
 
     setInviteCode(code);
-    setInviteLink(`https://guide-to-the-galaxies.app/connect/${token}`);
+    setInviteLink(`${getPublicAppUrl()}/connect/${token}`);
     setConnectionsMessage("Invite code generated.");
   }
 
@@ -1078,7 +1080,7 @@ function App() {
     }
 
     setInviteCode(code);
-    setInviteLink(`https://guide-to-the-galaxies.app/connect/${token}`);
+    setInviteLink(`${getPublicAppUrl()}/connect/${token}`);
     setConnectionsMessage("Invite link generated.");
   }
 
@@ -4616,6 +4618,24 @@ const popupCardStyle = (theme) => ({
 
 function darkModeSafe(theme, galaxyValue, solarValue) {
   return theme.modeName === "Galaxy" ? galaxyValue : solarValue;
+}
+
+function getPublicAppUrl() {
+  if (typeof window === "undefined") {
+    return DEFAULT_PUBLIC_APP_URL;
+  }
+
+  const { origin, hostname } = window.location;
+
+  if (
+    hostname === "localhost" ||
+    hostname === "127.0.0.1" ||
+    hostname.endsWith(".local")
+  ) {
+    return DEFAULT_PUBLIC_APP_URL;
+  }
+
+  return origin;
 }
 
 function getFeedbackTone(message = "") {
