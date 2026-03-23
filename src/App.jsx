@@ -28,6 +28,7 @@ const PENDING_SIGNUP_PROFILE_KEY = "pendingSignupProfile";
 const PREFERRED_APP_EXPERIENCE_KEY = "preferredAppExperience";
 const DEFAULT_PUBLIC_APP_URL = "https://guide-to-the-galaxies.app";
 const NATIVE_PUSH_TARGET_PAGE = "support";
+const DEFAULT_PUSH_ENVIRONMENT = "production";
 const DEFAULT_CONNECTION_PERMISSIONS = {
   meds: true,
   food: true,
@@ -240,6 +241,12 @@ function getNativePushOptOutKey(userId) {
 
 function getTrackedAreasStorageKey(userId) {
   return `trackedAreas:${userId}`;
+}
+
+function getNativePushEnvironment() {
+  return import.meta.env.VITE_PUSH_ENVIRONMENT === "sandbox"
+    ? "sandbox"
+    : DEFAULT_PUSH_ENVIRONMENT;
 }
 
 function isTrackedAreasColumnError(error) {
@@ -1287,18 +1294,39 @@ function App() {
   async function sendSupportMessage(message) {
     if (!user || !selectedOutsider) return;
 
-    const { error } = await supabase.from("support_messages").insert({
-      connection_id: selectedOutsider.id,
-      tracker_id: selectedOutsider.trackerId,
-      outsider_id: user.id,
-      outsider_name: displayName.trim() || secondaryDisplayName.trim() || "Connected outsider",
-      message,
-    });
+    const outsiderName =
+      displayName.trim() || secondaryDisplayName.trim() || "Connected outsider";
+    const { data, error } = await supabase
+      .from("support_messages")
+      .insert({
+        connection_id: selectedOutsider.id,
+        tracker_id: selectedOutsider.trackerId,
+        outsider_id: user.id,
+        outsider_name: outsiderName,
+        message,
+      })
+      .select("id")
+      .single();
 
     if (error) {
       console.error("Support message send error:", error);
       setOutsiderMessage("Could not send support message.");
       return;
+    }
+
+    if (data?.id) {
+      const { error: pushError } = await supabase.functions.invoke(
+        "send-support-message-push",
+        {
+          body: {
+            supportMessageId: data.id,
+          },
+        }
+      );
+
+      if (pushError) {
+        console.error("Support push trigger error:", pushError);
+      }
     }
 
     setOutsiderMessage(message);
@@ -1587,7 +1615,7 @@ function App() {
         token: pushTokenValue,
         platform: Capacitor.getPlatform(),
         app_id: "app.guidetothegalaxies",
-        environment: "production",
+        environment: getNativePushEnvironment(),
         enabled: true,
         last_registered_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),

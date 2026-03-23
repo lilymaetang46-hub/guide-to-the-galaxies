@@ -42,5 +42,9 @@ The repo is now set up to use Capacitor as the native shell so the existing Reac
 - Native push groundwork now lives in the shared React app plus the Capacitor Android shell:
   - [`src/pushNotifications.js`](C:\Users\Lily\tracker-app\src\pushNotifications.js) wraps Capacitor push registration so the web app codepath stays unchanged.
   - [`supabase/migrations/20260322143000_add_push_notification_devices.sql`](C:\Users\Lily\tracker-app\supabase\migrations\20260322143000_add_push_notification_devices.sql) stores per-device push tokens for authenticated users.
+  - [`supabase/functions/send-support-message-push/index.ts`](C:\Users\Lily\tracker-app\supabase\functions\send-support-message-push\index.ts) sends APNs notifications for new support messages when iOS device tokens exist.
   - [`android/app/src/main/AndroidManifest.xml`](C:\Users\Lily\tracker-app\android\app\src\main\AndroidManifest.xml) now requests Android notification permission.
-- To finish live Android push delivery, add your Firebase `google-services.json` file under [`android/app`](C:\Users\Lily\tracker-app\android\app), run `npm run cap:sync`, and then add the server-side send step that targets rows in `push_notification_devices`.
+- To finish live iPhone push delivery, add the iOS shell on a Mac, enable Push Notifications in Xcode, and configure the APNs secrets listed in [`supabase/functions/send-support-message-push/README.md`](C:\Users\Lily\tracker-app\supabase\functions\send-support-message-push\README.md).
+- For iPhone development builds, compile the native shell with `VITE_PUSH_ENVIRONMENT=sandbox` so sandbox APNs device tokens do not get mixed with production tokens.
+- A full Mac/Xcode handoff checklist now lives in [`docs/iphone-push-handoff.md`](C:\Users\Lily\tracker-app\docs\iphone-push-handoff.md).
+- To finish live Android push delivery later, add your Firebase `google-services.json` file under [`android/app`](C:\Users\Lily\tracker-app\android\app), run `npm run cap:sync`, and add an Android send path alongside the current APNs sender.
