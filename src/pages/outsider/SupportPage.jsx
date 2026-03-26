@@ -20,6 +20,8 @@ function consoleLabel(color = "#6b7078") {
 }
 
 function OutsiderSupportPage({ app }) {
+  const viewportWidth = typeof window !== "undefined" ? window.innerWidth : 1280;
+  const isMobile = viewportWidth < 768;
   const {
     theme,
     chartsPageStyle,
@@ -91,8 +93,8 @@ function OutsiderSupportPage({ app }) {
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "minmax(0, 1.3fr) minmax(0, 1fr)",
-            gap: "24px",
+            gridTemplateColumns: isMobile ? "1fr" : "minmax(0, 1.3fr) minmax(0, 1fr)",
+            gap: isMobile ? "16px" : "24px",
           }}
         >
           <div style={consolePanel(theme)}>
@@ -101,13 +103,13 @@ function OutsiderSupportPage({ app }) {
               <span style={consoleLabel(theme.observerAccent)}>COMMS_OPEN</span>
             </div>
             <p style={consoleLabel()}>{selectedOutsider.themeFamily}</p>
-            <p style={{ margin: "6px 0 0", fontFamily: "Newsreader, serif", fontSize: "1.8rem", color: theme.text }}>
+            <p style={{ margin: "6px 0 0", fontFamily: "Newsreader, serif", fontSize: isMobile ? "1.45rem" : "1.8rem", color: theme.text }}>
               {selectedOutsider.name}
             </p>
-            <p style={{ margin: "12px 0 0", color: "#929095", fontSize: "12px" }}>
+            <p style={{ margin: "12px 0 0", color: "#929095", fontSize: "12px", lineHeight: 1.7 }}>
               Approved categories can receive support nudges from this space.
             </p>
-            <div style={{ display: "flex", gap: "12px", flexWrap: "wrap", marginTop: "14px" }}>
+            <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(2, max-content)", gap: "12px", marginTop: "14px", width: isMobile ? "100%" : "auto" }}>
               <button style={primaryButtonStyle(theme)} onClick={() => setShowOutsiderChooser(true)}>
                 Select Tracker
               </button>
@@ -122,7 +124,7 @@ function OutsiderSupportPage({ app }) {
             <p style={{ margin: "8px 0 0", fontFamily: "Newsreader, serif", fontSize: "1.7rem", color: "#fd8b00" }}>
               {outsiderCooldownUntil ? "Cooldown_Active" : "Ready_To_Transmit"}
             </p>
-            <p style={{ margin: "8px 0 0", color: "#d39b66", fontSize: "12px" }}>
+            <p style={{ margin: "8px 0 0", color: "#d39b66", fontSize: "12px", lineHeight: 1.7 }}>
               {outsiderCooldownUntil ? `Next reminder available at ${outsiderCooldownUntil}` : "A reminder can be sent now."}
             </p>
           </div>
@@ -131,8 +133,8 @@ function OutsiderSupportPage({ app }) {
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)",
-            gap: "24px",
+            gridTemplateColumns: isMobile ? "1fr" : "minmax(0, 1fr) minmax(0, 1fr)",
+            gap: isMobile ? "16px" : "24px",
           }}
         >
           <div style={consolePanel(theme)}>
@@ -140,7 +142,7 @@ function OutsiderSupportPage({ app }) {
               <span style={consoleLabel()}>[03] GENERAL_SUPPORT</span>
               <span style={consoleLabel(theme.observerAccent)}>TEXT_QUEUE</span>
             </div>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: "12px" }}>
+            <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(2, minmax(0, 1fr))", gap: "12px" }}>
               {generalMessages.map((message) => (
                 <button key={message} style={quickJumpButtonStyle(theme)} onClick={() => sendSupportMessage(message)}>
                   {message}

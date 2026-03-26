@@ -20,6 +20,8 @@ function consoleLabel(color = "#6b7078") {
 }
 
 function OutsiderGoalsPage({ app }) {
+  const viewportWidth = typeof window !== "undefined" ? window.innerWidth : 1280;
+  const isMobile = viewportWidth < 768;
   const {
     theme,
     chartsPageStyle,
@@ -81,17 +83,17 @@ function OutsiderGoalsPage({ app }) {
 
     return (
       <div style={{ display: "grid", gap: "24px", marginTop: "8px" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", gap: "16px", flexWrap: "wrap" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", gap: "16px", flexWrap: "wrap", flexDirection: isMobile ? "column" : "row" }}>
           <div style={consolePanel(theme)}>
             <p style={consoleLabel()}>[01] CURRENT_TRACKER</p>
-            <p style={{ margin: "6px 0 0", fontFamily: "Newsreader, serif", fontSize: "1.8rem", color: theme.text }}>
+            <p style={{ margin: "6px 0 0", fontFamily: "Newsreader, serif", fontSize: isMobile ? "1.45rem" : "1.8rem", color: theme.text }}>
               {selectedOutsider.name}
             </p>
             <p style={{ margin: "10px 0 0", color: "#929095", fontSize: "12px" }}>
               Only high-level approved goal progress is shown here.
             </p>
           </div>
-          <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(2, max-content)", gap: "12px", width: isMobile ? "100%" : "auto" }}>
             <button style={primaryButtonStyle(theme)} onClick={() => setShowOutsiderChooser(true)}>
               Select Tracker
             </button>
@@ -104,8 +106,8 @@ function OutsiderGoalsPage({ app }) {
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "minmax(0, 1.25fr) minmax(0, 1fr)",
-            gap: "24px",
+            gridTemplateColumns: isMobile ? "1fr" : "minmax(0, 1.25fr) minmax(0, 1fr)",
+            gap: isMobile ? "16px" : "24px",
           }}
         >
           {selectedOutsiderPermissions.streaks ? (

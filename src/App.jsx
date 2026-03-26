@@ -399,8 +399,12 @@ function App() {
     darkMode,
     appExperience === "outsider" ? selectedOutsider?.themeFamily || themeFamily : themeFamily
   );
+  const trackerTheme =
+    appExperience === "tracker" ? getTrackerExperienceTheme(baseTheme, darkMode) : baseTheme;
   const theme =
-    appExperience === "outsider" ? getObserverExperienceTheme(baseTheme, darkMode) : baseTheme;
+    appExperience === "outsider"
+      ? getObserverExperienceTheme(baseTheme, darkMode)
+      : trackerTheme;
   const moodTagGroups = [
     {
       label: "Positive",
@@ -3613,6 +3617,36 @@ function App() {
       }
     }
 
+    .observatory-orbit-spin {
+      animation: observatory-orbit-spin 60s linear infinite;
+      transform-origin: center;
+    }
+
+    .observatory-orbit-counterspin {
+      animation: observatory-orbit-counterspin 60s linear infinite;
+      transform-origin: center;
+    }
+
+    @keyframes observatory-orbit-spin {
+      from {
+        transform: rotate(0deg);
+      }
+
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    @keyframes observatory-orbit-counterspin {
+      from {
+        transform: rotate(0deg);
+      }
+
+      to {
+        transform: rotate(-360deg);
+      }
+    }
+
     .app-shell svg,
     .app-shell canvas,
     .app-shell img {
@@ -4049,6 +4083,7 @@ function App() {
           navButtonStyle={navButtonStyle}
           themeToggleStyle={themeToggleStyle}
           softButtonStyle={softButtonStyle}
+          handleLogout={handleLogout}
         >
           {outsiderPageContent}
         </OutsiderLayout>
@@ -4480,6 +4515,67 @@ function getAppTheme(isDarkMode, family = "galaxy") {
   };
 }
 
+function getTrackerExperienceTheme(theme, isDarkMode) {
+  if (theme.themeFamily !== "galaxy" || !isDarkMode) {
+    return {
+      ...theme,
+      trackerObservatory: false,
+    };
+  }
+
+  return {
+    ...theme,
+    trackerObservatory: true,
+    pageBackground:
+      "linear-gradient(180deg, #020205 0%, #05060c 42%, #0d1019 100%)",
+    heroBackground:
+      "linear-gradient(180deg, rgba(4,4,10,0.82) 0%, rgba(8,8,18,0.78) 100%)",
+    cardBackground:
+      "linear-gradient(180deg, rgba(5,5,14,0.8) 0%, rgba(8,8,20,0.72) 100%)",
+    itemBackground: "rgba(11, 11, 25, 0.76)",
+    inputBackground: "rgba(7, 7, 16, 0.88)",
+    inputBorder: "rgba(116, 115, 143, 0.38)",
+    softButtonBackground: "rgba(216, 185, 255, 0.08)",
+    softButtonText: "#d8b9ff",
+    primary: "linear-gradient(180deg, #fff0c3 0%, #ebd481 100%)",
+    primaryText: "#4c3e00",
+    navInactive: "rgba(216, 185, 255, 0.08)",
+    navActive: "rgba(255, 240, 195, 0.12)",
+    navText: "#d8b9ff",
+    text: "#e5e3ff",
+    subtleText: "#aaa8c6",
+    faintText: "rgba(216, 185, 255, 0.44)",
+    border: "1px solid rgba(255,255,255,0.06)",
+    shadow: "0 12px 48px -12px rgba(0, 0, 0, 0.8)",
+    heroShadow: "0 24px 60px rgba(0, 0, 0, 0.65)",
+    glow: "rgba(255, 240, 195, 0.22)",
+    track: "rgba(255,255,255,0.1)",
+    chartSurface: "rgba(13, 13, 25, 0.78)",
+    chartGrid: "rgba(255,255,255,0.08)",
+    chartLabel: "#aaa8c6",
+    chartPalette: {
+      mood: "#fd6f85",
+      focus: "#d8b9ff",
+      energy: "#fff0c3",
+      meals: "#d8b9ff",
+      meds: "#92baff",
+      hygiene: "#a9c7ff",
+      exercise: "#fff0c3",
+    },
+    heroRadius: "24px",
+    featureRadius: "24px",
+    sectionRadius: "24px",
+    trackerHeadingFamily: "'Newsreader', serif",
+    trackerBodyFamily: "'Inter', 'Segoe UI', sans-serif",
+    trackerAccent: "#fff0c3",
+    trackerAccentSoft: "#d8b9ff",
+    trackerError: "#fd6f85",
+    trackerGlassBackground: "rgba(4, 4, 10, 0.54)",
+    trackerGlowImage:
+      "radial-gradient(circle at 12% 16%, rgba(94, 28, 176, 0.82) 0%, rgba(94, 28, 176, 0.42) 16%, rgba(94, 28, 176, 0) 40%), radial-gradient(circle at 86% 84%, rgba(28, 44, 156, 0.76) 0%, rgba(28, 44, 156, 0.32) 18%, rgba(28, 44, 156, 0) 42%), radial-gradient(circle at 52% 56%, rgba(126, 44, 82, 0.44) 0%, rgba(126, 44, 82, 0.16) 18%, rgba(126, 44, 82, 0) 52%), radial-gradient(circle at 24% 78%, rgba(255, 216, 132, 0.22) 0%, rgba(255, 216, 132, 0) 26%), radial-gradient(circle at 74% 68%, rgba(96, 160, 255, 0.24) 0%, rgba(96, 160, 255, 0) 28%), radial-gradient(circle at 50% 100%, rgba(255, 240, 195, 0.08) 0%, rgba(255, 240, 195, 0) 22%), linear-gradient(180deg, rgba(1, 2, 5, 0.04) 0%, rgba(1, 2, 5, 0.48) 100%)",
+  };
+}
+
 function getObserverExperienceTheme(theme, isDarkMode) {
   if (theme.themeFamily !== "galaxy") {
     return {
@@ -4556,30 +4652,30 @@ function getObserverExperienceTheme(theme, isDarkMode) {
     ...theme,
     observerConsole: true,
     pageBackground:
-      "linear-gradient(180deg, rgba(238,239,233,0.98) 0%, rgba(223,226,221,0.98) 38%, rgba(207,212,214,0.98) 100%)",
+      "linear-gradient(180deg, rgba(218,222,224,0.98) 0%, rgba(198,204,208,0.98) 38%, rgba(182,189,194,0.98) 100%)",
     heroBackground:
-      "linear-gradient(180deg, rgba(227,231,232,0.98) 0%, rgba(208,214,217,0.98) 100%)",
+      "linear-gradient(180deg, rgba(212,218,221,0.98) 0%, rgba(192,199,204,0.98) 100%)",
     observerHeroBackground:
-      "linear-gradient(180deg, rgba(230,233,235,0.98) 0%, rgba(208,214,217,0.98) 100%)",
+      "linear-gradient(180deg, rgba(216,221,224,0.98) 0%, rgba(193,199,204,0.98) 100%)",
     cardBackground:
-      "linear-gradient(180deg, rgba(226,230,232,0.96) 0%, rgba(207,213,216,0.95) 100%)",
+      "linear-gradient(180deg, rgba(206,212,216,0.96) 0%, rgba(184,191,196,0.95) 100%)",
     observerCardBackground:
-      "linear-gradient(180deg, rgba(229,233,234,0.98) 0%, rgba(209,214,217,0.97) 100%)",
-    itemBackground: "rgba(216,223,226,0.92)",
-    inputBackground: "rgba(242,245,245,0.98)",
-    inputBorder: "#8f9ea4",
-    softButtonBackground: "linear-gradient(180deg, #d9dfe2 0%, #bcc6cb 100%)",
+      "linear-gradient(180deg, rgba(210,216,219,0.98) 0%, rgba(186,193,198,0.97) 100%)",
+    itemBackground: "rgba(198,205,209,0.92)",
+    inputBackground: "rgba(228,233,235,0.98)",
+    inputBorder: "#74848b",
+    softButtonBackground: "linear-gradient(180deg, #c6cfd4 0%, #aab6bc 100%)",
     softButtonText: "#22343a",
     primary: "linear-gradient(180deg, #ffc54f 0%, #e09018 100%)",
     primaryText: "#241506",
-    navInactive: "linear-gradient(180deg, rgba(220,226,228,0.98) 0%, rgba(195,203,206,0.98) 100%)",
+    navInactive: "linear-gradient(180deg, rgba(202,209,213,0.98) 0%, rgba(178,187,192,0.98) 100%)",
     navActive: "linear-gradient(180deg, #ffc54f 0%, #e09018 100%)",
     navText: "#20343a",
-    text: "#19272d",
-    subtleText: "#40545a",
-    faintText: "#63777d",
-    border: "1px solid rgba(122, 136, 144, 0.35)",
-    observerBorder: "1px solid rgba(122, 136, 144, 0.42)",
+    text: "#152228",
+    subtleText: "#35484f",
+    faintText: "#55686f",
+    border: "1px solid rgba(100, 115, 123, 0.42)",
+    observerBorder: "1px solid rgba(100, 115, 123, 0.48)",
     shadow: "0 18px 30px rgba(68,79,88,0.14)",
     observerShadow:
       "inset 0 2px 4px rgba(100,111,119,0.22), 0 18px 28px rgba(68,79,88,0.12)",
@@ -4606,9 +4702,9 @@ function getObserverExperienceTheme(theme, isDarkMode) {
     observerAccentAlt: "#1b8a69",
     observerAlert: "#bf5544",
     observerPanelFrame:
-      "linear-gradient(180deg, rgba(212,219,223,0.98) 0%, rgba(186,195,201,0.98) 100%)",
+      "linear-gradient(180deg, rgba(193,201,206,0.98) 0%, rgba(165,175,182,0.98) 100%)",
     observerChrome:
-      "linear-gradient(180deg, rgba(238,241,242,0.98) 0%, rgba(206,214,217,0.98) 100%)",
+      "linear-gradient(180deg, rgba(209,215,219,0.98) 0%, rgba(180,189,195,0.98) 100%)",
     observerChartMode: "stepped",
     observerFontFamily: "'JetBrains Mono', 'IBM Plex Mono', 'Segoe UI', monospace",
     observerHeadingFamily: "'Space Grotesk', 'Segoe UI', sans-serif",
@@ -4619,9 +4715,15 @@ function isSpaceConsoleTheme(theme) {
   return Boolean(theme?.observerConsole && theme?.themeFamily === "galaxy");
 }
 
+function isObservatoryTrackerTheme(theme) {
+  return Boolean(theme?.trackerObservatory && theme?.themeFamily === "galaxy");
+}
+
 const pageStyle = (theme) => ({
   minHeight: "100vh",
-  background: isSpaceConsoleTheme(theme)
+  background: isObservatoryTrackerTheme(theme)
+    ? theme.pageBackground
+    : isSpaceConsoleTheme(theme)
     ? [
         "linear-gradient(180deg, rgba(255,255,255,0.03) 0, rgba(255,255,255,0.03) 1px, transparent 1px, transparent 5px)",
         "linear-gradient(90deg, rgba(255,255,255,0.025) 0, rgba(255,255,255,0.025) 1px, transparent 1px, transparent 84px)",
@@ -4631,7 +4733,9 @@ const pageStyle = (theme) => ({
       ].join(", ")
     : `${theme.pageBackground}, radial-gradient(circle at 12% 12%, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0) 18%), radial-gradient(circle at 88% 20%, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0) 18%)`,
   padding: "clamp(12px, 4vw, 24px)",
-  fontFamily: isSpaceConsoleTheme(theme)
+  fontFamily: isObservatoryTrackerTheme(theme)
+    ? theme.trackerBodyFamily
+    : isSpaceConsoleTheme(theme)
     ? theme.observerFontFamily
     : "'Trebuchet MS', 'Segoe UI', sans-serif",
   color: theme.text,

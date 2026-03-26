@@ -46,6 +46,8 @@ function labelStyle(color = "#6b7078") {
 }
 
 function OutsiderTrackerDataPage({ app }) {
+  const viewportWidth = typeof window !== "undefined" ? window.innerWidth : 1280;
+  const isMobile = viewportWidth < 768;
   const {
     theme,
     chartsPageStyle,
@@ -214,8 +216,8 @@ function OutsiderTrackerDataPage({ app }) {
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "minmax(0, 2fr) minmax(260px, 1fr)",
-            gap: "24px",
+            gridTemplateColumns: isMobile ? "1fr" : "minmax(0, 2fr) minmax(260px, 1fr)",
+            gap: isMobile ? "16px" : "24px",
           }}
         >
           <div style={telemetryPanelStyle(theme)}>
@@ -224,7 +226,7 @@ function OutsiderTrackerDataPage({ app }) {
               <span style={labelStyle(theme.observerAccent)}>SIGMA_V.04</span>
             </div>
 
-            <div style={{ height: "220px", border: `1px solid ${theme.observerAccent}22`, padding: "16px", background: "rgba(0,0,0,0.16)" }}>
+            <div style={{ height: isMobile ? "160px" : "220px", border: `1px solid ${theme.observerAccent}22`, padding: isMobile ? "12px" : "16px", background: "rgba(0,0,0,0.16)" }}>
               {hasTrendData ? (
                 <svg viewBox="0 0 400 100" preserveAspectRatio="none" style={{ width: "100%", height: "100%" }}>
                   <path
@@ -250,8 +252,8 @@ function OutsiderTrackerDataPage({ app }) {
             <div
               style={{
                 display: "grid",
-                gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
-                gap: "16px",
+                gridTemplateColumns: isMobile ? "1fr" : "repeat(3, minmax(0, 1fr))",
+                gap: isMobile ? "12px" : "16px",
                 borderTop: `1px solid ${theme.observerAccent}22`,
                 paddingTop: "16px",
                 marginTop: "16px",
@@ -330,8 +332,8 @@ function OutsiderTrackerDataPage({ app }) {
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
-            gap: "16px",
+            gridTemplateColumns: isMobile ? "repeat(2, minmax(0, 1fr))" : "repeat(4, minmax(0, 1fr))",
+            gap: isMobile ? "12px" : "16px",
           }}
         >
           {systemsStrip.map((item) => (

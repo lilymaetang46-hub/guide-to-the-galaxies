@@ -31,6 +31,7 @@ function OutsiderLayout({
   navButtonStyle,
   themeToggleStyle,
   softButtonStyle,
+  handleLogout,
   children,
 }) {
   const [navOpen, setNavOpen] = useState(
@@ -40,6 +41,9 @@ function OutsiderLayout({
   const shouldCollapseAfterAction =
     typeof window !== "undefined" && window.innerWidth < 900;
   const isConsole = theme.observerConsole;
+  const viewportWidth = typeof window !== "undefined" ? window.innerWidth : 1280;
+  const isMobile = viewportWidth < 768;
+  const isTablet = viewportWidth < 1024;
 
   const handleSelectPage = (page) => {
     setOutsiderPage(page);
@@ -232,6 +236,9 @@ function OutsiderLayout({
               <button style={softButtonStyle(theme)} onClick={handleToggleExperience}>
                 Open Tracker App
               </button>
+              <button style={softButtonStyle(theme)} onClick={handleLogout}>
+                Logout
+              </button>
               <button style={themeToggleStyle(theme)} onClick={() => setDarkMode(!darkMode)}>
                 {darkMode ? "Solar Mode" : "Galaxy Mode"}
               </button>
@@ -292,8 +299,8 @@ function OutsiderLayout({
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
-          padding: "0 20px",
-          background: "rgba(13, 13, 18, 0.92)",
+          padding: isMobile ? "0 12px" : "0 20px",
+          background: theme.observerChrome,
           backdropFilter: "blur(16px)",
           borderBottom: `2px solid ${theme.observerAccent}33`,
         }}
@@ -308,7 +315,7 @@ function OutsiderLayout({
               fontWeight: 700,
               letterSpacing: "0.2em",
               color: theme.observerAccent,
-              fontSize: "1.05rem",
+              fontSize: isMobile ? "0.82rem" : "1.05rem",
               textTransform: "uppercase",
             }}
           >
@@ -316,7 +323,7 @@ function OutsiderLayout({
           </div>
         </div>
 
-        <nav style={{ display: "flex", gap: "24px", alignItems: "center" }}>
+        <nav style={{ display: isMobile ? "none" : "flex", gap: "24px", alignItems: "center" }}>
           {CONSOLE_NAV_ITEMS.map((item) => (
             <button
               key={item.key}
@@ -324,7 +331,7 @@ function OutsiderLayout({
               style={{
                 background: "transparent",
                 border: "none",
-                color: outsiderPage === item.key ? theme.observerAccent : "#5d6168",
+                color: outsiderPage === item.key ? theme.observerAccent : theme.faintText,
                 fontFamily: "Newsreader, serif",
                 fontSize: "0.82rem",
                 fontWeight: 700,
@@ -333,7 +340,7 @@ function OutsiderLayout({
                 textDecoration: outsiderPage === item.key ? "underline" : "none",
                 textUnderlineOffset: "8px",
                 padding: "6px 0",
-                display: typeof window !== "undefined" && window.innerWidth < 900 ? "none" : "inline-flex",
+                display: viewportWidth < 900 ? "none" : "inline-flex",
               }}
             >
               {item.label}
@@ -342,12 +349,28 @@ function OutsiderLayout({
         </nav>
 
         <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-          <div style={{ textAlign: "right", display: typeof window !== "undefined" && window.innerWidth < 640 ? "none" : "block" }}>
+          <div style={{ textAlign: "right", display: viewportWidth < 640 ? "none" : "block" }}>
             <p style={{ margin: 0, fontSize: "10px", color: `${theme.observerAccent}99`, textTransform: "uppercase" }}>
               System Integrity
             </p>
             <p style={{ margin: 0, fontSize: "12px", color: theme.observerAccent }}>NOMINAL_98%</p>
           </div>
+          <button
+            onClick={handleLogout}
+            style={{
+              padding: "8px 10px",
+              borderRadius: "2px",
+              border: `1px solid ${theme.inputBorder}`,
+              background: theme.softButtonBackground,
+              color: theme.text,
+              fontFamily: theme.observerFontFamily,
+              fontSize: "10px",
+              letterSpacing: "0.08em",
+              textTransform: "uppercase",
+            }}
+          >
+            Logout
+          </button>
           <button
             onClick={() => setDarkMode(!darkMode)}
             style={{
@@ -355,13 +378,16 @@ function OutsiderLayout({
               height: "34px",
               borderRadius: "2px",
               border: `1px solid ${theme.inputBorder}`,
-              background: "#333537",
+              background: theme.observerPanelFrame,
               color: theme.text,
               display: "grid",
               placeItems: "center",
             }}
+            aria-label={darkMode ? "Switch to light console mode" : "Switch to dark console mode"}
           >
-            <span className="material-symbols-outlined" style={{ fontSize: "18px" }}>person</span>
+            <span className="material-symbols-outlined" style={{ fontSize: "18px" }}>
+              contrast
+            </span>
           </button>
         </div>
       </header>
@@ -373,17 +399,17 @@ function OutsiderLayout({
           top: 0,
           bottom: 0,
           width: "272px",
-          background: "#121416",
-          borderRight: "1px solid #27292d",
+          background: theme.observerChrome,
+          borderRight: theme.observerBorder,
           paddingTop: "80px",
-          display: typeof window !== "undefined" && window.innerWidth < 1024 ? "none" : "flex",
+          display: isTablet ? "none" : "flex",
           flexDirection: "column",
           gap: "8px",
           zIndex: 40,
         }}
       >
         <div style={{ padding: "0 24px 16px" }}>
-          <p style={{ margin: 0, color: "#ff9c2b", letterSpacing: "0.18em", fontSize: "11px", textTransform: "uppercase" }}>
+          <p style={{ margin: 0, color: theme.observerAccentAlt, letterSpacing: "0.18em", fontSize: "11px", textTransform: "uppercase" }}>
             SYSTEM_MANIFEST
           </p>
         </div>
@@ -398,7 +424,7 @@ function OutsiderLayout({
                 gap: "14px",
                 width: "100%",
                 background: item.active ? `${theme.observerAccent}14` : "transparent",
-                color: item.active ? theme.observerAccent : "#757980",
+                color: item.active ? theme.observerAccent : theme.faintText,
                 border: "none",
                 borderLeft: item.active ? `4px solid ${theme.observerAccent}` : "4px solid transparent",
                 padding: "16px 24px",
@@ -418,15 +444,15 @@ function OutsiderLayout({
           style={{
             marginTop: "auto",
             padding: "24px",
-            background: "rgba(12,14,16,0.5)",
-            borderTop: "1px solid #27292d",
+            background: theme.cardBackground,
+            borderTop: theme.observerBorder,
           }}
         >
-          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px", fontSize: "10px", color: "#777c83", textTransform: "uppercase" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px", fontSize: "10px", color: theme.faintText, textTransform: "uppercase" }}>
             <span>Oxygen_Reserve</span>
             <span style={{ color: theme.observerAccent }}>84%</span>
           </div>
-          <div style={{ height: "4px", background: "#282a2c" }}>
+          <div style={{ height: "4px", background: theme.inputBackground }}>
             <div style={{ width: "84%", height: "100%", background: theme.observerAccent }} />
           </div>
         </div>
@@ -434,21 +460,22 @@ function OutsiderLayout({
 
       <main
         style={{
-          marginLeft: typeof window !== "undefined" && window.innerWidth >= 1024 ? "272px" : 0,
+          marginLeft: isTablet ? 0 : "272px",
           paddingTop: "80px",
-          paddingBottom: "24px",
-          paddingInline: "16px",
-          maxWidth: "1280px",
-          marginRight: "auto",
+          paddingBottom: isMobile ? "12px" : "24px",
+          paddingInline: isMobile ? "8px" : "24px",
+          maxWidth: "none",
+          width: isTablet ? "100%" : "calc(100vw - 272px)",
+          boxSizing: "border-box",
         }}
       >
         <div
           style={{
             position: "relative",
-            background: "#282a2c",
-            padding: "16px",
-            borderTop: "4px solid #47464b",
-            borderRadius: "12px 12px 0 0",
+            background: theme.observerPanelFrame,
+            padding: isMobile ? "8px" : "16px",
+            borderTop: `4px solid ${theme.inputBorder}`,
+            borderRadius: isMobile ? "10px 10px 0 0" : "12px 12px 0 0",
             boxShadow: "0 24px 48px rgba(0,0,0,0.34)",
             overflow: "hidden",
           }}
@@ -467,11 +494,11 @@ function OutsiderLayout({
             className="orbital-crt-glow"
             style={{
               position: "relative",
-              background: "#0c0e10",
-              borderRadius: "4px",
-              border: "4px solid #37393b",
-              padding: "24px 16px 32px",
-              minHeight: "600px",
+              background: theme.observerCardBackground,
+              borderRadius: isMobile ? "2px" : "4px",
+              border: `4px solid ${theme.inputBorder}`,
+              padding: isMobile ? "16px 12px 20px" : "24px 16px 32px",
+              minHeight: isMobile ? "auto" : "600px",
               display: "flex",
               flexDirection: "column",
               gap: "24px",
@@ -496,7 +523,7 @@ function OutsiderLayout({
                       margin: 0,
                       fontFamily: "Newsreader, serif",
                       fontStyle: "italic",
-                      fontSize: "clamp(1.9rem, 4vw, 3rem)",
+                      fontSize: isMobile ? "clamp(1.65rem, 8vw, 2.3rem)" : "clamp(1.9rem, 4vw, 3rem)",
                       color: theme.text,
                     }}
                   >
@@ -505,10 +532,11 @@ function OutsiderLayout({
                   <p
                     style={{
                       margin: "8px 0 0",
-                      fontSize: "11px",
+                      fontSize: isMobile ? "10px" : "11px",
                       color: theme.observerAccent,
                       letterSpacing: "0.18em",
                       textTransform: "uppercase",
+                      lineHeight: 1.7,
                     }}
                   >
                     {pageSubline}
@@ -516,20 +544,23 @@ function OutsiderLayout({
                 </div>
                 <div
                   style={{
-                    padding: "10px 14px",
+                    padding: isMobile ? "8px 10px" : "10px 14px",
                     border: `1px solid ${theme.observerAccent}55`,
                     background: `${theme.observerAccent}12`,
                     color: theme.observerAccent,
-                    fontSize: "12px",
+                    fontSize: isMobile ? "10px" : "12px",
                     textTransform: "uppercase",
-                    letterSpacing: "0.08em",
+                    letterSpacing: isMobile ? "0.04em" : "0.08em",
                     display: "flex",
                     alignItems: "center",
-                    gap: "8px",
+                    gap: isMobile ? "6px" : "8px",
                     whiteSpace: "nowrap",
+                    flexShrink: 0,
+                    minWidth: isMobile ? "86px" : "auto",
+                    justifyContent: "center",
                   }}
                 >
-                  <span style={{ width: "9px", height: "9px", borderRadius: "50%", background: theme.observerAccent, boxShadow: `0 0 12px ${theme.observerAccent}` }} />
+                  <span style={{ width: isMobile ? "7px" : "9px", height: isMobile ? "7px" : "9px", borderRadius: "50%", background: theme.observerAccent, boxShadow: `0 0 12px ${theme.observerAccent}` }} />
                   {signalText}
                 </div>
               </div>
@@ -545,7 +576,7 @@ function OutsiderLayout({
                   justifyContent: "space-between",
                   gap: "12px",
                   flexWrap: "wrap",
-                  color: "#757980",
+                  color: theme.faintText,
                   fontSize: "10px",
                   textTransform: "uppercase",
                   letterSpacing: "0.08em",
@@ -558,22 +589,22 @@ function OutsiderLayout({
           </div>
 
           <div
-            style={{
-              marginTop: "24px",
-              display: "flex",
-              flexWrap: "wrap",
-              gap: "28px",
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-          >
-            <div style={{ display: "flex", gap: "16px" }}>
+          style={{
+            marginTop: "24px",
+            display: "flex",
+            flexWrap: "wrap",
+            gap: isMobile ? "14px" : "28px",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+            <div style={{ display: "flex", gap: isMobile ? "10px" : "16px", width: isMobile ? "100%" : "auto", justifyContent: "center" }}>
               <button
                 className="orbital-mechanical-shadow"
                 onClick={() => handleSelectPage("outsiderData")}
                 style={{
-                  width: "72px",
-                  height: "72px",
+                  width: isMobile ? "64px" : "72px",
+                  height: isMobile ? "64px" : "72px",
                   background: theme.observerAccent,
                   color: theme.primaryText,
                   border: "none",
@@ -595,10 +626,10 @@ function OutsiderLayout({
                 className="orbital-mechanical-shadow"
                 onClick={() => handleSelectPage("outsiderSupport")}
                 style={{
-                  width: "72px",
-                  height: "72px",
-                  background: "#fd8b00",
-                  color: "#2f1500",
+                  width: isMobile ? "64px" : "72px",
+                  height: isMobile ? "64px" : "72px",
+                  background: theme.observerAccentAlt,
+                  color: isConsole && darkMode ? "#2f1500" : "#10271f",
                   border: "none",
                   borderRadius: "4px",
                   display: "flex",
@@ -618,10 +649,10 @@ function OutsiderLayout({
                 className="orbital-mechanical-shadow"
                 onClick={handleRefresh}
                 style={{
-                  width: "72px",
-                  height: "72px",
-                  background: "#333537",
-                  color: "#c8c5cb",
+                  width: isMobile ? "64px" : "72px",
+                  height: isMobile ? "64px" : "72px",
+                  background: theme.observerPanelFrame,
+                  color: theme.text,
                   border: `2px solid ${theme.inputBorder}`,
                   borderRadius: "4px",
                   display: "flex",
@@ -641,13 +672,13 @@ function OutsiderLayout({
 
             <div
               style={{
-                display: "flex",
+                display: isMobile ? "none" : "flex",
                 gap: "24px",
                 alignItems: "center",
-                background: "rgba(12,14,16,0.5)",
+                background: theme.cardBackground,
                 padding: "16px",
                 borderRadius: "4px",
-                border: "1px solid #27292d",
+                border: theme.observerBorder,
               }}
             >
               {[
@@ -659,7 +690,7 @@ function OutsiderLayout({
                     style={{
                       width: "16px",
                       height: "48px",
-                      background: "#3f4348",
+                      background: theme.inputBorder,
                       borderRadius: "999px",
                       padding: "4px",
                       display: "flex",
@@ -673,25 +704,25 @@ function OutsiderLayout({
                       style={{
                         width: "10px",
                         height: item.active ? "18px" : "10px",
-                        background: item.active ? theme.observerAccent : "#a6aab0",
+                        background: item.active ? theme.observerAccent : theme.subtleText,
                         borderRadius: item.active ? "4px" : "50%",
                         boxShadow: item.active ? `0 0 8px ${theme.observerAccent}` : "none",
                       }}
                     />
                   </div>
-                  <span style={{ fontSize: "8px", color: "#777c83", letterSpacing: "0.08em" }}>{item.label}</span>
+                  <span style={{ fontSize: "8px", color: theme.faintText, letterSpacing: "0.08em" }}>{item.label}</span>
                 </div>
               ))}
             </div>
 
-            <div style={{ display: typeof window !== "undefined" && window.innerWidth < 640 ? "none" : "flex", flexDirection: "column", alignItems: "center", gap: "8px" }}>
+            <div style={{ display: viewportWidth < 640 ? "none" : "flex", flexDirection: "column", alignItems: "center", gap: "8px" }}>
               <div
                 style={{
                   width: "64px",
                   height: "64px",
                   borderRadius: "50%",
-                  border: "4px solid #555a60",
-                  background: "#333537",
+                  border: `4px solid ${theme.inputBorder}`,
+                  background: theme.observerPanelFrame,
                   boxShadow: "0 12px 20px rgba(0,0,0,0.24)",
                   position: "relative",
                   display: "grid",
@@ -704,7 +735,7 @@ function OutsiderLayout({
                     top: "3px",
                     width: "4px",
                     height: "24px",
-                    background: "#b8bec4",
+                    background: theme.subtleText,
                     transform: "rotate(45deg)",
                     transformOrigin: "bottom center",
                   }}
@@ -714,12 +745,12 @@ function OutsiderLayout({
                     width: "40px",
                     height: "40px",
                     borderRadius: "50%",
-                    border: "1px solid #64686d",
-                    background: "#1f2226",
+                    border: `1px solid ${theme.inputBorder}`,
+                    background: theme.inputBackground,
                   }}
                 />
               </div>
-              <span style={{ fontSize: "8px", color: "#777c83", letterSpacing: "0.08em" }}>BANDWIDTH</span>
+              <span style={{ fontSize: "8px", color: theme.faintText, letterSpacing: "0.08em" }}>BANDWIDTH</span>
             </div>
           </div>
         </div>
@@ -732,9 +763,9 @@ function OutsiderLayout({
           right: 0,
           bottom: 0,
           zIndex: 55,
-          height: "78px",
-          background: "#0c0e10",
-          borderTop: "4px solid #282a2c",
+          height: isMobile ? "72px" : "78px",
+          background: theme.observerChrome,
+          borderTop: `4px solid ${theme.inputBorder}`,
           display: "grid",
           gridTemplateColumns: "repeat(4, 1fr)",
         }}
@@ -748,23 +779,23 @@ function OutsiderLayout({
               style={{
                 border: "none",
                 background: active ? `${theme.observerAccent}22` : "transparent",
-                color: active ? theme.observerAccent : "#757980",
+                color: active ? theme.observerAccent : theme.faintText,
                 borderTop: active ? `2px solid ${theme.observerAccent}` : "2px solid transparent",
                 display: "flex",
                 flexDirection: "column",
                 alignItems: "center",
                 justifyContent: "center",
                 gap: "4px",
-                paddingBottom: "10px",
+                paddingBottom: isMobile ? "8px" : "10px",
               }}
             >
-              <span className="material-symbols-outlined" style={{ fontSize: "20px" }}>{item.icon}</span>
+              <span className="material-symbols-outlined" style={{ fontSize: isMobile ? "18px" : "20px" }}>{item.icon}</span>
               <span
                 style={{
                   fontFamily: theme.observerHeadingFamily,
-                  fontSize: "10px",
+                  fontSize: isMobile ? "9px" : "10px",
                   fontWeight: 700,
-                  letterSpacing: "0.16em",
+                  letterSpacing: isMobile ? "0.1em" : "0.16em",
                   textTransform: "uppercase",
                 }}
               >

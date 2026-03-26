@@ -20,6 +20,8 @@ function consoleLabel(color = "#6b7078") {
 }
 
 function OutsiderOverviewPage({ app }) {
+  const viewportWidth = typeof window !== "undefined" ? window.innerWidth : 1280;
+  const isMobile = viewportWidth < 768;
   const {
     theme,
     chartsPageStyle,
@@ -61,8 +63,8 @@ function OutsiderOverviewPage({ app }) {
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "minmax(0, 1.4fr) minmax(0, 1fr)",
-            gap: "24px",
+            gridTemplateColumns: isMobile ? "1fr" : "minmax(0, 1.4fr) minmax(0, 1fr)",
+            gap: isMobile ? "16px" : "24px",
           }}
         >
           <div style={consolePanel(theme)}>
@@ -84,7 +86,7 @@ function OutsiderOverviewPage({ app }) {
                     <div style={{ display: "flex", justifyContent: "space-between", gap: "12px", flexWrap: "wrap" }}>
                       <div>
                         <p style={consoleLabel()}>{tracker.themeFamily}</p>
-                        <p style={{ margin: "6px 0 0", fontFamily: "Newsreader, serif", fontSize: "1.5rem", color: theme.text }}>
+                        <p style={{ margin: "6px 0 0", fontFamily: "Newsreader, serif", fontSize: isMobile ? "1.2rem" : "1.5rem", color: theme.text }}>
                           {tracker.name}
                         </p>
                       </div>
@@ -92,10 +94,10 @@ function OutsiderOverviewPage({ app }) {
                         {tracker.status}
                       </div>
                     </div>
-                    <p style={{ margin: "10px 0 0", color: "#7d8289", fontSize: "12px", letterSpacing: "0.06em", textTransform: "uppercase" }}>
+                    <p style={{ margin: "10px 0 0", color: "#7d8289", fontSize: "12px", letterSpacing: "0.06em", textTransform: "uppercase", lineHeight: 1.6 }}>
                       Goals: {tracker.activeGoals?.length || 0} // Mood {tracker.moodScore}/5
                     </p>
-                    <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", marginTop: "12px" }}>
+                    <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(2, minmax(0, max-content))", gap: "10px", marginTop: "12px" }}>
                       <button
                         style={primaryButtonStyle(theme)}
                         onClick={() => {
