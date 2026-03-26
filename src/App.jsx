@@ -395,10 +395,12 @@ function App() {
   const outsiderPeople = outsiderTrackers;
   const selectedOutsider =
     outsiderPeople.find((person) => person.id === selectedOutsiderId) || outsiderPeople[0];
-  const theme = getAppTheme(
+  const baseTheme = getAppTheme(
     darkMode,
     appExperience === "outsider" ? selectedOutsider?.themeFamily || themeFamily : themeFamily
   );
+  const theme =
+    appExperience === "outsider" ? getObserverExperienceTheme(baseTheme, darkMode) : baseTheme;
   const moodTagGroups = [
     {
       label: "Positive",
@@ -3567,6 +3569,50 @@ function App() {
       filter: brightness(1.015);
     }
 
+    .material-symbols-outlined {
+      font-family: 'Material Symbols Outlined';
+      font-weight: normal;
+      font-style: normal;
+      font-size: 24px;
+      line-height: 1;
+      letter-spacing: normal;
+      text-transform: none;
+      display: inline-block;
+      white-space: nowrap;
+      word-wrap: normal;
+      direction: ltr;
+      -webkit-font-smoothing: antialiased;
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+    }
+
+    .orbital-scanlines {
+      background:
+        linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.11) 50%),
+        linear-gradient(90deg, rgba(0, 230, 57, 0.015), rgba(255, 179, 0, 0.008), rgba(0, 230, 57, 0.015));
+      background-size: 100% 3px, 3px 100%;
+      pointer-events: none;
+    }
+
+    .orbital-crt-glow {
+      box-shadow: inset 0 0 40px rgba(0, 230, 57, 0.08), 0 0 20px rgba(0, 230, 57, 0.05);
+    }
+
+    .orbital-mechanical-shadow {
+      box-shadow: 2px 2px 0px #0c0e10, -1px -1px 0px #47464b;
+    }
+
+    .orbital-waveform-path {
+      stroke-dasharray: 1000;
+      stroke-dashoffset: 1000;
+      animation: orbital-dash 5s linear infinite;
+    }
+
+    @keyframes orbital-dash {
+      to {
+        stroke-dashoffset: 0;
+      }
+    }
+
     .app-shell svg,
     .app-shell canvas,
     .app-shell img {
@@ -4434,11 +4480,160 @@ function getAppTheme(isDarkMode, family = "galaxy") {
   };
 }
 
+function getObserverExperienceTheme(theme, isDarkMode) {
+  if (theme.themeFamily !== "galaxy") {
+    return {
+      ...theme,
+      observerConsole: false,
+    };
+  }
+
+  if (isDarkMode) {
+    return {
+      ...theme,
+      observerConsole: true,
+      pageBackground:
+        "linear-gradient(180deg, rgba(3,7,16,0.98) 0%, rgba(8,12,24,0.98) 28%, rgba(12,18,32,0.98) 100%)",
+      heroBackground:
+        "linear-gradient(180deg, rgba(18,24,38,0.98) 0%, rgba(13,18,31,0.98) 100%)",
+      observerHeroBackground:
+        "linear-gradient(180deg, rgba(19,24,35,0.99) 0%, rgba(12,16,27,0.98) 100%)",
+      cardBackground:
+        "linear-gradient(180deg, rgba(15,20,34,0.96) 0%, rgba(10,14,24,0.95) 100%)",
+      observerCardBackground:
+        "linear-gradient(180deg, rgba(15,20,34,0.98) 0%, rgba(10,14,24,0.97) 100%)",
+      itemBackground: "rgba(9,13,22,0.92)",
+      inputBackground: "rgba(5,9,16,0.96)",
+      inputBorder: "#2e4350",
+      softButtonBackground: "linear-gradient(180deg, #1d2833 0%, #101821 100%)",
+      softButtonText: "#d9f2ef",
+      primary: "linear-gradient(180deg, #27d7a1 0%, #0e9c73 100%)",
+      primaryText: "#03120d",
+      navInactive: "linear-gradient(180deg, rgba(19,27,36,0.98) 0%, rgba(11,17,24,0.98) 100%)",
+      navActive: "linear-gradient(180deg, #1fcf95 0%, #0f8d69 100%)",
+      navText: "#d8ece8",
+      text: "#e8f5f2",
+      subtleText: "#a8c4c0",
+      faintText: "#6f8b89",
+      border: "1px solid rgba(93, 120, 126, 0.34)",
+      observerBorder: "1px solid rgba(93, 120, 126, 0.4)",
+      shadow: "0 18px 32px rgba(0,0,0,0.34)",
+      observerShadow:
+        "inset 0 2px 4px rgba(0,0,0,0.58), 0 18px 28px rgba(0,0,0,0.28)",
+      glow: "rgba(39, 215, 161, 0.22)",
+      track: "#17262c",
+      chartSurface: "rgba(5,9,16,0.9)",
+      chartGrid: "rgba(74, 106, 102, 0.28)",
+      chartLabel: "#92b3ad",
+      chartPalette: {
+        mood: "#27d7a1",
+        focus: "#ffbf47",
+        energy: "#f56b4c",
+        meals: "#7de7d4",
+        meds: "#ff855e",
+        hygiene: "#ffcf67",
+        exercise: "#81f2a7",
+      },
+      observerRadius: "14px",
+      heroRadius: "14px",
+      featureRadius: "14px",
+      sectionRadius: "14px",
+      heroShadow: "0 20px 36px rgba(0,0,0,0.35)",
+      observerAccent: "#27d7a1",
+      observerAccentAlt: "#ffbf47",
+      observerAlert: "#d85b57",
+      observerPanelFrame:
+        "linear-gradient(180deg, rgba(43,55,67,0.92) 0%, rgba(20,28,37,0.98) 100%)",
+      observerChrome:
+        "linear-gradient(180deg, rgba(30,38,49,0.98) 0%, rgba(14,18,25,0.98) 100%)",
+      observerChartMode: "stepped",
+      observerFontFamily: "'JetBrains Mono', 'IBM Plex Mono', 'Segoe UI', monospace",
+      observerHeadingFamily: "'Space Grotesk', 'Segoe UI', sans-serif",
+    };
+  }
+
+  return {
+    ...theme,
+    observerConsole: true,
+    pageBackground:
+      "linear-gradient(180deg, rgba(238,239,233,0.98) 0%, rgba(223,226,221,0.98) 38%, rgba(207,212,214,0.98) 100%)",
+    heroBackground:
+      "linear-gradient(180deg, rgba(227,231,232,0.98) 0%, rgba(208,214,217,0.98) 100%)",
+    observerHeroBackground:
+      "linear-gradient(180deg, rgba(230,233,235,0.98) 0%, rgba(208,214,217,0.98) 100%)",
+    cardBackground:
+      "linear-gradient(180deg, rgba(226,230,232,0.96) 0%, rgba(207,213,216,0.95) 100%)",
+    observerCardBackground:
+      "linear-gradient(180deg, rgba(229,233,234,0.98) 0%, rgba(209,214,217,0.97) 100%)",
+    itemBackground: "rgba(216,223,226,0.92)",
+    inputBackground: "rgba(242,245,245,0.98)",
+    inputBorder: "#8f9ea4",
+    softButtonBackground: "linear-gradient(180deg, #d9dfe2 0%, #bcc6cb 100%)",
+    softButtonText: "#22343a",
+    primary: "linear-gradient(180deg, #ffc54f 0%, #e09018 100%)",
+    primaryText: "#241506",
+    navInactive: "linear-gradient(180deg, rgba(220,226,228,0.98) 0%, rgba(195,203,206,0.98) 100%)",
+    navActive: "linear-gradient(180deg, #ffc54f 0%, #e09018 100%)",
+    navText: "#20343a",
+    text: "#19272d",
+    subtleText: "#40545a",
+    faintText: "#63777d",
+    border: "1px solid rgba(122, 136, 144, 0.35)",
+    observerBorder: "1px solid rgba(122, 136, 144, 0.42)",
+    shadow: "0 18px 30px rgba(68,79,88,0.14)",
+    observerShadow:
+      "inset 0 2px 4px rgba(100,111,119,0.22), 0 18px 28px rgba(68,79,88,0.12)",
+    glow: "rgba(255, 197, 79, 0.18)",
+    track: "#c6d0d3",
+    chartSurface: "rgba(243,245,245,0.96)",
+    chartGrid: "rgba(90, 105, 113, 0.2)",
+    chartLabel: "#486067",
+    chartPalette: {
+      mood: "#c77b11",
+      focus: "#1b8a69",
+      energy: "#b44a35",
+      meals: "#2c9ba1",
+      meds: "#d76740",
+      hygiene: "#8766c9",
+      exercise: "#4c7d2e",
+    },
+    observerRadius: "14px",
+    heroRadius: "14px",
+    featureRadius: "14px",
+    sectionRadius: "14px",
+    heroShadow: "0 18px 30px rgba(80,90,100,0.14)",
+    observerAccent: "#ffc54f",
+    observerAccentAlt: "#1b8a69",
+    observerAlert: "#bf5544",
+    observerPanelFrame:
+      "linear-gradient(180deg, rgba(212,219,223,0.98) 0%, rgba(186,195,201,0.98) 100%)",
+    observerChrome:
+      "linear-gradient(180deg, rgba(238,241,242,0.98) 0%, rgba(206,214,217,0.98) 100%)",
+    observerChartMode: "stepped",
+    observerFontFamily: "'JetBrains Mono', 'IBM Plex Mono', 'Segoe UI', monospace",
+    observerHeadingFamily: "'Space Grotesk', 'Segoe UI', sans-serif",
+  };
+}
+
+function isSpaceConsoleTheme(theme) {
+  return Boolean(theme?.observerConsole && theme?.themeFamily === "galaxy");
+}
+
 const pageStyle = (theme) => ({
   minHeight: "100vh",
-  background: `${theme.pageBackground}, radial-gradient(circle at 12% 12%, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0) 18%), radial-gradient(circle at 88% 20%, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0) 18%)`,
+  background: isSpaceConsoleTheme(theme)
+    ? [
+        "linear-gradient(180deg, rgba(255,255,255,0.03) 0, rgba(255,255,255,0.03) 1px, transparent 1px, transparent 5px)",
+        "linear-gradient(90deg, rgba(255,255,255,0.025) 0, rgba(255,255,255,0.025) 1px, transparent 1px, transparent 84px)",
+        "radial-gradient(circle at 16% 18%, rgba(255,191,71,0.1) 0%, rgba(255,191,71,0) 18%)",
+        "radial-gradient(circle at 84% 22%, rgba(39,215,161,0.09) 0%, rgba(39,215,161,0) 20%)",
+        theme.pageBackground,
+      ].join(", ")
+    : `${theme.pageBackground}, radial-gradient(circle at 12% 12%, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0) 18%), radial-gradient(circle at 88% 20%, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0) 18%)`,
   padding: "clamp(12px, 4vw, 24px)",
-  fontFamily: "'Trebuchet MS', 'Segoe UI', sans-serif",
+  fontFamily: isSpaceConsoleTheme(theme)
+    ? theme.observerFontFamily
+    : "'Trebuchet MS', 'Segoe UI', sans-serif",
   color: theme.text,
   position: "relative",
   overflowX: "hidden",
@@ -4481,16 +4676,22 @@ const heroCardStyle = (theme) => ({
 });
 
 const featureCardStyle = (theme) => ({
-  background: theme.cardBackground,
+  background: isSpaceConsoleTheme(theme)
+    ? `${theme.observerPanelFrame}, ${theme.cardBackground}`
+    : theme.cardBackground,
   borderRadius:
     theme.themeFamily === "underwater"
       ? "28px 18px 30px 22px / 20px 30px 22px 32px"
       : theme.themeFamily === "forest"
       ? "20px 32px 22px 34px / 30px 20px 32px 22px"
+      : isSpaceConsoleTheme(theme)
+      ? theme.featureRadius || "14px"
       : theme.featureRadius || "22px 32px 20px 34px / 24px 20px 32px 22px",
   padding: "clamp(18px, 4vw, 24px)",
-  boxShadow: theme.shadow,
-  border: theme.border,
+  boxShadow: isSpaceConsoleTheme(theme)
+    ? `inset 0 2px 4px rgba(0,0,0,0.45), 0 18px 28px rgba(0,0,0,0.16)`
+    : theme.shadow,
+  border: isSpaceConsoleTheme(theme) ? theme.observerBorder || theme.border : theme.border,
   clipPath: theme.featureClipPath || "none",
   position: "relative",
   overflow: "hidden",
@@ -4633,6 +4834,25 @@ const sectionCardStyle = (theme, section) => {
 };
 
 const observerSectionCardStyle = (theme, section) => {
+  if (isSpaceConsoleTheme(theme)) {
+    const sectionAccents = {
+      dashboard: "linear-gradient(90deg, rgba(39,215,161,0.16) 0%, rgba(39,215,161,0) 36%)",
+      signals: "linear-gradient(90deg, rgba(255,191,71,0.16) 0%, rgba(255,191,71,0) 36%)",
+      jump: "linear-gradient(90deg, rgba(129,242,167,0.14) 0%, rgba(129,242,167,0) 36%)",
+      care: "linear-gradient(90deg, rgba(216,91,87,0.16) 0%, rgba(216,91,87,0) 36%)",
+      goals: "linear-gradient(90deg, rgba(125,231,212,0.16) 0%, rgba(125,231,212,0) 36%)",
+    };
+
+    return {
+      ...featureCardStyle(theme),
+      background: `${sectionAccents[section] || sectionAccents.dashboard}, ${theme.observerCardBackground || theme.cardBackground}`,
+      border: theme.observerBorder || theme.border,
+      boxShadow: theme.observerShadow || theme.shadow,
+      borderRadius: theme.observerRadius || "14px",
+      clipPath: "none",
+    };
+  }
+
   const observerAccents = {
     dashboard: "radial-gradient(circle at 16% 18%, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0) 26%)",
     signals: "radial-gradient(circle at 82% 18%, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0) 24%)",
@@ -4667,7 +4887,11 @@ const titleStyle = (theme) => ({
   margin: 0,
   fontSize: "clamp(1.75rem, 5vw, 2.3rem)",
   color: theme.text,
-  letterSpacing: "0.02em",
+  letterSpacing: isSpaceConsoleTheme(theme) ? "0.08em" : "0.02em",
+  fontFamily: isSpaceConsoleTheme(theme)
+    ? theme.observerHeadingFamily
+    : undefined,
+  textTransform: isSpaceConsoleTheme(theme) ? "uppercase" : "none",
   overflowWrap: "anywhere",
 });
 
@@ -4675,15 +4899,17 @@ const tinyLabelStyle = (theme) => ({
   margin: "0 0 6px 0",
   color: theme.faintText,
   textTransform: "uppercase",
-  letterSpacing: "0.16em",
+  letterSpacing: isSpaceConsoleTheme(theme) ? "0.22em" : "0.16em",
   fontSize: "0.78rem",
   fontWeight: "bold",
+  fontFamily: isSpaceConsoleTheme(theme) ? theme.observerFontFamily : undefined,
 });
 
 const subtitleStyle = (theme) => ({
   margin: "8px 0 6px 0",
   color: theme.subtleText,
   lineHeight: 1.5,
+  fontFamily: isSpaceConsoleTheme(theme) ? theme.observerFontFamily : undefined,
 });
 
 const dateStyle = (theme) => ({
@@ -4731,6 +4957,9 @@ const sectionTitleStyle = (theme) => ({
   marginBottom: "10px",
   color: theme.text,
   fontSize: "clamp(1.15rem, 4vw, 1.35rem)",
+  fontFamily: isSpaceConsoleTheme(theme) ? theme.observerHeadingFamily : undefined,
+  letterSpacing: isSpaceConsoleTheme(theme) ? "0.06em" : "normal",
+  textTransform: isSpaceConsoleTheme(theme) ? "uppercase" : "none",
   overflowWrap: "anywhere",
   lineHeight: 1.25,
 });
@@ -4739,6 +4968,7 @@ const helperTextStyle = (theme) => ({
   marginTop: 0,
   color: theme.faintText,
   fontSize: "0.95rem",
+  fontFamily: isSpaceConsoleTheme(theme) ? theme.observerFontFamily : undefined,
   overflowWrap: "anywhere",
   lineHeight: 1.55,
 });
@@ -4793,7 +5023,7 @@ const sleepGridStyle = {
 
 const inputStyle = (theme) => ({
   padding: "13px 14px",
-  borderRadius: "12px",
+  borderRadius: isSpaceConsoleTheme(theme) ? "10px" : "12px",
   border: `1px solid ${theme.inputBorder}`,
   color: theme.text,
   background: theme.inputBackground,
@@ -4803,39 +5033,55 @@ const inputStyle = (theme) => ({
   boxShadow: `inset 0 1px 0 ${theme.star}`,
   minWidth: 0,
   lineHeight: 1.4,
+  fontFamily: isSpaceConsoleTheme(theme) ? theme.observerFontFamily : undefined,
+  textTransform: isSpaceConsoleTheme(theme) ? "uppercase" : "none",
+  letterSpacing: isSpaceConsoleTheme(theme) ? "0.04em" : "normal",
 });
 
 const primaryButtonStyle = (theme) => ({
   background: theme.primary,
   color: theme.primaryText,
-  border: "none",
+  border: isSpaceConsoleTheme(theme)
+    ? `1px solid ${theme.observerAccentAlt || theme.inputBorder}`
+    : "none",
   borderRadius:
     theme.themeFamily === "underwater"
       ? "18px 14px 18px 14px / 14px 18px 14px 18px"
       : theme.themeFamily === "forest"
       ? "14px 18px 14px 18px / 18px 14px 18px 16px"
+      : isSpaceConsoleTheme(theme)
+      ? "10px"
       : "999px",
   padding: "13px 16px",
   cursor: "pointer",
   fontWeight: "bold",
-  boxShadow: `0 10px 22px ${theme.glow}`,
+  boxShadow: isSpaceConsoleTheme(theme)
+    ? `inset 0 1px 0 rgba(255,255,255,0.16), 0 6px 0 rgba(0,0,0,0.3), 0 12px 22px ${theme.glow}`
+    : `0 10px 22px ${theme.glow}`,
   minHeight: "48px",
   maxWidth: "100%",
   whiteSpace: "normal",
   overflowWrap: "anywhere",
   lineHeight: 1.35,
   textAlign: "center",
+  fontFamily: isSpaceConsoleTheme(theme) ? theme.observerFontFamily : undefined,
+  textTransform: isSpaceConsoleTheme(theme) ? "uppercase" : "none",
+  letterSpacing: isSpaceConsoleTheme(theme) ? "0.06em" : "normal",
 });
 
 const softButtonStyle = (theme) => ({
   background: theme.softButtonBackground,
   color: theme.softButtonText,
-  border: "none",
+  border: isSpaceConsoleTheme(theme)
+    ? `1px solid ${theme.inputBorder}`
+    : "none",
   borderRadius:
     theme.themeFamily === "underwater"
       ? "18px 14px 18px 14px / 14px 18px 14px 18px"
       : theme.themeFamily === "forest"
       ? "14px 18px 14px 18px / 18px 14px 18px 16px"
+      : isSpaceConsoleTheme(theme)
+      ? "10px"
       : "999px",
   padding: "13px 16px",
   cursor: "pointer",
@@ -4846,6 +5092,12 @@ const softButtonStyle = (theme) => ({
   overflowWrap: "anywhere",
   lineHeight: 1.35,
   textAlign: "center",
+  boxShadow: isSpaceConsoleTheme(theme)
+    ? "inset 0 1px 0 rgba(255,255,255,0.08), 0 4px 0 rgba(0,0,0,0.24)"
+    : undefined,
+  fontFamily: isSpaceConsoleTheme(theme) ? theme.observerFontFamily : undefined,
+  textTransform: isSpaceConsoleTheme(theme) ? "uppercase" : "none",
+  letterSpacing: isSpaceConsoleTheme(theme) ? "0.05em" : "normal",
 });
 
 const successButtonStyle = {
@@ -4880,17 +5132,27 @@ const smallRemoveButtonStyle = (theme) => ({
 const navButtonStyle = (active, theme) => ({
   background: active ? theme.navActive : theme.navInactive,
   color: active ? theme.primaryText : theme.navText,
-  border: "none",
+  border: isSpaceConsoleTheme(theme)
+    ? `1px solid ${active ? theme.observerAccentAlt : theme.inputBorder}`
+    : "none",
   borderRadius:
     theme.themeFamily === "underwater"
       ? "22px 18px 22px 18px / 18px 22px 18px 22px"
       : theme.themeFamily === "forest"
       ? "18px 24px 18px 22px / 22px 18px 22px 20px"
+      : isSpaceConsoleTheme(theme)
+      ? "10px"
       : "999px",
   padding: "10px 12px",
   cursor: "pointer",
   fontWeight: "bold",
-  boxShadow: active ? `0 12px 24px ${theme.glow}` : "none",
+  boxShadow: isSpaceConsoleTheme(theme)
+    ? active
+      ? `inset 0 1px 0 rgba(255,255,255,0.14), 0 5px 0 rgba(0,0,0,0.28), 0 12px 24px ${theme.glow}`
+      : "inset 0 1px 0 rgba(255,255,255,0.06), 0 4px 0 rgba(0,0,0,0.18)"
+    : active
+    ? `0 12px 24px ${theme.glow}`
+    : "none",
   minHeight: "42px",
   flex: "0 1 auto",
   maxWidth: "100%",
@@ -4899,6 +5161,9 @@ const navButtonStyle = (active, theme) => ({
   lineHeight: 1.35,
   textAlign: "center",
   fontSize: "0.92rem",
+  fontFamily: isSpaceConsoleTheme(theme) ? theme.observerFontFamily : undefined,
+  textTransform: isSpaceConsoleTheme(theme) ? "uppercase" : "none",
+  letterSpacing: isSpaceConsoleTheme(theme) ? "0.05em" : "normal",
 });
 
 const mealListStyle = {
@@ -5006,6 +5271,8 @@ const observerHeroStyle = (theme) => ({
   border: theme.observerBorder || theme.border,
   borderRadius: theme.observerRadius || "18px",
   boxShadow: theme.observerShadow || theme.shadow,
+  position: "relative",
+  overflow: "hidden",
 });
 
 const dashboardKickerStyle = (theme) => ({
@@ -5015,12 +5282,16 @@ const dashboardKickerStyle = (theme) => ({
   letterSpacing: "0.14em",
   fontSize: "0.75rem",
   fontWeight: "bold",
+  fontFamily: isSpaceConsoleTheme(theme) ? theme.observerFontFamily : undefined,
 });
 
 const dashboardHeadingStyle = (theme) => ({
   margin: 0,
   fontSize: "clamp(1.25rem, 4vw, 1.5rem)",
   color: theme.text,
+  fontFamily: isSpaceConsoleTheme(theme) ? theme.observerHeadingFamily : undefined,
+  letterSpacing: isSpaceConsoleTheme(theme) ? "0.06em" : "normal",
+  textTransform: isSpaceConsoleTheme(theme) ? "uppercase" : "none",
   overflowWrap: "anywhere",
 });
 
@@ -5061,16 +5332,25 @@ const dashboardStatsGridStyle = {
 };
 
 const summaryCardStyle = (theme) => ({
-  background:
-    theme.themeFamily === "underwater"
+  background: isSpaceConsoleTheme(theme)
+    ? `linear-gradient(180deg, rgba(8,12,20,0.9) 0%, rgba(14,18,29,0.95) 100%)`
+    : theme.themeFamily === "underwater"
       ? `radial-gradient(circle at 18% 18%, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0) 22%), linear-gradient(155deg, ${theme.itemBackground} 0%, rgba(255,255,255,0.03) 100%)`
       : theme.themeFamily === "forest"
       ? `radial-gradient(circle at 82% 18%, rgba(229,237,204,0.18) 0%, rgba(229,237,204,0) 22%), linear-gradient(155deg, ${theme.itemBackground} 0%, rgba(255,255,255,0.03) 100%)`
       : `radial-gradient(circle at 18% 18%, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0) 20%), linear-gradient(155deg, ${theme.itemBackground} 0%, rgba(255,255,255,0.03) 100%)`,
-  borderRadius: theme.themeFamily === "underwater" ? "24px 18px 24px 18px / 18px 24px 18px 24px" : theme.themeFamily === "forest" ? "18px 24px 18px 28px / 24px 18px 24px 20px" : "20px 28px 20px 26px / 24px 20px 24px 22px",
+  borderRadius: isSpaceConsoleTheme(theme)
+    ? "12px"
+    : theme.themeFamily === "underwater"
+    ? "24px 18px 24px 18px / 18px 24px 18px 24px"
+    : theme.themeFamily === "forest"
+    ? "18px 24px 18px 28px / 24px 18px 24px 20px"
+    : "20px 28px 20px 26px / 24px 20px 24px 22px",
   padding: "18px",
-  border: theme.border,
-  boxShadow: `0 16px 32px ${theme.glow}, inset 0 1px 0 rgba(255,255,255,0.06)`,
+  border: isSpaceConsoleTheme(theme) ? theme.observerBorder || theme.border : theme.border,
+  boxShadow: isSpaceConsoleTheme(theme)
+    ? `inset 0 2px 4px rgba(0,0,0,0.5), 0 10px 20px rgba(0,0,0,0.18)`
+    : `0 16px 32px ${theme.glow}, inset 0 1px 0 rgba(255,255,255,0.06)`,
 });
 
 const summaryLabelStyle = (theme) => ({
@@ -5175,17 +5455,23 @@ const goalSuggestionButtonStyle = (theme) => ({
 const quickJumpButtonStyle = (theme) => ({
   background: theme.softButtonBackground,
   color: theme.softButtonText,
-  border: "none",
+  border: isSpaceConsoleTheme(theme)
+    ? `1px solid ${theme.inputBorder}`
+    : "none",
   borderRadius:
     theme.themeFamily === "underwater"
       ? "22px 16px 22px 16px / 16px 22px 16px 22px"
       : theme.themeFamily === "forest"
       ? "18px 24px 18px 22px / 22px 18px 22px 20px"
+      : isSpaceConsoleTheme(theme)
+      ? "10px"
       : "22px",
   padding: "10px 14px",
   cursor: "pointer",
   fontWeight: "bold",
-  boxShadow: `0 10px 20px ${theme.glow}`,
+  boxShadow: isSpaceConsoleTheme(theme)
+    ? "inset 0 1px 0 rgba(255,255,255,0.08), 0 4px 0 rgba(0,0,0,0.22)"
+    : `0 10px 20px ${theme.glow}`,
   minHeight: "42px",
   width: "auto",
   minWidth: "110px",
@@ -5194,6 +5480,9 @@ const quickJumpButtonStyle = (theme) => ({
   textAlign: "center",
   justifySelf: "start",
   fontSize: "0.92rem",
+  fontFamily: isSpaceConsoleTheme(theme) ? theme.observerFontFamily : undefined,
+  textTransform: isSpaceConsoleTheme(theme) ? "uppercase" : "none",
+  letterSpacing: isSpaceConsoleTheme(theme) ? "0.05em" : "normal",
 });
 
 const chartToolbarStyle = {
@@ -5219,11 +5508,15 @@ const chartStackStyle = {
 };
 
 const chartCardStyle = (theme) => ({
-  background: `linear-gradient(160deg, ${theme.chartSurface} 0%, rgba(255,255,255,0.03) 100%)`,
-  borderRadius: "22px",
+  background: isSpaceConsoleTheme(theme)
+    ? "linear-gradient(180deg, rgba(7,10,17,0.95) 0%, rgba(13,18,28,0.98) 100%)"
+    : `linear-gradient(160deg, ${theme.chartSurface} 0%, rgba(255,255,255,0.03) 100%)`,
+  borderRadius: isSpaceConsoleTheme(theme) ? "12px" : "22px",
   padding: "18px",
-  border: theme.border,
-  boxShadow: `${theme.shadow}, 0 16px 30px ${theme.glow}`,
+  border: isSpaceConsoleTheme(theme) ? theme.observerBorder || theme.border : theme.border,
+  boxShadow: isSpaceConsoleTheme(theme)
+    ? "inset 0 2px 4px rgba(0,0,0,0.52), 0 12px 24px rgba(0,0,0,0.18)"
+    : `${theme.shadow}, 0 16px 30px ${theme.glow}`,
 });
 
 const goalCardItemStyle = (theme) => ({
@@ -5261,16 +5554,25 @@ const rewardGridStyle = {
 };
 
 const rewardCardStyle = (theme) => ({
-  background:
-    theme.themeFamily === "underwater"
+  background: isSpaceConsoleTheme(theme)
+    ? "linear-gradient(180deg, rgba(9,13,21,0.95) 0%, rgba(15,20,31,0.98) 100%)"
+    : theme.themeFamily === "underwater"
       ? `radial-gradient(circle at 84% 20%, rgba(211,247,252,0.14) 0%, rgba(211,247,252,0) 22%), linear-gradient(160deg, ${theme.itemBackground} 0%, rgba(255,255,255,0.04) 100%)`
       : theme.themeFamily === "forest"
       ? `radial-gradient(circle at 18% 20%, rgba(220,231,191,0.14) 0%, rgba(220,231,191,0) 22%), linear-gradient(160deg, ${theme.itemBackground} 0%, rgba(255,255,255,0.04) 100%)`
       : `radial-gradient(circle at 18% 18%, rgba(145,130,255,0.08) 0%, rgba(145,130,255,0) 20%), linear-gradient(160deg, ${theme.itemBackground} 0%, rgba(255,255,255,0.04) 100%)`,
-  borderRadius: theme.themeFamily === "underwater" ? "22px 16px 22px 16px / 18px 24px 18px 24px" : theme.themeFamily === "forest" ? "18px 24px 18px 26px / 24px 18px 22px 20px" : "18px 24px 18px 24px / 22px 18px 22px 20px",
+  borderRadius: isSpaceConsoleTheme(theme)
+    ? "12px"
+    : theme.themeFamily === "underwater"
+    ? "22px 16px 22px 16px / 18px 24px 18px 24px"
+    : theme.themeFamily === "forest"
+    ? "18px 24px 18px 26px / 24px 18px 22px 20px"
+    : "18px 24px 18px 24px / 22px 18px 22px 20px",
   padding: "16px",
-  border: theme.border,
-  boxShadow: `0 14px 28px ${theme.glow}, inset 0 1px 0 rgba(255,255,255,0.06)`,
+  border: isSpaceConsoleTheme(theme) ? theme.observerBorder || theme.border : theme.border,
+  boxShadow: isSpaceConsoleTheme(theme)
+    ? "inset 0 2px 4px rgba(0,0,0,0.5), 0 10px 20px rgba(0,0,0,0.18)"
+    : `0 14px 28px ${theme.glow}, inset 0 1px 0 rgba(255,255,255,0.06)`,
 });
 
 const rewardTitleStyle = (theme) => ({
@@ -5577,6 +5879,23 @@ function getSectionFrameStyle(theme, section, observer = false) {
 
 function getAccentBadgeStyle(theme) {
   const family = theme.themeFamily || "galaxy";
+
+  if (isSpaceConsoleTheme(theme)) {
+    return {
+      display: "inline-flex",
+      alignItems: "center",
+      padding: "0.42rem 0.78rem",
+      borderRadius: "999px",
+      background:
+        "linear-gradient(180deg, rgba(13,25,24,0.98) 0%, rgba(6,14,13,0.98) 100%)",
+      border: `1px solid ${theme.observerAccent || "#27d7a1"}`,
+      boxShadow: `0 0 0 1px rgba(0,0,0,0.24), inset 0 1px 0 rgba(255,255,255,0.06), 0 0 16px ${theme.glow}`,
+      color: theme.observerAccent || theme.text,
+      fontFamily: theme.observerFontFamily,
+      letterSpacing: "0.08em",
+      textTransform: "uppercase",
+    };
+  }
 
   if (family === "underwater") {
     return {

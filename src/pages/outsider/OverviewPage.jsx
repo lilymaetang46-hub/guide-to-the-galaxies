@@ -1,3 +1,24 @@
+function consolePanel(theme, accent = "primary") {
+  const borderColor =
+    accent === "warning" ? "rgba(253, 139, 0, 0.35)" : `${theme.observerAccent}26`;
+
+  return {
+    background: accent === "warning" ? "rgba(253, 139, 0, 0.08)" : "rgba(0,0,0,0.22)",
+    border: `1px solid ${borderColor}`,
+    padding: "16px",
+  };
+}
+
+function consoleLabel(color = "#6b7078") {
+  return {
+    margin: 0,
+    fontSize: "10px",
+    color,
+    letterSpacing: "0.12em",
+    textTransform: "uppercase",
+  };
+}
+
 function OutsiderOverviewPage({ app }) {
   const {
     theme,
@@ -33,6 +54,127 @@ function OutsiderOverviewPage({ app }) {
     setJoinLinkInput,
     joinByLink,
   } = app;
+
+  if (theme.observerConsole) {
+    return (
+      <div style={{ display: "grid", gap: "24px", marginTop: "8px" }}>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "minmax(0, 1.4fr) minmax(0, 1fr)",
+            gap: "24px",
+          }}
+        >
+          <div style={consolePanel(theme)}>
+            <div style={{ display: "flex", justifyContent: "space-between", gap: "12px", marginBottom: "14px" }}>
+              <span style={consoleLabel()}>[01] TRACKER_LINKS</span>
+              <span style={consoleLabel(theme.observerAccent)}>VIEWPORT_READY</span>
+            </div>
+            {outsiderTrackers.length > 0 ? (
+              <div style={{ display: "grid", gap: "12px" }}>
+                {outsiderTrackers.map((tracker) => (
+                  <div
+                    key={tracker.id}
+                    style={{
+                      border: `1px solid ${theme.observerAccent}22`,
+                      padding: "14px",
+                      background: "rgba(0,0,0,0.18)",
+                    }}
+                  >
+                    <div style={{ display: "flex", justifyContent: "space-between", gap: "12px", flexWrap: "wrap" }}>
+                      <div>
+                        <p style={consoleLabel()}>{tracker.themeFamily}</p>
+                        <p style={{ margin: "6px 0 0", fontFamily: "Newsreader, serif", fontSize: "1.5rem", color: theme.text }}>
+                          {tracker.name}
+                        </p>
+                      </div>
+                      <div style={{ color: theme.observerAccent, fontSize: "12px", letterSpacing: "0.08em", textTransform: "uppercase" }}>
+                        {tracker.status}
+                      </div>
+                    </div>
+                    <p style={{ margin: "10px 0 0", color: "#7d8289", fontSize: "12px", letterSpacing: "0.06em", textTransform: "uppercase" }}>
+                      Goals: {tracker.activeGoals?.length || 0} // Mood {tracker.moodScore}/5
+                    </p>
+                    <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", marginTop: "12px" }}>
+                      <button
+                        style={primaryButtonStyle(theme)}
+                        onClick={() => {
+                          setSelectedOutsiderId(tracker.id);
+                          setOutsiderPage("outsiderData");
+                        }}
+                      >
+                        Open Telemetry
+                      </button>
+                      <button
+                        style={softButtonStyle(theme)}
+                        onClick={() => {
+                          setSelectedOutsiderId(tracker.id);
+                          setOutsiderPage("outsiderSupport");
+                        }}
+                      >
+                        Open Comms
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p style={{ margin: 0, color: "#929095", fontSize: "13px" }}>{observerLabels.emptyBody}</p>
+            )}
+          </div>
+
+          <div style={{ display: "grid", gap: "24px" }}>
+            <div style={consolePanel(theme)}>
+              <span style={consoleLabel()}>[02] REQUEST_ACCESS</span>
+              {renderFeedbackMessage(connectionsMessage, theme)}
+              <div style={{ display: "grid", gap: "12px", marginTop: "14px" }}>
+                <div>
+                  <label style={consoleLabel()}>Invite Code</label>
+                  <input
+                    style={inputStyle(theme)}
+                    type="text"
+                    value={joinCodeInput}
+                    onChange={(e) => setJoinCodeInput(e.target.value)}
+                    placeholder="STAR-ABC123"
+                  />
+                  <div style={{ marginTop: "10px" }}>
+                    <button style={primaryButtonStyle(theme)} onClick={joinByCode}>
+                      Request by Code
+                    </button>
+                  </div>
+                </div>
+                <div>
+                  <label style={consoleLabel()}>Invite Link</label>
+                  <input
+                    style={inputStyle(theme)}
+                    type="text"
+                    value={joinLinkInput}
+                    onChange={(e) => setJoinLinkInput(e.target.value)}
+                    placeholder="Paste invite link"
+                  />
+                  <div style={{ marginTop: "10px" }}>
+                    <button style={softButtonStyle(theme)} onClick={joinByLink}>
+                      Request by Link
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div style={consolePanel(theme, "warning")}>
+              <span style={consoleLabel("#fd8b00")}>[03] QUICK_SUPPORT</span>
+              <p style={{ margin: "8px 0 0", fontFamily: "Newsreader, serif", fontSize: "1.7rem", color: "#fd8b00" }}>
+                Support Queue
+              </p>
+              <p style={{ margin: "8px 0 0", color: "#d39b66", fontSize: "12px" }}>
+                Approved trackers appear in the viewport and can be opened directly into telemetry or comms.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div style={chartsPageStyle}>

@@ -1,5 +1,50 @@
 import LineTrendChart from "../../components/LineTrendChart";
 
+function buildWaveformPath(data, yMax = 5) {
+  if (!data?.length) {
+    return "M0,50 L400,50";
+  }
+
+  const safeMax = Math.max(yMax, 1);
+
+  return data
+    .map((item, index) => {
+      const x = data.length === 1 ? 0 : (index / (data.length - 1)) * 400;
+      const value = Number(item.mood ?? item.energy ?? item.sleepQuality ?? 0);
+      const normalized = Math.max(0, Math.min(value, safeMax)) / safeMax;
+      const y = 90 - normalized * 60;
+      return `${index === 0 ? "M" : "L"}${x},${y}`;
+    })
+    .join(" ");
+}
+
+function getSignalBars(value) {
+  const activeBars = Math.max(1, Math.min(4, Math.round(value)));
+  return Array.from({ length: 4 }, (_, index) => index < activeBars);
+}
+
+function telemetryPanelStyle(theme, accent = "primary") {
+  const accentColor =
+    accent === "warning" ? "#fd8b00" : accent === "neutral" ? "#929095" : theme.observerAccent;
+
+  return {
+    background: accent === "warning" ? "rgba(253, 139, 0, 0.1)" : "rgba(0,0,0,0.22)",
+    border: `1px solid ${accent === "warning" ? "rgba(253, 139, 0, 0.35)" : `${accentColor}26`}`,
+    padding: "16px",
+    minHeight: 0,
+  };
+}
+
+function labelStyle(color = "#6b7078") {
+  return {
+    margin: 0,
+    fontSize: "10px",
+    color,
+    letterSpacing: "0.12em",
+    textTransform: "uppercase",
+  };
+}
+
 function OutsiderTrackerDataPage({ app }) {
   const {
     theme,
@@ -58,26 +103,50 @@ function OutsiderTrackerDataPage({ app }) {
 
   const overviewCards = [
     selectedOutsiderPermissions.mood && {
-      label: "Mood",
-      value: `${selectedOutsider.moodScore}/5`,
-      note: `Current read: ${outsiderMoodLabel}`,
+      label: "Stability",
+      value: selectedOutsider.moodScore >= 4 ? "High_Resilience" : selectedOutsider.moodScore >= 3 ? "Adaptive" : "Monitor",
+      note: outsiderMoodLabel,
     },
-    selectedOutsiderPermissions.food && {
-      label: "Meals / 14d",
-      value: selectedOutsider.comparisonStats?.[0]?.value ?? 0,
-      note: "Shared count only",
+    selectedOutsiderPermissions.mood && {
+      label: "Volatility",
+      value: selectedOutsider.comparisonStats?.[2]?.value ?? "0.12_EPS",
+      note: "Mood average",
     },
-    selectedOutsiderPermissions.exercise && {
-      label: "Movement / 14d",
-      value: selectedOutsider.comparisonStats?.[1]?.value ?? 0,
-      note: "Shared count only",
-    },
-    (selectedOutsiderPermissions.mood || selectedOutsiderPermissions.sleep) && {
-      label: "Mood avg",
-      value: selectedOutsider.comparisonStats?.[2]?.value ?? "N/A",
-      note: "Average across recent shared check-ins",
+    selectedOutsiderPermissions.activity && {
+      label: "Sync Rate",
+      value: `${Math.max(72, Math.min(99, 80 + selectedOutsiderHistory.length * 2))}%`,
+      note: "Recent shared check-ins",
     },
   ].filter(Boolean);
+
+  const systemsStrip = [
+    {
+      label: "Sensors",
+      value: selectedOutsiderPermissions.activity ? "Active_Scan" : "Passive",
+      tone: "default",
+    },
+    {
+      label: "Power",
+      value: selectedOutsiderPermissions.sleep ? "Aux_Grid_IV" : "Standby",
+      tone: "default",
+    },
+    {
+      label: "Biometrics",
+      value: selectedOutsider.status || "Stable",
+      tone: "accent",
+    },
+    {
+      label: "Coord",
+      value: `${selectedOutsider.moodScore ?? 0}.${selectedOutsider.comparisonStats?.[0]?.value ?? 0} / ${selectedOutsider.comparisonStats?.[1]?.value ?? 0}.8`,
+      tone: "default",
+    },
+  ];
+
+  const signalStrength = {
+    uplink: getSignalBars((selectedOutsider.moodScore ?? 0) >= 4 ? 3.5 : 3),
+    downlink: getSignalBars((selectedOutsiderHistory?.length ?? 0) >= 5 ? 3 : 2),
+    latency: `${Math.max(24, 64 - selectedOutsiderHistory.length * 3)}ms`,
+  };
 
   const wellbeingSeries = [
     selectedOutsiderPermissions.mood && {
@@ -139,6 +208,241 @@ function OutsiderTrackerDataPage({ app }) {
     ...latestChartWindow.map((item) => Math.max(item.medsCount ?? 0, item.medsTaken ?? 0))
   );
 
+  if (theme.observerConsole) {
+    return (
+      <div style={{ display: "grid", gap: "24px", marginTop: "8px" }}>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "minmax(0, 2fr) minmax(260px, 1fr)",
+            gap: "24px",
+          }}
+        >
+          <div style={telemetryPanelStyle(theme)}>
+            <div style={{ display: "flex", justifyContent: "space-between", gap: "12px", marginBottom: "18px" }}>
+              <span style={labelStyle()}>[01] MOOD_TREND_ANALYTICS</span>
+              <span style={labelStyle(theme.observerAccent)}>SIGMA_V.04</span>
+            </div>
+
+            <div style={{ height: "220px", border: `1px solid ${theme.observerAccent}22`, padding: "16px", background: "rgba(0,0,0,0.16)" }}>
+              {hasTrendData ? (
+                <svg viewBox="0 0 400 100" preserveAspectRatio="none" style={{ width: "100%", height: "100%" }}>
+                  <path
+                    className="orbital-waveform-path"
+                    d={buildWaveformPath(latestChartWindow)}
+                    fill="none"
+                    stroke={theme.observerAccent}
+                    strokeWidth="2"
+                  />
+                </svg>
+              ) : (
+                <div
+                  style={{
+                    width: "100%",
+                    height: "100%",
+                    background: `${theme.observerAccent}22`,
+                    borderTop: `1px solid ${theme.observerAccent}55`,
+                  }}
+                />
+              )}
+            </div>
+
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+                gap: "16px",
+                borderTop: `1px solid ${theme.observerAccent}22`,
+                paddingTop: "16px",
+                marginTop: "16px",
+              }}
+            >
+              {overviewCards.map((item) => (
+                <div key={item.label}>
+                  <p style={labelStyle()}>{item.label}</p>
+                  <p
+                    style={{
+                      margin: "6px 0 0",
+                      fontFamily: "Newsreader, serif",
+                      fontSize: "clamp(1.05rem, 2vw, 1.55rem)",
+                      color: theme.text,
+                    }}
+                  >
+                    {item.value}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+            <div style={telemetryPanelStyle(theme)}>
+              <span style={labelStyle()}>[02] SIGNAL_STRENGTH</span>
+              <div style={{ display: "grid", gap: "16px", marginTop: "16px" }}>
+                {[
+                  { label: "UPLINK", bars: signalStrength.uplink },
+                  { label: "DOWNLINK", bars: signalStrength.downlink },
+                ].map((item) => (
+                  <div key={item.label} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px" }}>
+                    <span style={{ color: theme.text, fontSize: "12px", letterSpacing: "0.08em" }}>{item.label}</span>
+                    <div style={{ display: "flex", gap: "4px" }}>
+                      {item.bars.map((active, index) => (
+                        <div
+                          key={`${item.label}-${index}`}
+                          style={{
+                            width: "8px",
+                            height: "18px",
+                            background: active ? theme.observerAccent : `${theme.observerAccent}22`,
+                          }}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                ))}
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px" }}>
+                  <span style={{ color: theme.text, fontSize: "12px", letterSpacing: "0.08em" }}>LATENCY</span>
+                  <span style={{ color: theme.observerAccent, fontSize: "12px" }}>{signalStrength.latency}</span>
+                </div>
+              </div>
+            </div>
+
+            <div style={telemetryPanelStyle(theme, "warning")}>
+              <span style={labelStyle("#fd8b00")}>[03] CORE_TEMP_WARNING</span>
+              <div style={{ display: "flex", alignItems: "baseline", gap: "8px", marginTop: "10px" }}>
+                <p
+                  style={{
+                    margin: 0,
+                    fontFamily: "Newsreader, serif",
+                    fontSize: "clamp(1.4rem, 3vw, 2rem)",
+                    color: "#fd8b00",
+                  }}
+                >
+                  {selectedOutsiderPermissions.mood ? "Over_Nominal" : "Standby"}
+                </p>
+                <span className="material-symbols-outlined" style={{ color: "#fd8b00", fontSize: "18px" }}>
+                  warning
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
+            gap: "16px",
+          }}
+        >
+          {systemsStrip.map((item) => (
+            <div
+              key={item.label}
+              style={{
+                background: "rgba(40,42,44,0.5)",
+                padding: "16px",
+                border: "1px solid #47464b",
+              }}
+            >
+              <p style={labelStyle()}>{item.label}</p>
+              <p
+                style={{
+                  margin: "8px 0 0",
+                  color: item.tone === "accent" ? theme.observerAccent : theme.text,
+                  fontWeight: 700,
+                  fontSize: "1rem",
+                  letterSpacing: "-0.02em",
+                  textTransform: "uppercase",
+                }}
+              >
+                {item.value}
+              </p>
+            </div>
+          ))}
+        </div>
+
+        <div
+          style={{
+            display: "grid",
+            gap: "16px",
+          }}
+        >
+          <div style={{ display: "flex", justifyContent: "space-between", gap: "16px", flexWrap: "wrap" }}>
+            <div>
+              <p style={labelStyle(theme.observerAccent)}>Selected Tracker</p>
+              <p
+                style={{
+                  margin: "6px 0 0",
+                  fontFamily: "Newsreader, serif",
+                  fontSize: "1.6rem",
+                }}
+              >
+                {selectedOutsider.name}
+              </p>
+              <p style={{ ...labelStyle("#7d8289"), marginTop: "8px" }}>
+                {outsiderEnvironmentLabel} // shared summaries only
+              </p>
+            </div>
+            <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
+              <button style={primaryButtonStyle(theme)} onClick={() => setShowOutsiderChooser(true)}>
+                Select Tracker
+              </button>
+              <button style={primaryButtonStyle(theme)} onClick={() => setOutsiderPage("outsiderSupport")}>
+                Open Comms
+              </button>
+            </div>
+          </div>
+
+          {hasTrendData ? (
+            <div style={{ display: "grid", gap: "18px" }}>
+              {wellbeingSeries.length > 0 ? (
+                <LineTrendChart
+                  title="Shared wellbeing trend"
+                  subtitle="High-level emotional and sleep trends only."
+                  data={latestChartWindow}
+                  yMax={5}
+                  theme={theme}
+                  chartCardStyle={chartCardStyle}
+                  series={wellbeingSeries}
+                />
+              ) : null}
+
+              {routineSeries.length > 0 ? (
+                <LineTrendChart
+                  title="Daily routines"
+                  subtitle="Shared counts for meals, movement, and resets."
+                  data={latestChartWindow}
+                  yMax={routineMax}
+                  theme={theme}
+                  chartCardStyle={chartCardStyle}
+                  series={routineSeries}
+                />
+              ) : null}
+
+              {medsSeries.length > 0 ? (
+                <LineTrendChart
+                  title="Medication support view"
+                  subtitle="Only medication check counts and log counts are shown."
+                  data={latestChartWindow}
+                  yMax={medsMax}
+                  theme={theme}
+                  chartCardStyle={chartCardStyle}
+                  series={medsSeries}
+                />
+              ) : null}
+            </div>
+          ) : (
+            <div style={telemetryPanelStyle(theme, "neutral")}>
+              <p style={{ ...labelStyle(), marginBottom: "8px" }}>NO_SHARED_TREND_DATA</p>
+              <p style={{ margin: 0, color: "#929095", fontSize: "13px" }}>
+                Shared telemetry will appear after approved tracker check-ins are available.
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div style={chartsPageStyle}>
       <section className="galaxy-panel" style={observerSectionCardStyle(theme, "dashboard")}>
@@ -182,111 +486,6 @@ function OutsiderTrackerDataPage({ app }) {
               </div>
             ))}
           </div>
-        </section>
-
-        {selectedOutsiderPermissions.mood ? (
-          <section className="galaxy-panel" style={observerSectionCardStyle(theme, "care")}>
-            {renderSectionHeader(
-              observerLabels.mood,
-              "Simple mood summary from the current view.",
-              "Mood",
-              "Mood"
-            )}
-            <p style={smallInfoStyle(theme)}>{outsiderMoodLabel}</p>
-            {selectedOutsider.latestEntry ? (
-              <p style={smallInfoStyle(theme)}>
-                Focus / Energy: {selectedOutsider.latestEntry.focus ?? "N/A"}/5,{" "}
-                {selectedOutsider.latestEntry.energy ?? "N/A"}/5
-              </p>
-            ) : null}
-          </section>
-        ) : null}
-      </div>
-
-      {selectedOutsider.systems.filter((system) => selectedOutsiderPermissions[system.label]).length > 0 ? (
-        <section className="galaxy-panel" style={observerSectionCardStyle(theme, "jump")}>
-          {renderSectionHeader("Systems", "Approved category summaries only.", "Systems", "Systems")}
-          <div style={{ display: "grid", gap: "10px" }}>
-            {selectedOutsider.systems
-              .filter((system) => selectedOutsiderPermissions[system.label])
-              .map((system) => (
-                <div key={system.label} style={summaryCardStyle(theme)}>
-                  <div style={summaryLabelStyle(theme)}>{system.label}</div>
-                  <div style={summaryValueStyle(theme)}>{system.value}</div>
-                  <div style={summaryNoteStyle(theme)}>{system.note}</div>
-                </div>
-              ))}
-          </div>
-        </section>
-      ) : null}
-
-      <div style={gridStyle}>
-        {selectedOutsiderPermissions.activity ? (
-          <section className="galaxy-panel" style={observerSectionCardStyle(theme, "dashboard")}>
-            {renderSectionHeader(
-              observerLabels.activity,
-              "Recent shared activity from the tracker.",
-              "Activity",
-              "Activity"
-            )}
-            <div style={{ display: "grid", gap: "8px" }}>
-              {selectedOutsider.activity.map((item) => (
-                <p key={item} style={smallInfoStyle(theme)}>
-                  {item}
-                </p>
-              ))}
-            </div>
-          </section>
-        ) : null}
-
-        <section className="galaxy-panel" style={observerSectionCardStyle(theme, "goals")}>
-          {renderSectionHeader(
-            "Trends & Charts",
-            "Recent shared patterns across the latest approved check-ins.",
-            "Trends",
-            "Trends"
-          )}
-          {!hasTrendData ? (
-            <p style={smallInfoStyle(theme)}>No shared trend data yet.</p>
-          ) : (
-            <div style={chartStackStyle}>
-              {wellbeingSeries.length > 0 ? (
-                <LineTrendChart
-                  title="Shared wellbeing trend"
-                  subtitle="High-level emotional and sleep trends only."
-                  data={latestChartWindow}
-                  yMax={5}
-                  theme={theme}
-                  chartCardStyle={chartCardStyle}
-                  series={wellbeingSeries}
-                />
-              ) : null}
-
-              {routineSeries.length > 0 ? (
-                <LineTrendChart
-                  title="Daily routines"
-                  subtitle="Shared counts for meals, movement, and resets."
-                  data={latestChartWindow}
-                  yMax={routineMax}
-                  theme={theme}
-                  chartCardStyle={chartCardStyle}
-                  series={routineSeries}
-                />
-              ) : null}
-
-              {medsSeries.length > 0 ? (
-                <LineTrendChart
-                  title="Medication support view"
-                  subtitle="Only medication check counts and log counts are shown."
-                  data={latestChartWindow}
-                  yMax={medsMax}
-                  theme={theme}
-                  chartCardStyle={chartCardStyle}
-                  series={medsSeries}
-                />
-              ) : null}
-            </div>
-          )}
         </section>
       </div>
     </div>

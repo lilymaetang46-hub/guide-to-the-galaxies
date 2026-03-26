@@ -10,7 +10,24 @@ function buildLinePath(points) {
   return points.map((point, index) => `${index === 0 ? "M" : "L"} ${point.x} ${point.y}`).join(" ");
 }
 
+function buildSteppedLinePath(points) {
+  if (points.length === 0) return "";
+  if (points.length === 1) return `M ${points[0].x} ${points[0].y}`;
+
+  const commands = [`M ${points[0].x} ${points[0].y}`];
+
+  for (let index = 1; index < points.length; index += 1) {
+    const previous = points[index - 1];
+    const current = points[index];
+    commands.push(`L ${current.x} ${previous.y}`);
+    commands.push(`L ${current.x} ${current.y}`);
+  }
+
+  return commands.join(" ");
+}
+
 function LineTrendChart({ title, subtitle, data, yMax, series, theme, chartCardStyle }) {
+  const isConsoleChart = theme.observerChartMode === "stepped";
   const width = 640;
   const height = 260;
   const padding = { top: 24, right: 18, bottom: 40, left: 40 };
@@ -50,11 +67,14 @@ function LineTrendChart({ title, subtitle, data, yMax, series, theme, chartCardS
               alignItems: "center",
               gap: "8px",
               padding: "7px 10px",
-              borderRadius: "999px",
+              borderRadius: isConsoleChart ? "10px" : "999px",
               background: theme.itemBackground,
               color: theme.subtleText,
               fontSize: "0.88rem",
               fontWeight: "bold",
+              fontFamily: theme.observerFontFamily,
+              letterSpacing: isConsoleChart ? "0.05em" : "normal",
+              textTransform: isConsoleChart ? "uppercase" : "none",
             }}
           >
             <span
@@ -72,6 +92,18 @@ function LineTrendChart({ title, subtitle, data, yMax, series, theme, chartCardS
       </div>
 
       <svg viewBox={`0 0 ${width} ${height}`} style={{ width: "100%", height: "auto", display: "block" }}>
+        {isConsoleChart ? (
+          <rect
+            x={padding.left}
+            y={padding.top}
+            width={chartWidth}
+            height={chartHeight}
+            fill="none"
+            stroke={theme.chartGrid}
+            strokeWidth="1"
+            opacity="0.8"
+          />
+        ) : null}
         {gridLines.map((line) => (
           <g key={line.value}>
             <line
@@ -88,6 +120,7 @@ function LineTrendChart({ title, subtitle, data, yMax, series, theme, chartCardS
               textAnchor="end"
               fill={theme.chartLabel}
               fontSize="11"
+              fontFamily={theme.observerFontFamily}
             >
               {Math.round(line.value)}
             </text>
@@ -102,6 +135,7 @@ function LineTrendChart({ title, subtitle, data, yMax, series, theme, chartCardS
             textAnchor="middle"
             fill={theme.chartLabel}
             fontSize="11"
+            fontFamily={theme.observerFontFamily}
           >
             {formatShortDate(item.date)}
           </text>
@@ -113,7 +147,7 @@ function LineTrendChart({ title, subtitle, data, yMax, series, theme, chartCardS
             y: getY(Number(entry[item.key] ?? 0)),
             value: Number(entry[item.key] ?? 0),
           }));
-          const path = buildLinePath(points);
+          const path = isConsoleChart ? buildSteppedLinePath(points) : buildLinePath(points);
 
           return (
             <g key={item.key}>
@@ -121,30 +155,54 @@ function LineTrendChart({ title, subtitle, data, yMax, series, theme, chartCardS
                 d={path}
                 fill="none"
                 stroke={item.color}
-                strokeWidth="8"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                opacity="0.14"
+                strokeWidth={isConsoleChart ? "5" : "8"}
+                strokeLinecap={isConsoleChart ? "square" : "round"}
+                strokeLinejoin={isConsoleChart ? "miter" : "round"}
+                opacity={isConsoleChart ? "0.08" : "0.14"}
               />
               <path
                 d={path}
                 fill="none"
                 stroke={item.color}
-                strokeWidth="3"
-                strokeLinecap="round"
-                strokeLinejoin="round"
+                strokeWidth={isConsoleChart ? "1.8" : "3"}
+                strokeLinecap={isConsoleChart ? "square" : "round"}
+                strokeLinejoin={isConsoleChart ? "miter" : "round"}
               />
               {points.map((point, index) => (
                 <g key={`${item.key}-${index}`}>
-                  <circle cx={point.x} cy={point.y} r="5" fill={item.color} opacity="0.22" />
-                  <circle
-                    cx={point.x}
-                    cy={point.y}
-                    r="2.8"
-                    fill={item.color}
-                    stroke={theme.chartSurface}
-                    strokeWidth="1.5"
-                  />
+                  {isConsoleChart ? (
+                    <>
+                      <rect
+                        x={point.x - 3.5}
+                        y={point.y - 3.5}
+                        width="7"
+                        height="7"
+                        fill={item.color}
+                        opacity="0.18"
+                      />
+                      <rect
+                        x={point.x - 2}
+                        y={point.y - 2}
+                        width="4"
+                        height="4"
+                        fill={item.color}
+                        stroke={theme.chartSurface}
+                        strokeWidth="1"
+                      />
+                    </>
+                  ) : (
+                    <>
+                      <circle cx={point.x} cy={point.y} r="5" fill={item.color} opacity="0.22" />
+                      <circle
+                        cx={point.x}
+                        cy={point.y}
+                        r="2.8"
+                        fill={item.color}
+                        stroke={theme.chartSurface}
+                        strokeWidth="1.5"
+                      />
+                    </>
+                  )}
                 </g>
               ))}
             </g>

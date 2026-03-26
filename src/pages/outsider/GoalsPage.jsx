@@ -1,3 +1,24 @@
+function consolePanel(theme, accent = "primary") {
+  const borderColor =
+    accent === "warning" ? "rgba(253, 139, 0, 0.35)" : `${theme.observerAccent}26`;
+
+  return {
+    background: accent === "warning" ? "rgba(253, 139, 0, 0.08)" : "rgba(0,0,0,0.22)",
+    border: `1px solid ${borderColor}`,
+    padding: "16px",
+  };
+}
+
+function consoleLabel(color = "#6b7078") {
+  return {
+    margin: 0,
+    fontSize: "10px",
+    color,
+    letterSpacing: "0.12em",
+    textTransform: "uppercase",
+  };
+}
+
 function OutsiderGoalsPage({ app }) {
   const {
     theme,
@@ -18,6 +39,7 @@ function OutsiderGoalsPage({ app }) {
     rewardCardStyle,
     rewardTitleStyle,
     goalMetaStyle,
+    softButtonStyle,
   } = app;
 
   if (!selectedOutsider) {
@@ -39,6 +61,90 @@ function OutsiderGoalsPage({ app }) {
             </button>
           </div>
         </section>
+      </div>
+    );
+  }
+
+  if (theme.observerConsole) {
+    const goalCards =
+      selectedOutsider.activeGoals?.length > 0
+        ? selectedOutsider.activeGoals.map((goal) => ({
+            key: goal.id,
+            title: goal.name,
+            subtitle: `${goal.currentStreakProgress}/${goal.streakLength} ${goal.checkType === "weekly" ? "weeks" : "days"}`,
+          }))
+        : selectedOutsider.alignments.map((alignment) => ({
+            key: alignment.label,
+            title: alignment.label,
+            subtitle: alignment.summary,
+          }));
+
+    return (
+      <div style={{ display: "grid", gap: "24px", marginTop: "8px" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", gap: "16px", flexWrap: "wrap" }}>
+          <div style={consolePanel(theme)}>
+            <p style={consoleLabel()}>[01] CURRENT_TRACKER</p>
+            <p style={{ margin: "6px 0 0", fontFamily: "Newsreader, serif", fontSize: "1.8rem", color: theme.text }}>
+              {selectedOutsider.name}
+            </p>
+            <p style={{ margin: "10px 0 0", color: "#929095", fontSize: "12px" }}>
+              Only high-level approved goal progress is shown here.
+            </p>
+          </div>
+          <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
+            <button style={primaryButtonStyle(theme)} onClick={() => setShowOutsiderChooser(true)}>
+              Select Tracker
+            </button>
+            <button style={softButtonStyle(theme)} onClick={() => setOutsiderPage("outsiderData")}>
+              Back to Telemetry
+            </button>
+          </div>
+        </div>
+
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "minmax(0, 1.25fr) minmax(0, 1fr)",
+            gap: "24px",
+          }}
+        >
+          {selectedOutsiderPermissions.streaks ? (
+            <div style={consolePanel(theme)}>
+              <div style={{ display: "flex", justifyContent: "space-between", gap: "12px", marginBottom: "14px" }}>
+                <span style={consoleLabel()}>{observerLabels.streaks}</span>
+                <span style={consoleLabel(theme.observerAccent)}>TRACKED</span>
+              </div>
+              <div style={{ display: "grid", gap: "12px" }}>
+                {goalCards.map((goal) => (
+                  <div key={goal.key} style={{ border: `1px solid ${theme.observerAccent}22`, padding: "14px" }}>
+                    <p style={consoleLabel()}>{goal.title}</p>
+                    <p style={{ margin: "6px 0 0", fontFamily: "Newsreader, serif", fontSize: "1.35rem", color: theme.text }}>
+                      {goal.subtitle}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : null}
+
+          {selectedOutsiderPermissions.rewards ? (
+            <div style={consolePanel(theme, "warning")}>
+              <div style={{ display: "flex", justifyContent: "space-between", gap: "12px", marginBottom: "14px" }}>
+                <span style={consoleLabel("#fd8b00")}>{observerLabels.rewards}</span>
+                <span style={consoleLabel("#fd8b00")}>UNLOCKED</span>
+              </div>
+              <div style={{ display: "grid", gap: "12px" }}>
+                {selectedOutsider.rewards.map((item) => (
+                  <div key={item} style={{ border: "1px solid rgba(253, 139, 0, 0.25)", padding: "14px" }}>
+                    <p style={{ margin: 0, fontFamily: "Newsreader, serif", fontSize: "1.3rem", color: "#fd8b00" }}>
+                      {item}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : null}
+        </div>
       </div>
     );
   }
