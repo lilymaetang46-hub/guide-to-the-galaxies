@@ -45,6 +45,16 @@ function labelStyle(color = "#6b7078") {
   };
 }
 
+function mobileChartScrollerStyle(theme) {
+  return {
+    overflowX: "auto",
+    paddingBottom: "4px",
+    marginTop: "12px",
+    borderTop: `1px solid ${theme.observerAccent}18`,
+    paddingTop: "14px",
+  };
+}
+
 function OutsiderTrackerDataPage({ app }) {
   const viewportWidth = typeof window !== "undefined" ? window.innerWidth : 1280;
   const isMobile = viewportWidth < 768;
@@ -211,13 +221,19 @@ function OutsiderTrackerDataPage({ app }) {
   );
 
   if (theme.observerConsole) {
+    const mobileTelemetryCardStyle = {
+      background: "rgba(0,0,0,0.16)",
+      border: `1px solid ${theme.observerAccent}22`,
+      padding: "14px",
+    };
+
     return (
       <div style={{ display: "grid", gap: "24px", marginTop: "8px" }}>
         <div
           style={{
             display: "grid",
             gridTemplateColumns: isMobile ? "1fr" : "minmax(0, 2fr) minmax(260px, 1fr)",
-            gap: isMobile ? "16px" : "24px",
+            gap: isMobile ? "14px" : "24px",
           }}
         >
           <div style={telemetryPanelStyle(theme)}>
@@ -226,7 +242,7 @@ function OutsiderTrackerDataPage({ app }) {
               <span style={labelStyle(theme.observerAccent)}>SIGMA_V.04</span>
             </div>
 
-            <div style={{ height: isMobile ? "160px" : "220px", border: `1px solid ${theme.observerAccent}22`, padding: isMobile ? "12px" : "16px", background: "rgba(0,0,0,0.16)" }}>
+            <div style={{ height: isMobile ? "140px" : "220px", border: `1px solid ${theme.observerAccent}22`, padding: isMobile ? "10px" : "16px", background: "rgba(0,0,0,0.16)" }}>
               {hasTrendData ? (
                 <svg viewBox="0 0 400 100" preserveAspectRatio="none" style={{ width: "100%", height: "100%" }}>
                   <path
@@ -252,8 +268,8 @@ function OutsiderTrackerDataPage({ app }) {
             <div
               style={{
                 display: "grid",
-                gridTemplateColumns: isMobile ? "1fr" : "repeat(3, minmax(0, 1fr))",
-                gap: isMobile ? "12px" : "16px",
+                gridTemplateColumns: isMobile ? "repeat(2, minmax(0, 1fr))" : "repeat(3, minmax(0, 1fr))",
+                gap: isMobile ? "10px" : "16px",
                 borderTop: `1px solid ${theme.observerAccent}22`,
                 paddingTop: "16px",
                 marginTop: "16px",
@@ -280,7 +296,7 @@ function OutsiderTrackerDataPage({ app }) {
           <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
             <div style={telemetryPanelStyle(theme)}>
               <span style={labelStyle()}>[02] SIGNAL_STRENGTH</span>
-              <div style={{ display: "grid", gap: "16px", marginTop: "16px" }}>
+              <div style={{ display: "grid", gap: "14px", marginTop: "16px" }}>
                 {[
                   { label: "UPLINK", bars: signalStrength.uplink },
                   { label: "DOWNLINK", bars: signalStrength.downlink },
@@ -333,7 +349,7 @@ function OutsiderTrackerDataPage({ app }) {
           style={{
             display: "grid",
             gridTemplateColumns: isMobile ? "repeat(2, minmax(0, 1fr))" : "repeat(4, minmax(0, 1fr))",
-            gap: isMobile ? "12px" : "16px",
+            gap: isMobile ? "10px" : "16px",
           }}
         >
           {systemsStrip.map((item) => (
@@ -365,7 +381,7 @@ function OutsiderTrackerDataPage({ app }) {
         <div
           style={{
             display: "grid",
-            gap: "16px",
+            gap: isMobile ? "14px" : "16px",
           }}
         >
           <div style={{ display: "flex", justifyContent: "space-between", gap: "16px", flexWrap: "wrap" }}>
@@ -395,41 +411,98 @@ function OutsiderTrackerDataPage({ app }) {
           </div>
 
           {hasTrendData ? (
-            <div style={{ display: "grid", gap: "18px" }}>
+            <div style={{ display: "grid", gap: isMobile ? "14px" : "18px" }}>
               {wellbeingSeries.length > 0 ? (
-                <LineTrendChart
-                  title="Shared wellbeing trend"
-                  subtitle="High-level emotional and sleep trends only."
-                  data={latestChartWindow}
-                  yMax={5}
-                  theme={theme}
-                  chartCardStyle={chartCardStyle}
-                  series={wellbeingSeries}
-                />
+                isMobile ? (
+                  <div style={mobileTelemetryCardStyle}>
+                    <p style={labelStyle(theme.observerAccent)}>WELLBEING_TREND</p>
+                    <div style={mobileChartScrollerStyle(theme)}>
+                      <div style={{ minWidth: "560px" }}>
+                        <LineTrendChart
+                          title="Shared wellbeing trend"
+                          subtitle="High-level emotional and sleep trends only."
+                          data={latestChartWindow}
+                          yMax={5}
+                          theme={theme}
+                          chartCardStyle={chartCardStyle}
+                          series={wellbeingSeries}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <LineTrendChart
+                    title="Shared wellbeing trend"
+                    subtitle="High-level emotional and sleep trends only."
+                    data={latestChartWindow}
+                    yMax={5}
+                    theme={theme}
+                    chartCardStyle={chartCardStyle}
+                    series={wellbeingSeries}
+                  />
+                )
               ) : null}
 
               {routineSeries.length > 0 ? (
-                <LineTrendChart
-                  title="Daily routines"
-                  subtitle="Shared counts for meals, movement, and resets."
-                  data={latestChartWindow}
-                  yMax={routineMax}
-                  theme={theme}
-                  chartCardStyle={chartCardStyle}
-                  series={routineSeries}
-                />
+                isMobile ? (
+                  <div style={mobileTelemetryCardStyle}>
+                    <p style={labelStyle(theme.observerAccent)}>DAILY_ROUTINES</p>
+                    <div style={mobileChartScrollerStyle(theme)}>
+                      <div style={{ minWidth: "560px" }}>
+                        <LineTrendChart
+                          title="Daily routines"
+                          subtitle="Shared counts for meals, movement, and resets."
+                          data={latestChartWindow}
+                          yMax={routineMax}
+                          theme={theme}
+                          chartCardStyle={chartCardStyle}
+                          series={routineSeries}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <LineTrendChart
+                    title="Daily routines"
+                    subtitle="Shared counts for meals, movement, and resets."
+                    data={latestChartWindow}
+                    yMax={routineMax}
+                    theme={theme}
+                    chartCardStyle={chartCardStyle}
+                    series={routineSeries}
+                  />
+                )
               ) : null}
 
               {medsSeries.length > 0 ? (
-                <LineTrendChart
-                  title="Medication support view"
-                  subtitle="Only medication check counts and log counts are shown."
-                  data={latestChartWindow}
-                  yMax={medsMax}
-                  theme={theme}
-                  chartCardStyle={chartCardStyle}
-                  series={medsSeries}
-                />
+                isMobile ? (
+                  <div style={mobileTelemetryCardStyle}>
+                    <p style={labelStyle(theme.observerAccent)}>MEDICATION_SUPPORT</p>
+                    <div style={mobileChartScrollerStyle(theme)}>
+                      <div style={{ minWidth: "560px" }}>
+                        <LineTrendChart
+                          title="Medication support view"
+                          subtitle="Only medication check counts and log counts are shown."
+                          data={latestChartWindow}
+                          yMax={medsMax}
+                          theme={theme}
+                          chartCardStyle={chartCardStyle}
+                          series={medsSeries}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <LineTrendChart
+                    title="Medication support view"
+                    subtitle="Only medication check counts and log counts are shown."
+                    data={latestChartWindow}
+                    yMax={medsMax}
+                    theme={theme}
+                    chartCardStyle={chartCardStyle}
+                    series={medsSeries}
+                  />
+                )
               ) : null}
             </div>
           ) : (

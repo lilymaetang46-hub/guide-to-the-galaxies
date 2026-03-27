@@ -142,7 +142,7 @@ function OutsiderSupportPage({ app }) {
               <span style={consoleLabel()}>[03] GENERAL_SUPPORT</span>
               <span style={consoleLabel(theme.observerAccent)}>TEXT_QUEUE</span>
             </div>
-            <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(2, minmax(0, 1fr))", gap: "12px" }}>
+            <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(2, minmax(0, 1fr))" : "repeat(2, minmax(0, 1fr))", gap: "12px" }}>
               {generalMessages.map((message) => (
                 <button key={message} style={quickJumpButtonStyle(theme)} onClick={() => sendSupportMessage(message)}>
                   {message}
@@ -156,7 +156,7 @@ function OutsiderSupportPage({ app }) {
               <span style={consoleLabel()}>[04] CATEGORY_NUDGES</span>
               <span style={consoleLabel(theme.observerAccent)}>APPROVED_ONLY</span>
             </div>
-            <div style={{ display: "grid", gap: "12px" }}>
+            <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(2, minmax(0, 1fr))" : "1fr", gap: "12px" }}>
               {categoryMessages.map((message) => (
                 <button key={message} style={quickJumpButtonStyle(theme)} onClick={() => sendSupportMessage(message)}>
                   {message}

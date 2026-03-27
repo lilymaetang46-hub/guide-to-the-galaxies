@@ -57,29 +57,35 @@ function OutsiderOverviewPage({ app }) {
     joinByLink,
   } = app;
 
+  const overviewConsolePanel = (accent = "primary") => ({
+    ...consolePanel(theme, accent),
+    minHeight: 0,
+  });
+
   if (theme.observerConsole) {
     return (
       <div style={{ display: "grid", gap: "24px", marginTop: "8px" }}>
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: isMobile ? "1fr" : "minmax(0, 1.4fr) minmax(0, 1fr)",
+            gridTemplateColumns: isMobile ? "1fr" : "minmax(0, 1.15fr) minmax(320px, 0.85fr)",
             gap: isMobile ? "16px" : "24px",
+            alignItems: "start",
           }}
         >
-          <div style={consolePanel(theme)}>
+          <div style={overviewConsolePanel()}>
             <div style={{ display: "flex", justifyContent: "space-between", gap: "12px", marginBottom: "14px" }}>
               <span style={consoleLabel()}>[01] TRACKER_LINKS</span>
               <span style={consoleLabel(theme.observerAccent)}>VIEWPORT_READY</span>
             </div>
             {outsiderTrackers.length > 0 ? (
-              <div style={{ display: "grid", gap: "12px" }}>
+              <div style={{ display: "grid", gap: "14px" }}>
                 {outsiderTrackers.map((tracker) => (
                   <div
                     key={tracker.id}
                     style={{
                       border: `1px solid ${theme.observerAccent}22`,
-                      padding: "14px",
+                      padding: isMobile ? "14px" : "16px",
                       background: "rgba(0,0,0,0.18)",
                     }}
                   >
@@ -95,7 +101,7 @@ function OutsiderOverviewPage({ app }) {
                       </div>
                     </div>
                     <p style={{ margin: "10px 0 0", color: "#7d8289", fontSize: "12px", letterSpacing: "0.06em", textTransform: "uppercase", lineHeight: 1.6 }}>
-                      Goals: {tracker.activeGoals?.length || 0} // Mood {tracker.moodScore}/5
+                      Status: {tracker.status} // Goals: {tracker.activeGoals?.length || 0} // Mood {tracker.moodScore}/5
                     </p>
                     <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(2, minmax(0, max-content))", gap: "10px", marginTop: "12px" }}>
                       <button
@@ -126,7 +132,7 @@ function OutsiderOverviewPage({ app }) {
           </div>
 
           <div style={{ display: "grid", gap: "24px" }}>
-            <div style={consolePanel(theme)}>
+            <div style={overviewConsolePanel()}>
               <span style={consoleLabel()}>[02] REQUEST_ACCESS</span>
               {renderFeedbackMessage(connectionsMessage, theme)}
               <div style={{ display: "grid", gap: "12px", marginTop: "14px" }}>
@@ -163,7 +169,7 @@ function OutsiderOverviewPage({ app }) {
               </div>
             </div>
 
-            <div style={consolePanel(theme, "warning")}>
+            <div style={overviewConsolePanel("warning")}>
               <span style={consoleLabel("#fd8b00")}>[03] QUICK_SUPPORT</span>
               <p style={{ margin: "8px 0 0", fontFamily: "Newsreader, serif", fontSize: "1.7rem", color: "#fd8b00" }}>
                 Support Queue
@@ -174,6 +180,61 @@ function OutsiderOverviewPage({ app }) {
             </div>
           </div>
         </div>
+
+        {outsiderTrackers.length > 0 ? (
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: isMobile ? "1fr" : "minmax(0, 1fr) minmax(0, 1fr)",
+              gap: isMobile ? "16px" : "24px",
+            }}
+          >
+            <div style={overviewConsolePanel()}>
+              <div style={{ display: "flex", justifyContent: "space-between", gap: "12px", marginBottom: "14px" }}>
+                <span style={consoleLabel()}>[04] SHARED_SIGNALS</span>
+                <span style={consoleLabel(theme.observerAccent)}>READ_ONLY</span>
+              </div>
+              <div style={{ display: "grid", gap: "12px" }}>
+                {outsiderTrackers.map((tracker) => (
+                  <div
+                    key={`signal-${tracker.id}`}
+                    style={{
+                      border: `1px solid ${theme.observerAccent}22`,
+                      padding: "14px",
+                      background: "rgba(0,0,0,0.16)",
+                    }}
+                  >
+                    <p style={consoleLabel()}>{tracker.name}</p>
+                    <p style={{ margin: "6px 0 0", color: theme.text, fontSize: "13px", lineHeight: 1.65 }}>
+                      Mood {tracker.moodScore}/5 // Meals {tracker.comparisonStats?.[0]?.value ?? 0} // Movement {tracker.comparisonStats?.[1]?.value ?? 0}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div style={overviewConsolePanel()}>
+              <div style={{ display: "flex", justifyContent: "space-between", gap: "12px", marginBottom: "14px" }}>
+                <span style={consoleLabel()}>[05] SUPPORT_SHORTCUTS</span>
+                <span style={consoleLabel(theme.observerAccent)}>FAST_ACTIONS</span>
+              </div>
+              <div style={{ display: "grid", gap: "12px" }}>
+                {outsiderTrackers.slice(0, 4).map((tracker) => (
+                  <button
+                    key={`support-${tracker.id}`}
+                    style={quickJumpButtonStyle(theme)}
+                    onClick={() => {
+                      setSelectedOutsiderId(tracker.id);
+                      setOutsiderPage("outsiderSupport");
+                    }}
+                  >
+                    {`Support ${tracker.name}`}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        ) : null}
       </div>
     );
   }

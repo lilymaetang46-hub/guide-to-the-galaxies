@@ -4691,16 +4691,43 @@ function App() {
             padding: tutorialIsMobile ? "0" : popupOverlayStyle.padding,
           }}
         >
+          {!tutorialIsMobile ? (
+            <>
+              <div style={getTutorialSpotlightStyle(outsiderTutorialStep.spotlightRegion)} />
+              <div style={getTutorialSpotlightBadgeStyle(outsiderTutorialStep.spotlightRegion)}>
+                <div
+                  style={{
+                    background: darkModeSafe(
+                      theme,
+                      "rgba(7, 11, 18, 0.9)",
+                      "rgba(255,255,255,0.92)"
+                    ),
+                    color: theme.text,
+                    borderRadius: "999px",
+                    padding: "10px 16px",
+                    border: theme.border,
+                    boxShadow: theme.heroShadow,
+                    fontSize: "0.8rem",
+                    fontWeight: 700,
+                    letterSpacing: "0.12em",
+                    textTransform: "uppercase",
+                  }}
+                >
+                  Outsider walkthrough
+                </div>
+              </div>
+            </>
+          ) : null}
           <div
             style={{
               ...popupCardStyle(theme),
               textAlign: "left",
-              width: tutorialIsMobile ? "calc(100vw - 16px)" : "min(620px, calc(100vw - 32px))",
+              width: tutorialIsMobile ? "calc(100vw - 16px)" : "min(560px, calc(100vw - 32px))",
               position: "fixed",
               zIndex: 42,
               margin: 0,
-              padding: tutorialIsMobile ? "18px 16px 18px" : "22px",
-              maxHeight: tutorialIsMobile ? "min(54vh, 460px)" : "min(84vh, 760px)",
+              padding: tutorialIsMobile ? "18px 16px 18px" : popupCardStyle(theme).padding,
+              maxHeight: tutorialIsMobile ? "min(54vh, 460px)" : "calc(100vh - 48px)",
               overflowY: "auto",
               borderRadius: tutorialIsMobile ? "22px 22px 18px 18px" : popupCardStyle(theme).borderRadius,
               boxShadow: tutorialIsMobile
@@ -4720,17 +4747,21 @@ function App() {
                     "1px solid rgba(98, 88, 66, 0.18)"
                   )
                 : popupCardStyle(theme).border,
-              ...(tutorialIsMobile
-                ? { left: "8px", right: "8px", bottom: "12px" }
-                : { left: "50%", top: "50%", transform: "translate(-50%, -50%)" }),
+              ...getTutorialCalloutPositionStyle(outsiderTutorialStep.calloutPosition),
             }}
           >
-            <p style={tinyLabelStyle(theme)}>
+            <p
+              style={{
+                ...tinyLabelStyle(theme),
+                color: tutorialIsMobile ? theme.subtleText : tinyLabelStyle(theme).color,
+                letterSpacing: tutorialIsMobile ? "0.16em" : tinyLabelStyle(theme).letterSpacing,
+              }}
+            >
               Outsider Tutorial Step {outsiderTutorialStepIndex + 1} of {outsiderTutorialSteps.length}
             </p>
             <div
               style={{
-                marginTop: "12px",
+                marginTop: tutorialIsMobile ? "12px" : "8px",
                 padding: tutorialIsMobile ? "12px 13px" : "12px 14px",
                 borderRadius: "14px",
                 background: darkModeSafe(
@@ -4753,9 +4784,9 @@ function App() {
             <h2
               style={{
                 ...sectionTitleStyle(theme),
-                marginTop: "14px",
+                marginTop: tutorialIsMobile ? "14px" : "8px",
                 fontSize: tutorialIsMobile ? "1.45rem" : sectionTitleStyle(theme).fontSize,
-                lineHeight: 1.1,
+                lineHeight: tutorialIsMobile ? 1.1 : sectionTitleStyle(theme).lineHeight,
               }}
             >
               {outsiderTutorialStep.title}
@@ -4763,8 +4794,8 @@ function App() {
             <p
               style={{
                 ...smallInfoStyle(theme),
-                marginTop: "12px",
-                lineHeight: 1.62,
+                marginTop: tutorialIsMobile ? "12px" : "10px",
+                lineHeight: tutorialIsMobile ? 1.62 : 1.7,
                 fontSize: tutorialIsMobile ? "0.98rem" : smallInfoStyle(theme).fontSize,
               }}
             >
@@ -6770,6 +6801,8 @@ function buildOutsiderTutorialSteps(outsiderTrackers, selectedOutsider) {
       id: "outsider-overview",
       pageKey: "outsiderOverview",
       pageLabel: "Overview",
+      calloutPosition: "bottom-right",
+      spotlightRegion: "center",
       pageNote:
         trackerCount > 0
           ? "This page lists your approved trackers and the entry points into the rest of the outsider app."
@@ -6790,6 +6823,8 @@ function buildOutsiderTutorialSteps(outsiderTrackers, selectedOutsider) {
       id: "outsider-data",
       pageKey: "outsiderData",
       pageLabel: "Telemetry",
+      calloutPosition: "top-right",
+      spotlightRegion: "center",
       pageNote: `Telemetry is the shared trend view for ${selectedTrackerName}.`,
       title: "Telemetry is for calm pattern-reading",
       body:
@@ -6805,6 +6840,8 @@ function buildOutsiderTutorialSteps(outsiderTrackers, selectedOutsider) {
       id: "outsider-support",
       pageKey: "outsiderSupport",
       pageLabel: "Comms",
+      calloutPosition: "bottom-right",
+      spotlightRegion: "center",
       pageNote: "Comms is where outsider support messages and nudges are sent.",
       title: "Comms is the action page",
       body:
@@ -6820,6 +6857,8 @@ function buildOutsiderTutorialSteps(outsiderTrackers, selectedOutsider) {
       id: "outsider-goals",
       pageKey: "outsiderGoals",
       pageLabel: "Goals",
+      calloutPosition: "top-right",
+      spotlightRegion: "center",
       pageNote: "Goals shows only the approved streak and reward summary view.",
       title: "Goals keeps progress visible without extra detail",
       body:

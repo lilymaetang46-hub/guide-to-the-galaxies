@@ -1,9 +1,9 @@
 import { useState } from "react";
 
 const CONSOLE_NAV_ITEMS = [
-  { key: "outsiderOverview", label: "Viewport", desktopLabel: "ENGINE_ROOM", icon: "settings_input_hdmi" },
+  { key: "outsiderOverview", label: "Overview", desktopLabel: "ENGINE_ROOM", icon: "settings_input_hdmi" },
   { key: "outsiderData", label: "Telemetry", desktopLabel: "NAV_COMPUTER", icon: "query_stats" },
-  { key: "outsiderGoals", label: "Logs", desktopLabel: "CARGO_BAY", icon: "database" },
+  { key: "outsiderGoals", label: "Goals", desktopLabel: "GOAL_ARCHIVE", icon: "database" },
   { key: "outsiderSupport", label: "Comms", desktopLabel: "CREW_QUARTERS", icon: "satellite_alt" },
 ];
 
@@ -44,8 +44,14 @@ function OutsiderLayout({
     typeof window !== "undefined" && window.innerWidth < 900;
   const isConsole = theme.observerConsole;
   const viewportWidth = typeof window !== "undefined" ? window.innerWidth : 1280;
-  const isMobile = viewportWidth < 768;
-  const isTablet = viewportWidth < 1024;
+  const isCoarsePointer =
+    typeof window !== "undefined" &&
+    typeof window.matchMedia === "function" &&
+    window.matchMedia("(pointer: coarse)").matches;
+  const isMobile = viewportWidth < 768 || (isCoarsePointer && viewportWidth < 1024);
+  const showDesktopSidebar = !isCoarsePointer && viewportWidth >= 1180;
+  const showCompactConsoleNav = !showDesktopSidebar;
+  const consoleSidebarWidth = viewportWidth >= 1480 ? 248 : 224;
 
   const handleSelectPage = (page) => {
     setOutsiderPage(page);
@@ -274,7 +280,7 @@ function OutsiderLayout({
       ? "Comms Console"
       : outsiderPage === "outsiderGoals"
       ? "Mission Log"
-      : "Observer Viewport";
+      : "Tracker Overview";
 
   const pageSubline =
     selectedTrackerName
@@ -288,7 +294,7 @@ function OutsiderLayout({
       style={{
         width: "100%",
         minHeight: "100vh",
-        paddingBottom: "84px",
+        paddingBottom: isMobile ? "64px" : "28px",
         fontFamily: theme.observerFontFamily,
         color: theme.text,
       }}
@@ -300,18 +306,18 @@ function OutsiderLayout({
           left: 0,
           right: 0,
           zIndex: 60,
-          height: "64px",
+          height: isMobile ? "48px" : "64px",
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
-          padding: isMobile ? "0 12px" : "0 20px",
+          padding: isMobile ? "0 10px" : "0 20px",
           background: theme.observerChrome,
           backdropFilter: "blur(16px)",
           borderBottom: `2px solid ${theme.observerAccent}33`,
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
-          <span className="material-symbols-outlined" style={{ color: theme.observerAccent }}>
+        <div style={{ display: "flex", alignItems: "center", gap: isMobile ? "8px" : "14px" }}>
+          <span className="material-symbols-outlined" style={{ color: theme.observerAccent, fontSize: isMobile ? "16px" : "24px" }}>
             settings_input_component
           </span>
           <div
@@ -320,7 +326,7 @@ function OutsiderLayout({
               fontWeight: 700,
               letterSpacing: "0.2em",
               color: theme.observerAccent,
-              fontSize: isMobile ? "0.82rem" : "1.05rem",
+              fontSize: isMobile ? "0.68rem" : "1.05rem",
               textTransform: "uppercase",
             }}
           >
@@ -328,33 +334,29 @@ function OutsiderLayout({
           </div>
         </div>
 
-        <nav style={{ display: isMobile ? "none" : "flex", gap: "24px", alignItems: "center" }}>
-          {CONSOLE_NAV_ITEMS.map((item) => (
+        <div style={{ display: "flex", alignItems: "center", gap: isMobile ? "8px" : "12px" }}>
+          {isMobile ? (
             <button
-              key={item.key}
-              onClick={() => handleSelectPage(item.key)}
+              onClick={() => startOutsiderTutorial(0)}
               style={{
-                background: "transparent",
-                border: "none",
-                color: outsiderPage === item.key ? theme.observerAccent : theme.faintText,
-                fontFamily: "Newsreader, serif",
-                fontSize: "0.82rem",
-                fontWeight: 700,
-                letterSpacing: "0.08em",
-                textTransform: "uppercase",
-                textDecoration: outsiderPage === item.key ? "underline" : "none",
-                textUnderlineOffset: "8px",
-                padding: "6px 0",
-                display: viewportWidth < 900 ? "none" : "inline-flex",
+                width: "30px",
+                height: "30px",
+                padding: 0,
+                borderRadius: "2px",
+                border: `1px solid ${theme.inputBorder}`,
+                background: showOutsiderTutorial ? `${theme.observerAccent}18` : theme.softButtonBackground,
+                color: showOutsiderTutorial ? theme.observerAccent : theme.text,
+                display: "grid",
+                placeItems: "center",
               }}
+              aria-label={showOutsiderTutorial ? "Outsider tutorial open" : "Start outsider tutorial"}
+              disabled={showOutsiderTutorial}
             >
-              {item.label}
+              <span className="material-symbols-outlined" style={{ fontSize: "16px" }}>
+                school
+              </span>
             </button>
-          ))}
-        </nav>
-
-        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-          {!isMobile ? (
+          ) : (
             <button
               onClick={() => startOutsiderTutorial(0)}
               style={{
@@ -372,7 +374,7 @@ function OutsiderLayout({
             >
               {showOutsiderTutorial ? "Tutorial Open" : "Tutorial"}
             </button>
-          ) : null}
+          )}
           <div style={{ textAlign: "right", display: viewportWidth < 640 ? "none" : "block" }}>
             <p style={{ margin: 0, fontSize: "10px", color: `${theme.observerAccent}99`, textTransform: "uppercase" }}>
               System Integrity
@@ -382,7 +384,9 @@ function OutsiderLayout({
           <button
             onClick={handleLogout}
             style={{
-              padding: "8px 10px",
+              width: isMobile ? "30px" : "auto",
+              height: isMobile ? "30px" : "auto",
+              padding: isMobile ? 0 : "8px 10px",
               borderRadius: "2px",
               border: `1px solid ${theme.inputBorder}`,
               background: theme.softButtonBackground,
@@ -391,15 +395,24 @@ function OutsiderLayout({
               fontSize: "10px",
               letterSpacing: "0.08em",
               textTransform: "uppercase",
+              display: "grid",
+              placeItems: "center",
             }}
+            aria-label="Logout"
           >
-            Logout
+            {isMobile ? (
+              <span className="material-symbols-outlined" style={{ fontSize: "16px" }}>
+                logout
+              </span>
+            ) : (
+              "Logout"
+            )}
           </button>
           <button
             onClick={() => setDarkMode(!darkMode)}
             style={{
-              width: "34px",
-              height: "34px",
+              width: isMobile ? "30px" : "34px",
+              height: isMobile ? "30px" : "34px",
               borderRadius: "2px",
               border: `1px solid ${theme.inputBorder}`,
               background: theme.observerPanelFrame,
@@ -422,11 +435,11 @@ function OutsiderLayout({
           left: 0,
           top: 0,
           bottom: 0,
-          width: "272px",
+          width: `${consoleSidebarWidth}px`,
           background: theme.observerChrome,
           borderRight: theme.observerBorder,
           paddingTop: "80px",
-          display: isTablet ? "none" : "flex",
+          display: showDesktopSidebar ? "flex" : "none",
           flexDirection: "column",
           gap: "8px",
           zIndex: 40,
@@ -484,20 +497,22 @@ function OutsiderLayout({
 
       <main
         style={{
-          marginLeft: isTablet ? 0 : "272px",
-          paddingTop: "80px",
-          paddingBottom: isMobile ? "12px" : "24px",
-          paddingInline: isMobile ? "8px" : "24px",
+          marginLeft: showDesktopSidebar ? `${consoleSidebarWidth}px` : 0,
+          marginRight: 0,
+          paddingTop: isMobile ? "54px" : "80px",
+          paddingBottom: showCompactConsoleNav ? (isMobile ? "60px" : "74px") : "24px",
+          paddingInline: isMobile ? "4px" : "20px",
           maxWidth: "none",
-          width: isTablet ? "100%" : "calc(100vw - 272px)",
+          width: showDesktopSidebar ? "auto" : "100%",
           boxSizing: "border-box",
+          minWidth: 0,
         }}
       >
         <div
           style={{
             position: "relative",
             background: theme.observerPanelFrame,
-            padding: isMobile ? "8px" : "16px",
+            padding: isMobile ? "4px" : "14px",
             borderTop: `4px solid ${theme.inputBorder}`,
             borderRadius: isMobile ? "10px 10px 0 0" : "12px 12px 0 0",
             boxShadow: "0 24px 48px rgba(0,0,0,0.34)",
@@ -521,11 +536,11 @@ function OutsiderLayout({
               background: theme.observerCardBackground,
               borderRadius: isMobile ? "2px" : "4px",
               border: `4px solid ${theme.inputBorder}`,
-              padding: isMobile ? "16px 12px 20px" : "24px 16px 32px",
+              padding: isMobile ? "12px 8px 14px" : "22px 16px 24px",
               minHeight: isMobile ? "auto" : "600px",
               display: "flex",
               flexDirection: "column",
-              gap: "24px",
+              gap: isMobile ? "18px" : "24px",
               overflow: "hidden",
             }}
           >
@@ -535,10 +550,11 @@ function OutsiderLayout({
                 style={{
                   display: "flex",
                   justifyContent: "space-between",
-                  alignItems: "flex-start",
+                  alignItems: isMobile ? "stretch" : "flex-start",
+                  flexDirection: isMobile ? "column" : "row",
                   gap: "16px",
                   borderBottom: `1px solid ${theme.observerAccent}33`,
-                  paddingBottom: "16px",
+                  paddingBottom: isMobile ? "12px" : "16px",
                 }}
               >
                 <div>
@@ -546,21 +562,21 @@ function OutsiderLayout({
                     style={{
                       margin: 0,
                       fontFamily: "Newsreader, serif",
-                      fontStyle: "italic",
                       fontSize: isMobile ? "clamp(1.65rem, 8vw, 2.3rem)" : "clamp(1.9rem, 4vw, 3rem)",
                       color: theme.text,
+                      lineHeight: 1.02,
                     }}
                   >
                     {pageTitle}
                   </h2>
                   <p
                     style={{
-                      margin: "8px 0 0",
+                      margin: isMobile ? "6px 0 0" : "8px 0 0",
                       fontSize: isMobile ? "10px" : "11px",
                       color: theme.observerAccent,
-                      letterSpacing: "0.18em",
+                      letterSpacing: isMobile ? "0.12em" : "0.18em",
                       textTransform: "uppercase",
-                      lineHeight: 1.7,
+                      lineHeight: 1.5,
                     }}
                   >
                     {pageSubline}
@@ -580,8 +596,9 @@ function OutsiderLayout({
                     gap: isMobile ? "6px" : "8px",
                     whiteSpace: "nowrap",
                     flexShrink: 0,
-                    minWidth: isMobile ? "86px" : "auto",
+                    minWidth: isMobile ? "100%" : "auto",
                     justifyContent: "center",
+                    alignSelf: isMobile ? "stretch" : "auto",
                   }}
                 >
                   <span style={{ width: isMobile ? "7px" : "9px", height: isMobile ? "7px" : "9px", borderRadius: "50%", background: theme.observerAccent, boxShadow: `0 0 12px ${theme.observerAccent}` }} />
@@ -611,175 +628,10 @@ function OutsiderLayout({
               </div>
             </div>
           </div>
-
-          <div
-          style={{
-            marginTop: "24px",
-            display: "flex",
-            flexWrap: "wrap",
-            gap: isMobile ? "14px" : "28px",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        >
-            <div style={{ display: "flex", gap: isMobile ? "10px" : "16px", width: isMobile ? "100%" : "auto", justifyContent: "center" }}>
-              <button
-                className="orbital-mechanical-shadow"
-                onClick={() => handleSelectPage("outsiderData")}
-                style={{
-                  width: isMobile ? "64px" : "72px",
-                  height: isMobile ? "64px" : "72px",
-                  background: theme.observerAccent,
-                  color: theme.primaryText,
-                  border: "none",
-                  borderRadius: "4px",
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: "4px",
-                  fontSize: "8px",
-                  letterSpacing: "0.08em",
-                  textTransform: "uppercase",
-                }}
-              >
-                <span className="material-symbols-outlined">emergency</span>
-                <span>Activate</span>
-              </button>
-              <button
-                className="orbital-mechanical-shadow"
-                onClick={() => handleSelectPage("outsiderSupport")}
-                style={{
-                  width: isMobile ? "64px" : "72px",
-                  height: isMobile ? "64px" : "72px",
-                  background: theme.observerAccentAlt,
-                  color: isConsole && darkMode ? "#2f1500" : "#10271f",
-                  border: "none",
-                  borderRadius: "4px",
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: "4px",
-                  fontSize: "8px",
-                  letterSpacing: "0.08em",
-                  textTransform: "uppercase",
-                }}
-              >
-                <span className="material-symbols-outlined">support</span>
-                <span>Support</span>
-              </button>
-              <button
-                className="orbital-mechanical-shadow"
-                onClick={handleRefresh}
-                style={{
-                  width: isMobile ? "64px" : "72px",
-                  height: isMobile ? "64px" : "72px",
-                  background: theme.observerPanelFrame,
-                  color: theme.text,
-                  border: `2px solid ${theme.inputBorder}`,
-                  borderRadius: "4px",
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: "4px",
-                  fontSize: "8px",
-                  letterSpacing: "0.08em",
-                  textTransform: "uppercase",
-                }}
-              >
-                <span className="material-symbols-outlined">refresh</span>
-                <span>Reboot</span>
-              </button>
-            </div>
-
-            <div
-              style={{
-                display: isMobile ? "none" : "flex",
-                gap: "24px",
-                alignItems: "center",
-                background: theme.cardBackground,
-                padding: "16px",
-                borderRadius: "4px",
-                border: theme.observerBorder,
-              }}
-            >
-              {[
-                { label: "NAV_LOCK", active: false },
-                { label: "SYNC_UP", active: true },
-              ].map((item) => (
-                <div key={item.label} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "8px" }}>
-                  <div
-                    style={{
-                      width: "16px",
-                      height: "48px",
-                      background: theme.inputBorder,
-                      borderRadius: "999px",
-                      padding: "4px",
-                      display: "flex",
-                      flexDirection: "column",
-                      justifyContent: item.active ? "flex-end" : "flex-start",
-                      alignItems: "center",
-                      boxShadow: "inset 0 2px 4px rgba(0,0,0,0.36)",
-                    }}
-                  >
-                    <div
-                      style={{
-                        width: "10px",
-                        height: item.active ? "18px" : "10px",
-                        background: item.active ? theme.observerAccent : theme.subtleText,
-                        borderRadius: item.active ? "4px" : "50%",
-                        boxShadow: item.active ? `0 0 8px ${theme.observerAccent}` : "none",
-                      }}
-                    />
-                  </div>
-                  <span style={{ fontSize: "8px", color: theme.faintText, letterSpacing: "0.08em" }}>{item.label}</span>
-                </div>
-              ))}
-            </div>
-
-            <div style={{ display: viewportWidth < 640 ? "none" : "flex", flexDirection: "column", alignItems: "center", gap: "8px" }}>
-              <div
-                style={{
-                  width: "64px",
-                  height: "64px",
-                  borderRadius: "50%",
-                  border: `4px solid ${theme.inputBorder}`,
-                  background: theme.observerPanelFrame,
-                  boxShadow: "0 12px 20px rgba(0,0,0,0.24)",
-                  position: "relative",
-                  display: "grid",
-                  placeItems: "center",
-                }}
-              >
-                <div
-                  style={{
-                    position: "absolute",
-                    top: "3px",
-                    width: "4px",
-                    height: "24px",
-                    background: theme.subtleText,
-                    transform: "rotate(45deg)",
-                    transformOrigin: "bottom center",
-                  }}
-                />
-                <div
-                  style={{
-                    width: "40px",
-                    height: "40px",
-                    borderRadius: "50%",
-                    border: `1px solid ${theme.inputBorder}`,
-                    background: theme.inputBackground,
-                  }}
-                />
-              </div>
-              <span style={{ fontSize: "8px", color: theme.faintText, letterSpacing: "0.08em" }}>BANDWIDTH</span>
-            </div>
-          </div>
         </div>
       </main>
 
+      {showCompactConsoleNav ? (
       <footer
         style={{
           position: "fixed",
@@ -787,9 +639,9 @@ function OutsiderLayout({
           right: 0,
           bottom: 0,
           zIndex: 55,
-          height: isMobile ? "72px" : "78px",
+          height: isMobile ? "52px" : "58px",
           background: theme.observerChrome,
-          borderTop: `4px solid ${theme.inputBorder}`,
+          borderTop: `2px solid ${theme.inputBorder}`,
           display: "grid",
           gridTemplateColumns: "repeat(4, 1fr)",
         }}
@@ -809,17 +661,17 @@ function OutsiderLayout({
                 flexDirection: "column",
                 alignItems: "center",
                 justifyContent: "center",
-                gap: "4px",
-                paddingBottom: isMobile ? "8px" : "10px",
+                gap: isMobile ? "2px" : "4px",
+                paddingBottom: isMobile ? "4px" : "6px",
               }}
             >
-              <span className="material-symbols-outlined" style={{ fontSize: isMobile ? "18px" : "20px" }}>{item.icon}</span>
+              <span className="material-symbols-outlined" style={{ fontSize: isMobile ? "16px" : "18px" }}>{item.icon}</span>
               <span
                 style={{
                   fontFamily: theme.observerHeadingFamily,
-                  fontSize: isMobile ? "9px" : "10px",
+                  fontSize: isMobile ? "7px" : "8px",
                   fontWeight: 700,
-                  letterSpacing: isMobile ? "0.1em" : "0.16em",
+                  letterSpacing: "0.08em",
                   textTransform: "uppercase",
                 }}
               >
@@ -829,6 +681,7 @@ function OutsiderLayout({
           );
         })}
       </footer>
+      ) : null}
 
       <div
         className="orbital-scanlines"
