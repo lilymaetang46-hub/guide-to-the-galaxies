@@ -6,10 +6,24 @@ const OBSERVATORY_NAV_ITEMS = [
   { key: "orbit", label: "Orbit", icon: "adjust" },
   { key: "support", label: "Signal", icon: "rss_feed" },
   { key: "connections", label: "Portal", icon: "blur_on" },
+  { key: "settings", label: "Settings", icon: "settings" },
+];
+
+const SOLAR_NAV_ITEMS = [
+  { key: "mission", label: "Observe", icon: "visibility" },
+  { key: "charts", label: "Reflect", icon: "auto_awesome" },
+  { key: "tracking", label: "Log", icon: "edit_note" },
+  { key: "support", label: "Signal", icon: "notifications" },
+  { key: "connections", label: "Orbit", icon: "wb_sunny" },
+  { key: "settings", label: "Settings", icon: "settings" },
 ];
 
 function isObservatoryTrackerTheme(theme) {
   return Boolean(theme?.trackerObservatory && theme?.themeFamily === "galaxy");
+}
+
+function isSolarTrackerTheme(theme) {
+  return Boolean(theme?.trackerSolar && theme?.themeFamily === "galaxy");
 }
 
 function TrackerLayout({
@@ -42,9 +56,10 @@ function TrackerLayout({
   const [navOpen, setNavOpen] = useState(
     () => typeof window !== "undefined" && window.innerWidth >= 900
   );
+  const viewportWidth = typeof window !== "undefined" ? window.innerWidth : 1280;
+  const isMobile = viewportWidth < 768;
 
-  const shouldCollapseAfterAction =
-    typeof window !== "undefined" && window.innerWidth < 900;
+  const shouldCollapseAfterAction = viewportWidth < 900;
 
   const handleSelectPage = (page) => {
     setActivePage(page);
@@ -82,7 +97,7 @@ function TrackerLayout({
           style={{
             width: "100%",
             minHeight: "100vh",
-            paddingBottom: "170px",
+            paddingBottom: isMobile ? "124px" : "170px",
             position: "relative",
             color: theme.text,
             fontFamily: theme.trackerBodyFamily,
@@ -296,7 +311,7 @@ function TrackerLayout({
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
-            padding: "24px 32px",
+            padding: isMobile ? "16px 14px" : "24px 32px",
             background: "rgba(255,255,255,0.94)",
             background: "rgba(0,0,0,0.42)",
             backdropFilter: "blur(24px)",
@@ -308,20 +323,20 @@ function TrackerLayout({
               style={{
                 fontFamily: theme.trackerHeadingFamily,
                 fontStyle: "italic",
-                fontSize: "2rem",
+                fontSize: isMobile ? "1.3rem" : "2rem",
                 color: theme.trackerAccent,
                 textShadow: "0 0 10px rgba(255,240,195,0.4)",
               }}
             >
               The Observatory
             </div>
-            <span style={{ fontSize: "8px", letterSpacing: "0.4em", textTransform: "uppercase", color: "rgba(216,185,255,0.4)", fontWeight: 700 }}>
+            <span style={{ fontSize: isMobile ? "7px" : "8px", letterSpacing: isMobile ? "0.28em" : "0.4em", textTransform: "uppercase", color: "rgba(216,185,255,0.4)", fontWeight: 700 }}>
               Vessel ID: 00-OMNIPRESENCE
             </span>
           </div>
 
-          <div style={{ display: "flex", alignItems: "center", gap: "24px" }}>
-            <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", marginRight: "12px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: isMobile ? "10px" : "24px" }}>
+            <div style={{ display: isMobile ? "none" : "flex", flexDirection: "column", alignItems: "flex-end", marginRight: "12px" }}>
               <span style={{ fontSize: "9px", color: "rgba(255,240,195,0.6)", textTransform: "uppercase", letterSpacing: "0.2em" }}>
                 Signal Strength
               </span>
@@ -341,13 +356,13 @@ function TrackerLayout({
             </div>
             <button
               onClick={() => setDarkMode(!darkMode)}
-              style={{ background: "transparent", border: "none", color: "rgba(216,185,255,0.6)" }}
+              style={{ background: "transparent", border: "none", color: "rgba(216,185,255,0.6)", padding: 0 }}
             >
               <span className="material-symbols-outlined">flare</span>
             </button>
             <button
               onClick={() => setActivePage("settings")}
-              style={{ background: "transparent", border: "none", color: "rgba(216,185,255,0.6)" }}
+              style={{ background: "transparent", border: "none", color: "rgba(216,185,255,0.6)", padding: 0 }}
             >
               <span className="material-symbols-outlined">account_circle</span>
             </button>
@@ -356,9 +371,9 @@ function TrackerLayout({
 
         <main
           style={{
-            paddingTop: "128px",
-            paddingBottom: "96px",
-            paddingInline: "24px",
+            paddingTop: isMobile ? "92px" : "128px",
+            paddingBottom: isMobile ? "84px" : "96px",
+            paddingInline: isMobile ? "12px" : "24px",
             maxWidth: "1600px",
             margin: "0 auto",
             position: "relative",
@@ -371,16 +386,16 @@ function TrackerLayout({
         <nav
           style={{
             position: "fixed",
-            bottom: "32px",
+            bottom: isMobile ? "12px" : "32px",
             left: "50%",
             transform: "translateX(-50%)",
-            width: "min(90%, 540px)",
+            width: isMobile ? "calc(100% - 16px)" : "min(94%, 680px)",
             zIndex: 50,
             background: "rgba(4, 4, 10, 0.75)",
             background: "rgba(4, 4, 10, 0.56)",
             backdropFilter: "blur(32px) saturate(160%)",
             borderRadius: "999px",
-            padding: "16px 24px",
+            padding: isMobile ? "12px 10px" : "16px 24px",
             display: "flex",
             justifyContent: "space-around",
             alignItems: "center",
@@ -417,37 +432,312 @@ function TrackerLayout({
                   background: active ? "rgba(255,240,195,0.1)" : "transparent",
                   border: active ? "1px solid rgba(255,240,195,0.2)" : "none",
                   borderRadius: active ? "999px" : "0",
-                  padding: active ? "14px 24px" : "0",
-                  marginTop: active ? "-40px" : "0",
-                  minWidth: active ? "90px" : "auto",
+                  padding: active ? (isMobile ? "9px 10px" : "14px 20px") : "0",
+                  marginTop: active ? (isMobile ? "-20px" : "-40px") : "0",
+                  minWidth: active ? (isMobile ? "58px" : "84px") : "auto",
                 }}
               >
                 <span
                   className="material-symbols-outlined"
                   style={{
-                    fontSize: active ? "32px" : "24px",
+                    fontSize: active ? (isMobile ? "24px" : "32px") : isMobile ? "20px" : "24px",
                     fontVariationSettings: active ? "'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24" : undefined,
                   }}
                 >
                   {item.icon}
                 </span>
-                <span style={{ fontSize: active ? "9px" : "8px", letterSpacing: "0.15em", textTransform: "uppercase", marginTop: "4px" }}>
+                <span style={{ fontSize: active ? (isMobile ? "7px" : "9px") : isMobile ? "7px" : "8px", letterSpacing: isMobile ? "0.06em" : "0.15em", textTransform: "uppercase", marginTop: "4px" }}>
                   {item.label}
                 </span>
                 {active ? (
                   <div
                     style={{
                       position: "absolute",
-                      top: "-4px",
-                      right: "10px",
-                      width: "8px",
-                      height: "8px",
+                      top: isMobile ? "-2px" : "-4px",
+                      right: isMobile ? "6px" : "10px",
+                      width: isMobile ? "6px" : "8px",
+                      height: isMobile ? "6px" : "8px",
                       borderRadius: "50%",
                       background: theme.trackerAccent,
                       boxShadow: "0 0 20px rgba(255,240,195,0.3)",
                     }}
                   />
                 ) : null}
+              </button>
+            );
+          })}
+        </nav>
+      </div>
+    );
+  }
+
+  if (isSolarTrackerTheme(theme)) {
+    const solarNavActive = (itemKey) => {
+      if (itemKey === "mission") {
+        return activePage === "mission" || activePage === "dashboard";
+      }
+
+       if (itemKey === "tracking") {
+        return ["meds", "food", "sleep", "hygiene", "cleaning", "exercise", "mood"].includes(activePage);
+      }
+
+      return activePage === itemKey;
+    };
+
+    return (
+      <div
+        style={{
+          width: "100%",
+          minHeight: "100vh",
+          paddingBottom: isMobile ? "112px" : "140px",
+          position: "relative",
+          color: theme.text,
+          fontFamily: theme.trackerBodyFamily,
+          overflow: "hidden",
+          isolation: "isolate",
+        }}
+      >
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 0,
+            background: theme.trackerSolarCanvas || theme.pageBackground,
+          }}
+        />
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 1,
+            pointerEvents: "none",
+            background: theme.trackerSolarGlow,
+          }}
+        />
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 2,
+            pointerEvents: "none",
+            background: theme.trackerSolarVignette,
+          }}
+        />
+        <div
+          style={{
+            position: "fixed",
+            top: isMobile ? "-80px" : "-140px",
+            left: isMobile ? "-80px" : "-140px",
+            width: isMobile ? "340px" : "800px",
+            height: isMobile ? "340px" : "800px",
+            zIndex: 3,
+            pointerEvents: "none",
+            borderRadius: "50%",
+            background:
+              "radial-gradient(circle, rgba(255, 193, 7, 0.3) 0%, rgba(255, 193, 7, 0) 70%)",
+            mixBlendMode: "color-dodge",
+          }}
+        />
+        <div
+          style={{
+            position: "fixed",
+            bottom: isMobile ? "36px" : "16px",
+            right: isMobile ? "-40px" : "10px",
+            width: isMobile ? "220px" : "600px",
+            height: isMobile ? "220px" : "600px",
+            zIndex: 3,
+            pointerEvents: "none",
+            borderRadius: "50%",
+            background:
+              "radial-gradient(circle, rgba(255, 193, 7, 0.22) 0%, rgba(255, 193, 7, 0) 70%)",
+            mixBlendMode: "color-dodge",
+          }}
+        />
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 4,
+            pointerEvents: "none",
+            background:
+              "radial-gradient(circle at center, rgba(255,255,255,0.34) 0%, rgba(255,255,255,0.18) 18%, rgba(255,255,255,0) 44%)",
+            filter: "blur(34px)",
+            opacity: 0.58,
+          }}
+        />
+
+        <nav
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            zIndex: 40,
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            padding: isMobile ? "14px 16px" : "18px 28px",
+            background: "rgba(255,255,255,0.3)",
+            backdropFilter: "blur(20px)",
+            borderBottom: "1px solid rgba(230,126,34,0.12)",
+          }}
+        >
+          <div
+            style={{
+              fontFamily: theme.trackerHeadingFamily,
+              fontStyle: "italic",
+              fontSize: isMobile ? "1.1rem" : "1.7rem",
+              color: theme.trackerAccent,
+              letterSpacing: "-0.02em",
+              position: "relative",
+              zIndex: 2,
+            }}
+          >
+            The Observer
+          </div>
+
+          <div
+            style={{
+              display: isMobile ? "none" : "flex",
+              alignItems: "center",
+              gap: "14px",
+              position: "absolute",
+              left: "50%",
+              transform: "translateX(-50%)",
+              zIndex: 1,
+            }}
+          >
+            {SOLAR_NAV_ITEMS.map((item) => (
+              <button
+                key={item.key}
+                onClick={() =>
+                  handleSelectPage(
+                    item.key === "tracking"
+                      ? trackerNavItems.find((navItem) =>
+                          ["meds", "food", "sleep", "hygiene", "cleaning", "exercise", "mood"].includes(navItem.key)
+                        )?.key || "mood"
+                      : item.key
+                  )
+                }
+                style={{
+                  border: "none",
+                  background: solarNavActive(item.key) ? "rgba(255,255,255,0.28)" : "rgba(255,193,7,0.08)",
+                  color: solarNavActive(item.key) ? theme.trackerAccent : `${theme.text}aa`,
+                  fontFamily: theme.trackerBodyFamily,
+                  fontWeight: solarNavActive(item.key) ? 700 : 500,
+                  padding: "10px 18px",
+                  borderRadius: "999px",
+                  fontSize: "1.05rem",
+                  boxShadow: solarNavActive(item.key) ? "0 8px 24px rgba(230,126,34,0.12)" : "none",
+                }}
+              >
+                {item.label}
+              </button>
+            ))}
+          </div>
+
+          <div style={{ display: "flex", alignItems: "center", gap: isMobile ? "10px" : "16px", position: "relative", zIndex: 2 }}>
+            <button
+              onClick={() => setDarkMode(!darkMode)}
+              style={{ border: "none", background: "transparent", color: theme.text, padding: 0 }}
+              aria-label="Switch tracker theme mode"
+            >
+              <span className="material-symbols-outlined">flare</span>
+            </button>
+            <button
+              onClick={() => setActivePage("support")}
+              style={{ border: "none", background: "transparent", color: theme.text, padding: 0 }}
+              aria-label="Open support"
+            >
+              <span className="material-symbols-outlined">notifications</span>
+            </button>
+          </div>
+        </nav>
+
+        <main
+          style={{
+            position: "relative",
+            zIndex: 10,
+            minHeight: "100vh",
+            paddingTop: isMobile ? "84px" : "102px",
+            paddingBottom: isMobile ? "128px" : "72px",
+            paddingInline: isMobile ? "16px" : "24px",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+          }}
+        >
+          {children}
+        </main>
+
+        <nav
+          style={{
+            position: "fixed",
+            left: isMobile ? 0 : "50%",
+            right: isMobile ? 0 : "auto",
+            bottom: isMobile ? 0 : "18px",
+            transform: isMobile ? "none" : "translateX(-50%)",
+            zIndex: 45,
+            display: "flex",
+            justifyContent: "space-around",
+            alignItems: "center",
+            padding: isMobile ? "14px 12px 28px" : "12px 16px",
+            background: "rgba(255,255,255,0.5)",
+            backdropFilter: "blur(24px)",
+            borderTop: "1px solid rgba(230,126,34,0.16)",
+            borderTopLeftRadius: isMobile ? "3rem" : "999px",
+            borderTopRightRadius: isMobile ? "3rem" : "999px",
+            borderBottomLeftRadius: isMobile ? 0 : "999px",
+            borderBottomRightRadius: isMobile ? 0 : "999px",
+            boxShadow: "0 -10px 40px rgba(230,126,34,0.1)",
+            width: isMobile ? "100%" : "min(94%, 900px)",
+          }}
+        >
+          {SOLAR_NAV_ITEMS.map((item) => {
+            const active = solarNavActive(item.key);
+            return (
+              <button
+                key={item.key}
+                onClick={() =>
+                  handleSelectPage(
+                    item.key === "tracking"
+                      ? trackerNavItems.find((navItem) =>
+                          ["meds", "food", "sleep", "hygiene", "cleaning", "exercise", "mood"].includes(navItem.key)
+                        )?.key || "mood"
+                      : item.key
+                  )
+                }
+                style={{
+                  border: "none",
+                  background: active ? theme.secondary : "transparent",
+                  color: active ? "#ffffff" : `${theme.text}99`,
+                  borderRadius: "999px",
+                  padding: active ? (isMobile ? "9px 12px" : "12px 18px") : isMobile ? "9px 10px" : "12px 16px",
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "4px",
+                  minWidth: isMobile ? "58px" : "86px",
+                  boxShadow: active ? "0 10px 24px rgba(230,126,34,0.18)" : "none",
+                }}
+              >
+                <span
+                  className="material-symbols-outlined"
+                  style={{ fontSize: isMobile ? "20px" : "22px", fontVariationSettings: active ? "'FILL' 1" : undefined }}
+                >
+                  {item.icon}
+                </span>
+                <span
+                  style={{
+                    fontSize: isMobile ? "9px" : "11px",
+                    textTransform: "uppercase",
+                    letterSpacing: isMobile ? "0.08em" : "0.16em",
+                    fontWeight: active ? 700 : 500,
+                  }}
+                >
+                  {item.label}
+                </span>
               </button>
             );
           })}

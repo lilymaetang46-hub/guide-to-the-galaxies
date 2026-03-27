@@ -25,7 +25,13 @@ function isObservatoryTrackerTheme(theme) {
   return Boolean(theme?.trackerObservatory && theme?.themeFamily === "galaxy");
 }
 
+function isSolarTrackerTheme(theme) {
+  return Boolean(theme?.trackerSolar && theme?.themeFamily === "galaxy");
+}
+
 function TrackerOverviewPage({ app }) {
+  const viewportWidth = typeof window !== "undefined" ? window.innerWidth : 1280;
+  const isMobile = viewportWidth < 768;
   const {
     theme,
     chartsPageStyle,
@@ -114,15 +120,15 @@ function TrackerOverviewPage({ app }) {
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "minmax(280px, 1fr) minmax(540px, 2fr) minmax(280px, 1fr)",
-          gap: "32px",
+          gridTemplateColumns: isMobile ? "1fr" : "minmax(280px, 1fr) minmax(540px, 2fr) minmax(280px, 1fr)",
+          gap: isMobile ? "18px" : "32px",
           alignItems: "start",
         }}
       >
-        <aside style={{ display: "grid", gap: "32px" }}>
+        <aside style={{ display: "grid", gap: isMobile ? "18px" : "32px", order: isMobile ? 2 : 0 }}>
           <section style={glassPanelStyle(theme)}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
-              <h3 style={{ margin: 0, fontFamily: theme.trackerHeadingFamily, fontStyle: "italic", fontSize: "2rem", color: theme.trackerAccent }}>
+              <h3 style={{ margin: 0, fontFamily: theme.trackerHeadingFamily, fontStyle: "italic", fontSize: isMobile ? "1.45rem" : "2rem", color: theme.trackerAccent }}>
                 Telemetry Logs
               </h3>
               <span style={{ fontSize: "10px", color: "rgba(216,185,255,0.4)" }}>LIVE</span>
@@ -168,7 +174,7 @@ function TrackerOverviewPage({ app }) {
           </section>
 
           <section style={{ ...glassPanelStyle(theme, "support"), borderLeft: "2px solid rgba(255,240,195,0.3)" }}>
-            <h3 style={{ margin: 0, fontFamily: theme.trackerHeadingFamily, fontStyle: "italic", fontSize: "2rem", color: theme.trackerAccent }}>
+            <h3 style={{ margin: 0, fontFamily: theme.trackerHeadingFamily, fontStyle: "italic", fontSize: isMobile ? "1.45rem" : "2rem", color: theme.trackerAccent }}>
               Support Uplink
             </h3>
             <p style={{ margin: "8px 0 0", fontSize: "12px", color: theme.subtleText, lineHeight: 1.7 }}>
@@ -183,7 +189,7 @@ function TrackerOverviewPage({ app }) {
                 marginTop: "20px",
                 border: "1px solid rgba(255,255,255,0.05)",
                 fontStyle: "italic",
-                fontSize: "1.35rem",
+                fontSize: isMobile ? "1.05rem" : "1.35rem",
                 lineHeight: 1.45,
                 color: theme.text,
                 fontFamily: theme.trackerHeadingFamily,
@@ -210,7 +216,7 @@ function TrackerOverviewPage({ app }) {
             >
               Transmit Support
             </button>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginTop: "16px" }}>
+            <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: "12px", marginTop: "16px" }}>
               <button style={{ padding: "10px 12px", border: "1px solid rgba(216,185,255,0.3)", borderRadius: "999px", background: "transparent", color: theme.trackerAccentSoft, fontSize: "10px", textTransform: "uppercase" }}>
                 Steady Orbit
               </button>
@@ -221,14 +227,14 @@ function TrackerOverviewPage({ app }) {
           </section>
         </aside>
 
-        <div style={{ display: "grid", gap: "32px", justifyItems: "center" }}>
+        <div style={{ display: "grid", gap: isMobile ? "18px" : "32px", justifyItems: "center", order: isMobile ? 1 : 0 }}>
           <section style={{ textAlign: "center", marginBottom: "8px" }}>
             <h1
               style={{
                 margin: 0,
                 fontFamily: theme.trackerHeadingFamily,
                 fontStyle: "italic",
-                fontSize: "clamp(4rem, 9vw, 6.8rem)",
+                fontSize: isMobile ? "clamp(2.7rem, 16vw, 4.2rem)" : "clamp(4rem, 9vw, 6.8rem)",
                 color: theme.trackerAccent,
                 textShadow: "0 0 20px rgba(255,240,195,0.3)",
                 lineHeight: 0.95,
@@ -236,19 +242,19 @@ function TrackerOverviewPage({ app }) {
             >
               Ritual Alignment
             </h1>
-            <p style={{ margin: "18px 0 0", color: "rgba(216,185,255,0.6)", letterSpacing: "0.35em", textTransform: "uppercase", fontSize: "10px" }}>
+            <p style={{ margin: "18px 0 0", color: "rgba(216,185,255,0.6)", letterSpacing: isMobile ? "0.16em" : "0.35em", textTransform: "uppercase", fontSize: "10px", lineHeight: 1.7 }}>
               Synchronizing your biological pulse with the celestial tide
             </p>
           </section>
 
-          <div style={{ position: "relative", width: "100%", maxWidth: "820px", aspectRatio: "1 / 1", display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <div style={{ position: "relative", width: "100%", maxWidth: isMobile ? "360px" : "820px", aspectRatio: "1 / 1", display: "flex", alignItems: "center", justifyContent: "center" }}>
             <div style={{ position: "absolute", width: "80%", aspectRatio: "1 / 1", borderRadius: "50%", border: "1px solid rgba(255,255,255,0.1)" }} />
             <div style={{ position: "absolute", width: "60%", aspectRatio: "1 / 1", borderRadius: "50%", border: "1px solid rgba(255,255,255,0.1)" }} />
             <div
               style={{
                 position: "absolute",
-                width: "180px",
-                height: "180px",
+                width: isMobile ? "132px" : "180px",
+                height: isMobile ? "132px" : "180px",
                 borderRadius: "50%",
                 background: "rgba(255,240,195,0.08)",
                 display: "grid",
@@ -259,10 +265,10 @@ function TrackerOverviewPage({ app }) {
               }}
             >
               <div style={{ textAlign: "center" }}>
-                <span className="material-symbols-outlined" style={{ fontSize: "52px", color: theme.trackerAccent, fontVariationSettings: "'FILL' 1" }}>
+                <span className="material-symbols-outlined" style={{ fontSize: isMobile ? "40px" : "52px", color: theme.trackerAccent, fontVariationSettings: "'FILL' 1" }}>
                   auto_awesome
                 </span>
-                <div style={{ marginTop: "8px", fontSize: "10px", letterSpacing: "0.3em", textTransform: "uppercase", color: theme.trackerAccent, fontWeight: 700 }}>
+                <div style={{ marginTop: "8px", fontSize: "10px", letterSpacing: isMobile ? "0.16em" : "0.3em", textTransform: "uppercase", color: theme.trackerAccent, fontWeight: 700 }}>
                   The Pulse
                 </div>
               </div>
@@ -290,8 +296,8 @@ function TrackerOverviewPage({ app }) {
                   <div className="observatory-orbit-counterspin" style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
                     <div
                       style={{
-                        width: `${node.size}px`,
-                        height: `${node.size}px`,
+                        width: `${isMobile ? Math.max(42, Math.round(node.size * 0.72)) : node.size}px`,
+                        height: `${isMobile ? Math.max(42, Math.round(node.size * 0.72)) : node.size}px`,
                         borderRadius: "50%",
                         background: "rgba(216, 185, 255, 0.08)",
                         border: "1px solid rgba(216, 185, 255, 0.15)",
@@ -301,11 +307,11 @@ function TrackerOverviewPage({ app }) {
                         transition: "all 0.4s ease",
                       }}
                     >
-                      <span className="material-symbols-outlined" style={{ fontSize: node.size > 80 ? "34px" : "28px" }}>
+                      <span className="material-symbols-outlined" style={{ fontSize: isMobile ? "22px" : node.size > 80 ? "34px" : "28px" }}>
                         {node.icon}
                       </span>
                     </div>
-                    <span style={{ marginTop: "12px", fontSize: "9px", letterSpacing: "0.2em", textTransform: "uppercase", color: "rgba(216,185,255,0.6)" }}>
+                    <span style={{ marginTop: isMobile ? "8px" : "12px", fontSize: isMobile ? "8px" : "9px", letterSpacing: isMobile ? "0.08em" : "0.2em", textTransform: "uppercase", color: "rgba(216,185,255,0.6)" }}>
                       {node.label}
                     </span>
                   </div>
@@ -314,8 +320,8 @@ function TrackerOverviewPage({ app }) {
             </div>
           </div>
 
-          <section style={{ ...glassPanelStyle(theme), width: "100%", maxWidth: "620px", padding: "28px 40px", borderRadius: "32px" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "34px" }}>
+          <section style={{ ...glassPanelStyle(theme), width: "100%", maxWidth: "620px", padding: isMobile ? "20px 16px" : "28px 40px", borderRadius: isMobile ? "24px" : "32px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: isMobile ? "24px" : "34px", gap: "12px", flexWrap: "wrap" }}>
               <span style={trackerSectionLabel(theme.subtleText)}>Resonance Map</span>
               <span style={trackerSectionLabel(theme.trackerAccent)}>Harmonizing...</span>
             </div>
@@ -331,12 +337,12 @@ function TrackerOverviewPage({ app }) {
           </section>
         </div>
 
-        <aside style={{ display: "grid", gap: "32px" }}>
+        <aside style={{ display: "grid", gap: isMobile ? "18px" : "32px", order: isMobile ? 3 : 0 }}>
           <section style={glassPanelStyle(theme)}>
-            <h3 style={{ margin: 0, fontFamily: theme.trackerHeadingFamily, fontStyle: "italic", fontSize: "2rem", color: theme.trackerAccent }}>
+            <h3 style={{ margin: 0, fontFamily: theme.trackerHeadingFamily, fontStyle: "italic", fontSize: isMobile ? "1.45rem" : "2rem", color: theme.trackerAccent }}>
               Signal Protocol
             </h3>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", marginTop: "24px", marginBottom: "28px" }}>
+            <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: "16px", marginTop: "24px", marginBottom: "28px" }}>
               <div>
                 <span style={{ ...trackerSectionLabel("rgba(216,185,255,0.6)"), display: "block", marginBottom: "6px" }}>Orbit Status</span>
                 <span style={{ fontSize: "13px", color: theme.trackerAccent, display: "flex", alignItems: "center", gap: "8px" }}>
@@ -375,10 +381,10 @@ function TrackerOverviewPage({ app }) {
             </div>
           </section>
 
-          <section style={{ display: "grid", gap: "24px" }}>
+          <section style={{ display: "grid", gap: isMobile ? "18px" : "24px" }}>
             <div style={{ ...glassPanelStyle(theme), background: "rgba(0,0,0,0.46)" }}>
               <span style={trackerSectionLabel("rgba(169,199,255,0.6)")}>Stellar Phase</span>
-              <h4 style={{ margin: "10px 0 0", fontFamily: theme.trackerHeadingFamily, fontStyle: "italic", fontSize: "2rem", color: theme.text }}>
+              <h4 style={{ margin: "10px 0 0", fontFamily: theme.trackerHeadingFamily, fontStyle: "italic", fontSize: isMobile ? "1.45rem" : "2rem", color: theme.text }}>
                 Waxing Resonance
               </h4>
               <p style={{ margin: "12px 0 0", fontSize: "12px", color: theme.subtleText, lineHeight: 1.7 }}>
@@ -389,7 +395,7 @@ function TrackerOverviewPage({ app }) {
               <div style={{ aspectRatio: "16 / 9", overflow: "hidden", borderRadius: "16px", background: "rgba(0,0,0,0.4)", marginBottom: "16px", border: "1px solid rgba(255,255,255,0.05)" }}>
                 <div style={{ width: "100%", height: "100%", background: "radial-gradient(circle at 45% 40%, rgba(253,111,133,0.35) 0%, rgba(216,185,255,0.16) 20%, rgba(0,0,0,0) 55%), radial-gradient(circle at 55% 45%, rgba(255,240,195,0.22) 0%, rgba(0,0,0,0) 20%), linear-gradient(135deg, #05070f 0%, #120815 42%, #090f1f 100%)" }} />
               </div>
-              <h4 style={{ margin: 0, fontFamily: theme.trackerHeadingFamily, fontStyle: "italic", fontSize: "2rem", color: theme.text }}>
+              <h4 style={{ margin: 0, fontFamily: theme.trackerHeadingFamily, fontStyle: "italic", fontSize: isMobile ? "1.45rem" : "2rem", color: theme.text }}>
                 Nebula Tracking
               </h4>
               <p style={{ margin: "12px 0 0", fontSize: "12px", color: theme.subtleText, lineHeight: 1.7 }}>
@@ -398,6 +404,412 @@ function TrackerOverviewPage({ app }) {
             </div>
           </section>
         </aside>
+      </div>
+    );
+  }
+
+  if (isSolarTrackerTheme(theme)) {
+    const medsCardValue =
+      dashboardStats.find((item) => item.key === "meds")?.value || "Sync";
+    const sleepCardValue =
+      dashboardStats.find((item) => item.key === "sleep")?.value || "8.2h";
+    const outputValue = ((mood + focus + energy) / 3 + 0.49).toFixed(2);
+    const moodWord =
+      mood >= 4 ? "Zenith" : mood >= 3 ? "Radiant" : mood >= 2 ? "Drift" : "Low Sun";
+    const leftTelemetryNote =
+      dashboardStats.find((item) => item.key === "mood")?.note ||
+      "Surface turbulence remains within predicted ritual alignment parameters.";
+    const rightSignalTitle =
+      dashboardStats.find((item) => item.key === "sleep")?.value || "X-Class 2.4";
+    const rightSignalNote =
+      dashboardStats.find((item) => item.key === "sleep")?.note ||
+      "Rest signal remains warm and steady through the current cycle.";
+    const isDesktopWide = viewportWidth >= 1280;
+    const solarTrackingPage =
+      selectedTrackingAreaOptions.find((item) =>
+        ["meds", "food", "sleep", "hygiene", "cleaning", "exercise", "mood"].includes(
+          item.pageKey || item.id
+        )
+      )?.pageKey ||
+      trackedAreas.find((item) =>
+        ["meds", "food", "sleep", "hygiene", "cleaning", "exercise", "mood"].includes(item)
+      ) ||
+      "mood";
+    const solarQuickLinks =
+      (selectedTrackingAreaOptions?.length
+        ? selectedTrackingAreaOptions.map((area) => ({
+            key: area.pageKey || area.id,
+            label: area.label,
+          }))
+        : trackedAreas.map((areaId) => ({
+            key: areaId,
+            label: areaId.charAt(0).toUpperCase() + areaId.slice(1),
+          }))).slice(0, 6);
+
+    const glassPlateStyle = {
+      backdropFilter: "blur(24px)",
+      background: theme.trackerSolarGlass || "rgba(255,255,255,0.22)",
+      border: "1.5px solid rgba(255, 193, 7, 0.4)",
+      boxShadow: "0 8px 32px rgba(70, 35, 0, 0.15)",
+      borderRadius: "24px",
+    };
+
+    const floatingCardStyle = {
+      backdropFilter: "blur(16px)",
+      background: theme.trackerSolarCard || "rgba(255,255,255,0.35)",
+      border: "1px solid rgba(255,255,255,0.4)",
+      boxShadow: "0 10px 30px rgba(70, 35, 0, 0.1), inset 0 0 10px rgba(255,255,255,0.5)",
+      borderRadius: isMobile ? "18px" : "22px",
+      padding: isMobile ? "12px 14px" : "14px 18px",
+    };
+
+    const orbitCard = (label, value, positionStyle, connectorStyle) => (
+      <div style={{ position: "absolute", zIndex: 30, ...positionStyle }}>
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "8px" }}>
+          {connectorStyle ? <div style={connectorStyle} /> : null}
+          <div style={{ ...floatingCardStyle, textAlign: "center" }}>
+            <p style={{ margin: 0, fontSize: "10px", letterSpacing: "0.2em", textTransform: "uppercase", color: "#7b5a00", fontWeight: 700 }}>
+              {label}
+            </p>
+            <p style={{ margin: "4px 0 0", fontFamily: theme.trackerHeadingFamily, fontStyle: "italic", fontSize: isMobile ? "1.7rem" : "2rem", color: theme.text }}>
+              {value}
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+
+    return (
+      <div style={{ width: "100%", maxWidth: "1500px" }}>
+        <div
+          style={{
+            position: "relative",
+            minHeight: isMobile ? "auto" : "calc(100vh - 170px)",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            overflow: "hidden",
+          }}
+        >
+          <div
+            style={{
+              position: "relative",
+              width: "100%",
+              maxWidth: isDesktopWide ? "980px" : "760px",
+              aspectRatio: "1 / 1",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              marginTop: isMobile ? "12px" : 0,
+            }}
+          >
+            <div style={{ position: "absolute", width: "100%", height: "100%", borderRadius: "50%", border: "1px solid rgba(139, 69, 19, 0.08)" }} />
+            <div style={{ position: "absolute", width: "80%", height: "80%", borderRadius: "50%", border: "1px solid rgba(139, 69, 19, 0.14)" }} />
+            <div style={{ position: "absolute", width: "60%", height: "60%", borderRadius: "50%", border: "1px solid rgba(139, 69, 19, 0.2)" }} />
+
+            {orbitCard(
+              "Meds",
+              medsCardValue,
+              isMobile
+                ? { top: "18%", left: "2%" }
+                : { top: "18%", left: "15%" },
+              {
+                width: "1px",
+                height: isMobile ? "34px" : "64px",
+                background: "linear-gradient(to bottom, rgba(139, 69, 19, 0.3), transparent)",
+              }
+            )}
+
+            {orbitCard(
+              "Mood",
+              moodWord,
+              isMobile
+                ? { top: "28%", right: "-2%" }
+                : { top: "42%", right: "2%", display: "flex", alignItems: "center", gap: "8px" },
+              !isMobile
+                ? {
+                    width: "64px",
+                    height: "1px",
+                    background: "linear-gradient(to right, transparent, rgba(139, 69, 19, 0.3))",
+                  }
+                : null
+            )}
+
+            {orbitCard(
+              "Sleep",
+              sleepCardValue,
+              isMobile
+                ? { bottom: "10%", right: "2%" }
+                : { bottom: "20%", right: "12%" },
+              {
+                width: "1px",
+                height: isMobile ? "34px" : "64px",
+                background: "linear-gradient(to top, rgba(139, 69, 19, 0.3), transparent)",
+              }
+            )}
+
+            <div style={{ position: "absolute", top: isMobile ? "6%" : "5%", right: isMobile ? "7%" : "25%", zIndex: 30 }}>
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: "6px" }}>
+                <span style={{ fontFamily: theme.trackerHeadingFamily, fontStyle: "italic", color: theme.text, fontSize: isMobile ? "1.15rem" : "2.4rem" }}>
+                  Photosphere
+                </span>
+                <span style={{ background: "rgba(255,255,255,0.4)", border: "1px solid rgba(230,126,34,0.22)", borderRadius: "999px", padding: isMobile ? "5px 10px" : "6px 12px", fontSize: isMobile ? "11px" : "12px", fontWeight: 700, color: "#6b5200" }}>
+                  5,778 K
+                </span>
+              </div>
+            </div>
+
+            <div style={{ position: "absolute", bottom: isMobile ? "12%" : "8%", left: isMobile ? "12%" : "28%", zIndex: 30 }}>
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "6px" }}>
+                <span style={{ fontFamily: theme.trackerHeadingFamily, fontStyle: "italic", color: theme.text, fontSize: isMobile ? "1.15rem" : "2.4rem" }}>
+                  Corona
+                </span>
+                <span style={{ background: "rgba(255,255,255,0.4)", border: "1px solid rgba(230,126,34,0.22)", borderRadius: "999px", padding: isMobile ? "5px 10px" : "6px 12px", fontSize: isMobile ? "11px" : "12px", fontWeight: 700, color: "#6b5200" }}>
+                  1.2M K
+                </span>
+              </div>
+            </div>
+
+            <div
+              style={{
+                position: "relative",
+                zIndex: 20,
+                width: isMobile ? "156px" : "208px",
+                height: isMobile ? "156px" : "208px",
+                borderRadius: "50%",
+                background: "linear-gradient(135deg, #ffc107 0%, #fff8dc 100%)",
+                boxShadow: "0 0 100px rgba(255,193,7,0.8), inset 0 0 40px rgba(230,126,34,0.3)",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                textAlign: "center",
+                padding: isMobile ? "18px" : "24px",
+                border: "8px solid rgba(255,255,255,0.4)",
+              }}
+            >
+              <span style={{ color: "#463600", fontSize: "10px", textTransform: "uppercase", letterSpacing: "0.2em", fontWeight: 700, marginBottom: "4px" }}>
+                Current Output
+              </span>
+              <span style={{ fontFamily: theme.trackerHeadingFamily, fontStyle: "italic", color: theme.text, fontSize: isMobile ? "2rem" : "3rem", fontWeight: 800, letterSpacing: "-0.03em" }}>
+                {outputValue}
+                <span style={{ fontSize: isMobile ? "1rem" : "1.4rem" }}>YW</span>
+              </span>
+              <div style={{ marginTop: "10px", width: "48px", height: "2px", background: "rgba(230,126,34,0.4)", borderRadius: "999px" }} />
+            </div>
+          </div>
+
+          {isDesktopWide ? (
+            <>
+              <div style={{ position: "absolute", left: "8px", top: "50%", transform: "translateY(-50%)", width: "288px", display: "grid", gap: "24px" }}>
+                <div style={{ ...glassPlateStyle, padding: "24px" }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                    <span style={{ fontSize: "10px", textTransform: "uppercase", letterSpacing: "0.18em", fontWeight: 700, color: "#7b5a00" }}>Telemetry</span>
+                    <span className="material-symbols-outlined" style={{ color: theme.secondary, fontSize: "16px", fontVariationSettings: "'FILL' 1" }}>
+                      sensors
+                    </span>
+                  </div>
+                  <div style={{ marginTop: "18px", display: "grid", gap: "16px" }}>
+                    <div>
+                      <p style={{ margin: 0, fontSize: "13px", color: theme.subtleText, fontWeight: 600 }}>Flux Density</p>
+                      <div style={{ marginTop: "8px", height: "4px", borderRadius: "999px", background: "rgba(255,255,255,0.36)", overflow: "hidden" }}>
+                        <div style={{ width: "74%", height: "100%", background: theme.primary, boxShadow: "0 0 8px rgba(255,193,7,0.8)" }} />
+                      </div>
+                    </div>
+                    <div>
+                      <p style={{ margin: 0, fontSize: "13px", color: theme.subtleText, fontWeight: 600 }}>Magnetic Variance</p>
+                      <div style={{ marginTop: "8px", height: "4px", borderRadius: "999px", background: "rgba(255,255,255,0.36)", overflow: "hidden" }}>
+                        <div style={{ width: "42%", height: "100%", background: theme.secondary, boxShadow: "0 0 8px rgba(230,126,34,0.8)" }} />
+                      </div>
+                    </div>
+                  </div>
+                  <p style={{ margin: "18px 0 0", fontFamily: theme.trackerHeadingFamily, fontStyle: "italic", fontSize: "1.1rem", lineHeight: 1.3, color: theme.text }}>
+                    {leftTelemetryNote}
+                  </p>
+                </div>
+              </div>
+
+              <div style={{ position: "absolute", right: "8px", top: "50%", transform: "translateY(-50%)", width: "288px", display: "grid", gap: "24px" }}>
+                <div style={{ ...glassPlateStyle, padding: "24px" }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                    <span style={{ fontSize: "10px", textTransform: "uppercase", letterSpacing: "0.18em", fontWeight: 700, color: "#7b5a00" }}>Signal</span>
+                    <span className="material-symbols-outlined" style={{ color: theme.secondary, fontSize: "16px" }}>
+                      wifi_tethering
+                    </span>
+                  </div>
+                  <div style={{ marginTop: "16px", aspectRatio: "16 / 9", borderRadius: "18px", overflow: "hidden", background: "linear-gradient(135deg, #150300 0%, #291100 24%, #ff7b00 60%, #fff2ba 100%)", boxShadow: "0 8px 24px rgba(70,35,0,0.14)" }} />
+                  <div style={{ marginTop: "16px", display: "flex", justifyContent: "space-between", alignItems: "flex-end", gap: "12px" }}>
+                    <div>
+                      <p style={{ margin: 0, fontSize: "10px", textTransform: "uppercase", fontWeight: 700, color: theme.subtleText }}>Active Flare</p>
+                      <p style={{ margin: "6px 0 0", fontFamily: theme.trackerHeadingFamily, fontStyle: "italic", fontSize: "2rem", color: theme.text }}>
+                        {rightSignalTitle}
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => setActivePage("charts")}
+                      style={{
+                        width: "36px",
+                        height: "36px",
+                        borderRadius: "50%",
+                        border: "none",
+                        background: theme.secondary,
+                        color: "#ffffff",
+                        display: "grid",
+                        placeItems: "center",
+                        boxShadow: "0 12px 24px rgba(230,126,34,0.24)",
+                      }}
+                    >
+                      <span className="material-symbols-outlined">arrow_forward</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </>
+          ) : null}
+
+          <div style={{ marginTop: isMobile ? "16px" : "42px", textAlign: "center", maxWidth: "700px", paddingInline: isMobile ? "4px" : 0 }}>
+            <h1 style={{ margin: 0, fontFamily: theme.trackerHeadingFamily, fontStyle: "italic", fontSize: isMobile ? "clamp(2.15rem, 12vw, 3.7rem)" : "clamp(4rem, 8vw, 5.8rem)", color: theme.text, letterSpacing: "-0.02em", lineHeight: 0.95 }}>
+              Behold the <span style={{ color: theme.secondary, fontStyle: "normal" }}>Infinite</span> Pulsation.
+            </h1>
+            <p style={{ margin: "18px auto 0", maxWidth: "560px", color: theme.subtleText, fontSize: isMobile ? "0.95rem" : "1.15rem", lineHeight: 1.7, fontWeight: 500 }}>
+              The solar engine continues its rhythmic cycle, casting radiance across the orbital planes. Observe the shifting corona with reverence.
+            </p>
+          </div>
+
+          <div
+            style={{
+              width: "100%",
+              maxWidth: "980px",
+              marginTop: "22px",
+              display: "grid",
+              gap: "14px",
+              justifyItems: "center",
+            }}
+          >
+            <div style={{ ...glassPlateStyle, width: "100%", padding: isMobile ? "16px" : "18px 22px" }}>
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  gap: "12px",
+                  flexWrap: "wrap",
+                  marginBottom: "14px",
+                }}
+              >
+                <span style={{ fontSize: "10px", textTransform: "uppercase", letterSpacing: "0.18em", fontWeight: 700, color: "#7b5a00" }}>
+                  Daily Rituals
+                </span>
+                  <button
+                    onClick={() => setActivePage(solarTrackingPage)}
+                    style={{
+                      border: "none",
+                      background: "rgba(255,255,255,0.34)",
+                      color: theme.text,
+                    padding: "10px 14px",
+                    borderRadius: "999px",
+                    fontWeight: 700,
+                  }}
+                >
+                  Open Log
+                </button>
+              </div>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: isMobile ? "repeat(2, minmax(0, 1fr))" : "repeat(6, minmax(0, 1fr))",
+                  gap: "12px",
+                }}
+              >
+                {solarQuickLinks.map((item) => (
+                  <button
+                    key={item.key}
+                    onClick={() => setActivePage(item.key)}
+                    style={{
+                      border: "1px solid rgba(255, 193, 7, 0.22)",
+                      background: "rgba(255,255,255,0.34)",
+                      color: theme.text,
+                      borderRadius: "18px",
+                      padding: isMobile ? "12px 10px" : "14px 12px",
+                      fontWeight: 700,
+                      minHeight: "58px",
+                    }}
+                  >
+                    {item.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {!isDesktopWide ? (
+            <div style={{ width: "100%", display: "grid", gap: "16px", marginTop: "20px" }}>
+              <div style={{ ...glassPlateStyle, padding: isMobile ? "18px" : "24px" }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                  <span style={{ fontSize: "10px", textTransform: "uppercase", letterSpacing: "0.18em", fontWeight: 700, color: "#7b5a00" }}>Telemetry</span>
+                  <span className="material-symbols-outlined" style={{ color: theme.secondary, fontSize: "16px", fontVariationSettings: "'FILL' 1" }}>
+                    sensors
+                  </span>
+                </div>
+                <div style={{ marginTop: "16px", display: "grid", gap: "14px" }}>
+                  <div>
+                    <p style={{ margin: 0, fontSize: "13px", color: theme.subtleText, fontWeight: 600 }}>Flux Density</p>
+                    <div style={{ marginTop: "8px", height: "4px", borderRadius: "999px", background: "rgba(255,255,255,0.36)", overflow: "hidden" }}>
+                      <div style={{ width: "74%", height: "100%", background: theme.primary, boxShadow: "0 0 8px rgba(255,193,7,0.8)" }} />
+                    </div>
+                  </div>
+                  <div>
+                    <p style={{ margin: 0, fontSize: "13px", color: theme.subtleText, fontWeight: 600 }}>Magnetic Variance</p>
+                    <div style={{ marginTop: "8px", height: "4px", borderRadius: "999px", background: "rgba(255,255,255,0.36)", overflow: "hidden" }}>
+                      <div style={{ width: "42%", height: "100%", background: theme.secondary, boxShadow: "0 0 8px rgba(230,126,34,0.8)" }} />
+                    </div>
+                  </div>
+                </div>
+                <p style={{ margin: "16px 0 0", fontFamily: theme.trackerHeadingFamily, fontStyle: "italic", fontSize: "1rem", lineHeight: 1.35, color: theme.text }}>
+                  {leftTelemetryNote}
+                </p>
+              </div>
+
+              <div style={{ ...glassPlateStyle, padding: isMobile ? "18px" : "24px" }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                  <span style={{ fontSize: "10px", textTransform: "uppercase", letterSpacing: "0.18em", fontWeight: 700, color: "#7b5a00" }}>Solar Signal</span>
+                  <span className="material-symbols-outlined" style={{ color: theme.secondary, fontSize: "16px" }}>
+                    wifi_tethering
+                  </span>
+                </div>
+                <div style={{ marginTop: "14px", aspectRatio: isMobile ? "16 / 7" : "16 / 8", borderRadius: "18px", overflow: "hidden", background: "linear-gradient(135deg, #150300 0%, #291100 24%, #ff7b00 60%, #fff2ba 100%)", boxShadow: "0 8px 24px rgba(70,35,0,0.14)" }} />
+                <div style={{ marginTop: "14px", display: "flex", justifyContent: "space-between", alignItems: "flex-end", gap: "12px" }}>
+                  <div>
+                    <p style={{ margin: 0, fontSize: "10px", textTransform: "uppercase", fontWeight: 700, color: theme.subtleText }}>Rest Signal</p>
+                    <p style={{ margin: "6px 0 0", fontFamily: theme.trackerHeadingFamily, fontStyle: "italic", fontSize: isMobile ? "1.7rem" : "2rem", color: theme.text }}>
+                      {rightSignalTitle}
+                    </p>
+                    <p style={{ margin: "8px 0 0", fontSize: "12px", lineHeight: 1.6, color: theme.subtleText, maxWidth: "320px" }}>
+                      {rightSignalNote}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setActivePage("charts")}
+                    style={{
+                      width: "36px",
+                      height: "36px",
+                      borderRadius: "50%",
+                      border: "none",
+                      background: theme.secondary,
+                      color: "#ffffff",
+                      display: "grid",
+                      placeItems: "center",
+                      boxShadow: "0 12px 24px rgba(230,126,34,0.24)",
+                    }}
+                  >
+                    <span className="material-symbols-outlined">arrow_forward</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : null}
+        </div>
       </div>
     );
   }

@@ -3,6 +3,8 @@ function TrackerTrackingPage({ app, pageKey }) {
     theme,
     sectionCardStyle,
     renderSectionHeader,
+    trackerNavItems,
+    setActivePage,
     inputStyle,
     primaryButtonStyle,
     countTextStyle,
@@ -89,10 +91,53 @@ function TrackerTrackingPage({ app, pageKey }) {
     removeExerciseLog,
   } = app;
 
+  const trackingSections = (trackerNavItems || []).filter((item) =>
+    ["meds", "food", "sleep", "hygiene", "cleaning", "exercise", "mood"].includes(item.key)
+  );
+
+  const sectionSwitcher = trackingSections.length > 1 ? (
+    <div
+      style={{
+        display: "flex",
+        flexWrap: "wrap",
+        gap: "10px",
+        marginBottom: "18px",
+      }}
+    >
+      {trackingSections.map((item) => {
+        const active = item.key === pageKey;
+        return (
+          <button
+            key={item.key}
+            onClick={() => setActivePage(item.key)}
+            style={{
+              border: theme.trackerSolar ? "1px solid rgba(255, 193, 7, 0.28)" : theme.border,
+              background: active
+                ? theme.primary
+                : theme.trackerSolar
+                ? "rgba(255,255,255,0.34)"
+                : theme.softButtonBackground,
+              color: active ? theme.primaryText : theme.softButtonText,
+              borderRadius: "999px",
+              padding: "10px 14px",
+              fontWeight: 700,
+              fontSize: "0.88rem",
+              letterSpacing: "0.04em",
+              boxShadow: active ? `0 10px 24px ${theme.glow}` : "none",
+            }}
+          >
+            {item.label}
+          </button>
+        );
+      })}
+    </div>
+  ) : null;
+
   if (pageKey === "meds") {
     return (
       <section className="galaxy-panel" style={sectionCardStyle(theme, "meds")}>
         {renderSectionHeader("Meds", "Track each medication separately.", "Sun", "Star")}
+        {sectionSwitcher}
         <div style={{ display: "grid", gap: "10px" }}>
           <input style={inputStyle(theme)} type="text" placeholder="Medication name" value={medName} onChange={(e) => setMedName(e.target.value)} />
           <input style={inputStyle(theme)} type="text" placeholder="Dose" value={medDose} onChange={(e) => setMedDose(e.target.value)} />
@@ -132,6 +177,7 @@ function TrackerTrackingPage({ app, pageKey }) {
     return (
       <section className="galaxy-panel" style={sectionCardStyle(theme, "food")}>
         {renderSectionHeader("Food", "Track what you ate and when.", "Glow", "Spark")}
+        {sectionSwitcher}
         <div style={rowStyle}>
           <input style={inputStyle(theme)} type="text" placeholder="What did you eat?" value={mealText} onChange={(e) => setMealText(e.target.value)} />
           <button style={primaryButtonStyle(theme)} onClick={addMeal}>Add</button>
@@ -160,6 +206,7 @@ function TrackerTrackingPage({ app, pageKey }) {
     return (
       <section className="galaxy-panel" style={sectionCardStyle(theme, "sleep")}>
         {renderSectionHeader("Sleep", "Track bedtime and wake time.", "Moon", "Moon")}
+        {sectionSwitcher}
         <div style={sleepGridStyle}>
           <div>
             <label style={labelStyle(theme)}>Bedtime</label>
@@ -199,6 +246,7 @@ function TrackerTrackingPage({ app, pageKey }) {
     return (
       <section className="galaxy-panel" style={sectionCardStyle(theme, "maintenance")}>
         {renderSectionHeader("Hygiene", "Quick check-off hygiene tasks.", "Star", "Star")}
+        {sectionSwitcher}
         <div style={buttonWrapStyle}>
           <button style={showered ? successButtonStyle : softButtonStyle(theme)} onClick={toggleShowered}>
             {showered ? "Showered Done" : "Shower"}
@@ -223,6 +271,7 @@ function TrackerTrackingPage({ app, pageKey }) {
     return (
       <section className="galaxy-panel" style={sectionCardStyle(theme, "cleaning")}>
         {renderSectionHeader("Cleaning", "Track small cleaning wins.", "Comet", "Spark")}
+        {sectionSwitcher}
         <div style={buttonWrapStyle}>
           <button style={laundryDone ? successButtonStyle : softButtonStyle(theme)} onClick={toggleLaundry}>
             {laundryDone ? "Laundry Done" : "Laundry"}
@@ -261,6 +310,7 @@ function TrackerTrackingPage({ app, pageKey }) {
   return (
     <section className="galaxy-panel" style={sectionCardStyle(theme, "exercise")}>
       {renderSectionHeader("Exercise", "Track movement and how it felt.", "Orbit", "Star")}
+      {sectionSwitcher}
       <div style={buttonWrapStyle}>
         <button style={exerciseDone ? successButtonStyle : softButtonStyle(theme)} onClick={toggleExerciseDone}>
           {exerciseDone ? "Exercise Done" : "Mark Exercise"}

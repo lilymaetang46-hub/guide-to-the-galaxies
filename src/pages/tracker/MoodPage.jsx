@@ -4,6 +4,8 @@ function TrackerMoodPage({ app }) {
     sectionCardStyle,
     renderSectionHeader,
     trackerLabels,
+    trackerNavItems,
+    setActivePage,
     sliderValueStyle,
     mood,
     rangeStyle,
@@ -17,6 +19,10 @@ function TrackerMoodPage({ app }) {
     smallInfoStyle,
   } = app;
 
+  const trackingSections = (trackerNavItems || []).filter((item) =>
+    ["meds", "food", "sleep", "hygiene", "cleaning", "exercise", "mood"].includes(item.key)
+  );
+
   return (
     <section className="galaxy-panel" style={sectionCardStyle(theme, "mood")}>
       {renderSectionHeader(
@@ -25,6 +31,43 @@ function TrackerMoodPage({ app }) {
         "Glow",
         "Nova"
       )}
+      {trackingSections.length > 1 ? (
+        <div
+          style={{
+            display: "flex",
+            flexWrap: "wrap",
+            gap: "10px",
+            marginBottom: "18px",
+          }}
+        >
+          {trackingSections.map((item) => {
+            const active = item.key === "mood";
+            return (
+              <button
+                key={item.key}
+                onClick={() => setActivePage(item.key)}
+                style={{
+                  border: theme.trackerSolar ? "1px solid rgba(255, 193, 7, 0.28)" : theme.border,
+                  background: active
+                    ? theme.primary
+                    : theme.trackerSolar
+                    ? "rgba(255,255,255,0.34)"
+                    : theme.softButtonBackground,
+                  color: active ? theme.primaryText : theme.softButtonText,
+                  borderRadius: "999px",
+                  padding: "10px 14px",
+                  fontWeight: 700,
+                  fontSize: "0.88rem",
+                  letterSpacing: "0.04em",
+                  boxShadow: active ? `0 10px 24px ${theme.glow}` : "none",
+                }}
+              >
+                {item.label}
+              </button>
+            );
+          })}
+        </div>
+      ) : null}
       <p style={sliderValueStyle(theme)}>{`${trackerLabels.mood}: ${mood}/5`}</p>
       <input
         style={rangeStyle}

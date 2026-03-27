@@ -4516,16 +4516,79 @@ function getAppTheme(isDarkMode, family = "galaxy") {
 }
 
 function getTrackerExperienceTheme(theme, isDarkMode) {
-  if (theme.themeFamily !== "galaxy" || !isDarkMode) {
+  if (theme.themeFamily !== "galaxy") {
     return {
       ...theme,
       trackerObservatory: false,
+      trackerSolar: false,
+    };
+  }
+
+  if (!isDarkMode) {
+    return {
+      ...theme,
+      trackerObservatory: false,
+      trackerSolar: true,
+      pageBackground:
+        "linear-gradient(180deg, #ffefbe 0%, #ffd884 34%, #f0a13e 100%)",
+      heroBackground:
+        "linear-gradient(180deg, rgba(255,255,255,0.28) 0%, rgba(255,248,227,0.22) 100%)",
+      cardBackground:
+        "linear-gradient(180deg, rgba(255,255,255,0.34) 0%, rgba(255,245,221,0.22) 100%)",
+      itemBackground: "rgba(255,255,255,0.34)",
+      inputBackground: "rgba(255,251,243,0.8)",
+      inputBorder: "rgba(197, 142, 40, 0.34)",
+      softButtonBackground: "rgba(255,255,255,0.38)",
+      softButtonText: "#5a3b00",
+      primary: "linear-gradient(180deg, #ffc107 0%, #f0a11c 100%)",
+      primaryText: "#463600",
+      navInactive: "rgba(255,255,255,0.26)",
+      navActive: "rgba(230,126,34,0.2)",
+      navText: "#5a3b00",
+      text: "#2c2100",
+      subtleText: "#6f5a2a",
+      faintText: "rgba(92, 69, 22, 0.64)",
+      border: "1px solid rgba(255, 193, 7, 0.24)",
+      shadow: "0 10px 30px rgba(70, 35, 0, 0.12)",
+      heroShadow: "0 16px 48px rgba(230, 126, 34, 0.14)",
+      glow: "rgba(255, 193, 7, 0.26)",
+      track: "rgba(139, 69, 19, 0.14)",
+      chartSurface: "rgba(255,255,255,0.42)",
+      chartGrid: "rgba(139, 69, 19, 0.14)",
+      chartLabel: "#6f5a2a",
+      chartPalette: {
+        mood: "#e67e22",
+        focus: "#ffc107",
+        energy: "#b8860b",
+        meals: "#f0a11c",
+        meds: "#cc8b1d",
+        hygiene: "#d08b3a",
+        exercise: "#e67e22",
+      },
+      heroRadius: "28px",
+      featureRadius: "28px",
+      sectionRadius: "28px",
+      trackerHeadingFamily: "'Newsreader', serif",
+      trackerBodyFamily: "'Epilogue', 'Inter', 'Segoe UI', sans-serif",
+      trackerAccent: "#2c2100",
+      trackerAccentSoft: "#e67e22",
+      trackerError: "#b92902",
+      trackerGlassBackground: "rgba(255,255,255,0.28)",
+      trackerSolarCanvas:
+        "radial-gradient(circle at center, #fff4d6 0%, #ffebae 42%, #e67e22 100%)",
+      trackerSolarVignette:
+        "radial-gradient(circle at center, transparent 30%, rgba(139, 69, 19, 0.15) 70%, rgba(70, 35, 0, 0.4) 100%)",
+      trackerSolarGlow:
+        "radial-gradient(circle at 18% 14%, rgba(255, 193, 7, 0.38) 0%, rgba(255, 193, 7, 0) 48%), radial-gradient(circle at 82% 78%, rgba(255, 215, 128, 0.26) 0%, rgba(255, 215, 128, 0) 40%), radial-gradient(circle at 50% 44%, rgba(255,255,255,0.26) 0%, rgba(255,255,255,0) 34%)",
+      trackerSolarGlass: "rgba(255,255,255,0.22)",
+      trackerSolarCard: "rgba(255,255,255,0.35)",
     };
   }
 
   return {
     ...theme,
     trackerObservatory: true,
+    trackerSolar: false,
     pageBackground:
       "linear-gradient(180deg, #020205 0%, #05060c 42%, #0d1019 100%)",
     heroBackground:
