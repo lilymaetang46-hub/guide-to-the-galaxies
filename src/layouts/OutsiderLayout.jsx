@@ -32,6 +32,8 @@ function OutsiderLayout({
   themeToggleStyle,
   softButtonStyle,
   handleLogout,
+  showOutsiderTutorial,
+  startOutsiderTutorial,
   children,
 }) {
   const [navOpen, setNavOpen] = useState(
@@ -230,6 +232,9 @@ function OutsiderLayout({
           <div style={{ ...headerControlsStyle, alignContent: "start" }}>
             <p style={navSectionLabelStyle}>Utilities</p>
             <div style={utilityGridStyle}>
+              <button style={softButtonStyle(theme)} onClick={() => startOutsiderTutorial(0)} disabled={showOutsiderTutorial}>
+                {showOutsiderTutorial ? "Tutorial Open" : "Start Tutorial"}
+              </button>
               <button style={softButtonStyle(theme)} onClick={handleRefresh}>
                 Refresh
               </button>
@@ -349,6 +354,25 @@ function OutsiderLayout({
         </nav>
 
         <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+          {!isMobile ? (
+            <button
+              onClick={() => startOutsiderTutorial(0)}
+              style={{
+                padding: "8px 10px",
+                borderRadius: "2px",
+                border: `1px solid ${theme.inputBorder}`,
+                background: showOutsiderTutorial ? `${theme.observerAccent}18` : theme.softButtonBackground,
+                color: showOutsiderTutorial ? theme.observerAccent : theme.text,
+                fontFamily: theme.observerFontFamily,
+                fontSize: "10px",
+                letterSpacing: "0.08em",
+                textTransform: "uppercase",
+              }}
+              disabled={showOutsiderTutorial}
+            >
+              {showOutsiderTutorial ? "Tutorial Open" : "Tutorial"}
+            </button>
+          ) : null}
           <div style={{ textAlign: "right", display: viewportWidth < 640 ? "none" : "block" }}>
             <p style={{ margin: 0, fontSize: "10px", color: `${theme.observerAccent}99`, textTransform: "uppercase" }}>
               System Integrity

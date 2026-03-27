@@ -51,6 +51,8 @@ function TrackerSettingsPage({ app }) {
     setTrackingAreaToAdd,
     addTrackedArea,
     trackingAreasMessage,
+    startTrackerTutorial,
+    showTrackerTutorial,
   } = app;
 
   return (
@@ -84,28 +86,6 @@ function TrackerSettingsPage({ app }) {
         <div style={{ marginTop: "18px" }}>
           <button style={primaryButtonStyle(theme)} onClick={saveProfileSettings}>Save Profile Settings</button>
         </div>
-      </section>
-
-      <section className="galaxy-panel" style={sectionCardStyle(theme, "goals")}>
-        {renderSectionHeader("Change PIN", "Use your current PIN, then choose a new one with 4 to 8 digits.", "Bloom", "Constellation")}
-        <div style={goalFormGridStyle}>
-          <div>
-            <label style={labelStyle(theme)}>Current PIN</label>
-            <input style={inputStyle(theme)} type="password" inputMode="numeric" value={currentPinInput} onChange={(e) => setCurrentPinInput(e.target.value.replace(/\D/g, ""))} placeholder="Current PIN" />
-          </div>
-          <div>
-            <label style={labelStyle(theme)}>New PIN</label>
-            <input style={inputStyle(theme)} type="password" inputMode="numeric" value={newPinInput} onChange={(e) => setNewPinInput(e.target.value.replace(/\D/g, ""))} placeholder="New PIN" />
-          </div>
-          <div>
-            <label style={labelStyle(theme)}>Confirm new PIN</label>
-            <input style={inputStyle(theme)} type="password" inputMode="numeric" value={confirmNewPinInput} onChange={(e) => setConfirmNewPinInput(e.target.value.replace(/\D/g, ""))} placeholder="Confirm new PIN" />
-          </div>
-        </div>
-        <div style={{ marginTop: "18px", display: "flex", gap: "10px", flexWrap: "wrap" }}>
-          <button style={primaryButtonStyle(theme)} onClick={changePin}>Update PIN</button>
-        </div>
-        {renderFeedbackMessage(settingsMessage, theme)}
       </section>
 
       <section className="galaxy-panel" style={sectionCardStyle(theme, "jump")}>
@@ -161,6 +141,42 @@ function TrackerSettingsPage({ app }) {
           <p style={{ color: theme.subtleText }}>All available tracking areas are already enabled.</p>
         )}
         {renderFeedbackMessage(trackingAreasMessage, theme)}
+      </section>
+
+      <section className="galaxy-panel" style={sectionCardStyle(theme, "dashboard")}>
+        {renderSectionHeader("Tutorial", "Replay the tracker walkthrough anytime while staying logged in.", "Guide", "Guide")}
+        <p style={{ margin: "0 0 16px 0", color: theme.subtleText, lineHeight: 1.6 }}>
+          Use this as a test harness while we tune the onboarding flow.
+        </p>
+        <button
+          style={primaryButtonStyle(theme)}
+          onClick={() => startTrackerTutorial(0)}
+          disabled={showTrackerTutorial}
+        >
+          {showTrackerTutorial ? "Tutorial Already Open" : "Start Tutorial"}
+        </button>
+      </section>
+
+      <section className="galaxy-panel" style={sectionCardStyle(theme, "goals")}>
+        {renderSectionHeader("Change PIN", "Use your current PIN, then choose a new one with 4 to 8 digits.", "Bloom", "Constellation")}
+        <div style={goalFormGridStyle}>
+          <div>
+            <label style={labelStyle(theme)}>Current PIN</label>
+            <input style={inputStyle(theme)} type="password" inputMode="numeric" value={currentPinInput} onChange={(e) => setCurrentPinInput(e.target.value.replace(/\D/g, ""))} placeholder="Current PIN" />
+          </div>
+          <div>
+            <label style={labelStyle(theme)}>New PIN</label>
+            <input style={inputStyle(theme)} type="password" inputMode="numeric" value={newPinInput} onChange={(e) => setNewPinInput(e.target.value.replace(/\D/g, ""))} placeholder="New PIN" />
+          </div>
+          <div>
+            <label style={labelStyle(theme)}>Confirm new PIN</label>
+            <input style={inputStyle(theme)} type="password" inputMode="numeric" value={confirmNewPinInput} onChange={(e) => setConfirmNewPinInput(e.target.value.replace(/\D/g, ""))} placeholder="Confirm new PIN" />
+          </div>
+        </div>
+        <div style={{ marginTop: "18px", display: "flex", gap: "10px", flexWrap: "wrap" }}>
+          <button style={primaryButtonStyle(theme)} onClick={changePin}>Update PIN</button>
+        </div>
+        {renderFeedbackMessage(settingsMessage, theme)}
       </section>
 
       <section className="galaxy-panel" style={sectionCardStyle(theme, "care")}>

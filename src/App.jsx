@@ -26,6 +26,8 @@ import OutsiderGoalsPage from "./pages/outsider/GoalsPage";
 
 const PENDING_SIGNUP_PROFILE_KEY = "pendingSignupProfile";
 const PREFERRED_APP_EXPERIENCE_KEY = "preferredAppExperience";
+const TRACKER_TUTORIAL_SEEN_KEY = "trackerTutorialSeen";
+const OUTSIDER_TUTORIAL_SEEN_KEY = "outsiderTutorialSeen";
 const DEFAULT_PUBLIC_APP_URL = "https://guide-to-the-galaxies.app";
 const NATIVE_PUSH_TARGET_PAGE = "support";
 const DEFAULT_PUSH_ENVIRONMENT = "production";
@@ -243,6 +245,14 @@ function getTrackedAreasStorageKey(userId) {
   return `trackedAreas:${userId}`;
 }
 
+function getTrackerTutorialSeenKey(userId) {
+  return `${TRACKER_TUTORIAL_SEEN_KEY}:${userId}`;
+}
+
+function getOutsiderTutorialSeenKey(userId) {
+  return `${OUTSIDER_TUTORIAL_SEEN_KEY}:${userId}`;
+}
+
 function getNativePushEnvironment() {
   return import.meta.env.VITE_PUSH_ENVIRONMENT === "sandbox"
     ? "sandbox"
@@ -303,6 +313,10 @@ function App() {
   const [trackingAreasMessage, setTrackingAreasMessage] = useState("");
   const [showAddTrackingAreaPicker, setShowAddTrackingAreaPicker] = useState(false);
   const [trackingAreaToAdd, setTrackingAreaToAdd] = useState("");
+  const [showTrackerTutorial, setShowTrackerTutorial] = useState(false);
+  const [trackerTutorialStepIndex, setTrackerTutorialStepIndex] = useState(0);
+  const [showOutsiderTutorial, setShowOutsiderTutorial] = useState(false);
+  const [outsiderTutorialStepIndex, setOutsiderTutorialStepIndex] = useState(0);
   const [showOutsiderChooser, setShowOutsiderChooser] = useState(false);
   const [selectedOutsiderId, setSelectedOutsiderId] = useState("aria");
   const [outsiderTrackers, setOutsiderTrackers] = useState([]);
@@ -679,6 +693,126 @@ function App() {
 
     setTrackingAreaToAdd("");
     setShowAddTrackingAreaPicker(false);
+  }
+
+  function startTrackerTutorial(startIndex = 0) {
+    const boundedIndex = Math.min(
+      Math.max(startIndex, 0),
+      Math.max(trackerTutorialSteps.length - 1, 0)
+    );
+    const nextStep = trackerTutorialSteps[boundedIndex];
+
+    setTrackerTutorialStepIndex(boundedIndex);
+    setShowTrackerTutorial(true);
+    setShowOutsiderTutorial(false);
+    setAppExperience("tracker");
+
+    if (nextStep?.pageKey) {
+      setActivePage(nextStep.pageKey);
+    }
+
+    scrollTutorialStepIntoView(nextStep);
+  }
+
+  function closeTrackerTutorial(markSeen = true) {
+    setShowTrackerTutorial(false);
+
+    if (markSeen && user && typeof window !== "undefined") {
+      localStorage.setItem(getTrackerTutorialSeenKey(user.id), "true");
+    }
+  }
+
+  function goToTrackerTutorialStep(stepIndex) {
+    const boundedIndex = Math.min(
+      Math.max(stepIndex, 0),
+      Math.max(trackerTutorialSteps.length - 1, 0)
+    );
+    const nextStep = trackerTutorialSteps[boundedIndex];
+
+    setTrackerTutorialStepIndex(boundedIndex);
+
+    if (nextStep?.pageKey) {
+      setActivePage(nextStep.pageKey);
+    }
+
+    scrollTutorialStepIntoView(nextStep);
+  }
+
+  function goToNextTrackerTutorialStep() {
+    if (trackerTutorialStepIndex >= trackerTutorialSteps.length - 1) {
+      closeTrackerTutorial(true);
+      return;
+    }
+
+    goToTrackerTutorialStep(trackerTutorialStepIndex + 1);
+  }
+
+  function goToPreviousTrackerTutorialStep() {
+    goToTrackerTutorialStep(trackerTutorialStepIndex - 1);
+  }
+
+  function startOutsiderTutorial(startIndex = 0) {
+    const boundedIndex = Math.min(
+      Math.max(startIndex, 0),
+      Math.max(outsiderTutorialSteps.length - 1, 0)
+    );
+    const nextStep = outsiderTutorialSteps[boundedIndex];
+
+    setOutsiderTutorialStepIndex(boundedIndex);
+    setShowOutsiderTutorial(true);
+    setShowTrackerTutorial(false);
+    setAppExperience("outsider");
+
+    if (nextStep?.pageKey) {
+      setOutsiderPage(nextStep.pageKey);
+    }
+
+    if (typeof window !== "undefined") {
+      window.requestAnimationFrame(() => {
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      });
+    }
+  }
+
+  function closeOutsiderTutorial(markSeen = true) {
+    setShowOutsiderTutorial(false);
+
+    if (markSeen && user && typeof window !== "undefined") {
+      localStorage.setItem(getOutsiderTutorialSeenKey(user.id), "true");
+    }
+  }
+
+  function goToOutsiderTutorialStep(stepIndex) {
+    const boundedIndex = Math.min(
+      Math.max(stepIndex, 0),
+      Math.max(outsiderTutorialSteps.length - 1, 0)
+    );
+    const nextStep = outsiderTutorialSteps[boundedIndex];
+
+    setOutsiderTutorialStepIndex(boundedIndex);
+
+    if (nextStep?.pageKey) {
+      setOutsiderPage(nextStep.pageKey);
+    }
+
+    if (typeof window !== "undefined") {
+      window.requestAnimationFrame(() => {
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      });
+    }
+  }
+
+  function goToNextOutsiderTutorialStep() {
+    if (outsiderTutorialStepIndex >= outsiderTutorialSteps.length - 1) {
+      closeOutsiderTutorial(true);
+      return;
+    }
+
+    goToOutsiderTutorialStep(outsiderTutorialStepIndex + 1);
+  }
+
+  function goToPreviousOutsiderTutorialStep() {
+    goToOutsiderTutorialStep(outsiderTutorialStepIndex - 1);
   }
 
   async function changePin() {
@@ -2720,6 +2854,10 @@ function App() {
       setTrackingAreasMessage("");
       setShowAddTrackingAreaPicker(false);
       setTrackingAreaToAdd("");
+      setShowTrackerTutorial(false);
+      setTrackerTutorialStepIndex(0);
+      setShowOutsiderTutorial(false);
+      setOutsiderTutorialStepIndex(0);
       setPushToken("");
       setPushStatusMessage("");
       setPushSyncing(false);
@@ -2784,6 +2922,26 @@ function App() {
 
     setPushOptedOutLocally(localStorage.getItem(getNativePushOptOutKey(user.id)) === "true");
   }, [user]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return undefined;
+    }
+
+    const previousBodyOverflow = document.body.style.overflow;
+    const previousHtmlOverflow = document.documentElement.style.overflow;
+
+    if (showTrackerTutorial || showOutsiderTutorial) {
+      window.scrollTo({ top: 0, behavior: "auto" });
+      document.body.style.overflow = "hidden";
+      document.documentElement.style.overflow = "hidden";
+    }
+
+    return () => {
+      document.body.style.overflow = previousBodyOverflow;
+      document.documentElement.style.overflow = previousHtmlOverflow;
+    };
+  }, [showTrackerTutorial, trackerTutorialStepIndex, showOutsiderTutorial, outsiderTutorialStepIndex]);
 
   useEffect(() => {
     if (!Capacitor.isNativePlatform()) {
@@ -2993,6 +3151,13 @@ function App() {
     { key: "connections", label: "Connections" },
     { key: "settings", label: "Settings" },
   ];
+  const trackerTutorialSteps = buildTrackerTutorialSteps(selectedTrackingAreaOptions);
+  const trackerTutorialStep = trackerTutorialSteps[trackerTutorialStepIndex] || null;
+  const outsiderTutorialSteps = buildOutsiderTutorialSteps(outsiderTrackers, selectedOutsider);
+  const outsiderTutorialStep = outsiderTutorialSteps[outsiderTutorialStepIndex] || null;
+  const tutorialIsMobile = isMobileTutorialViewport();
+  const hideTrackerNavForTutorial =
+    showTrackerTutorial && trackerTutorialStep?.spotlightRegion === "overview-orbit";
   const dashboardStats = [
     {
       key: "meds",
@@ -3282,6 +3447,9 @@ function App() {
     trackingAreaToAdd,
     setTrackingAreaToAdd,
     addTrackedArea,
+    showTrackerTutorial,
+    startTrackerTutorial,
+    closeTrackerTutorial,
     mood,
     focus,
     energy,
@@ -3483,6 +3651,8 @@ function App() {
     setSelectedOutsiderId,
     setOutsiderPage,
     setShowOutsiderChooser,
+    showOutsiderTutorial,
+    startOutsiderTutorial,
   };
 
   const outsiderPageContent = (() => {
@@ -4084,6 +4254,8 @@ function App() {
           themeToggleStyle={themeToggleStyle}
           softButtonStyle={softButtonStyle}
           handleLogout={handleLogout}
+          showOutsiderTutorial={showOutsiderTutorial}
+          startOutsiderTutorial={startOutsiderTutorial}
         >
           {outsiderPageContent}
         </OutsiderLayout>
@@ -4119,10 +4291,662 @@ function App() {
           themeToggleStyle={themeToggleStyle}
           softButtonStyle={softButtonStyle}
           statusBadgeStyle={statusBadgeStyle}
+          tutorialActive={hideTrackerNavForTutorial}
         >
           {currentPageContent}
         </TrackerLayout>
       )}
+
+      {session && appExperience === "tracker" && showTrackerTutorial && trackerTutorialStep ? (
+        <div
+          style={{
+            ...popupOverlayStyle,
+            background: tutorialIsMobile ? "rgba(6, 10, 18, 0.56)" : "rgba(4, 8, 18, 0.32)",
+            zIndex: 41,
+            alignItems: tutorialIsMobile ? "end" : undefined,
+            padding: tutorialIsMobile ? "0" : popupOverlayStyle.padding,
+          }}
+        >
+          <div style={getTutorialSpotlightStyle(trackerTutorialStep.spotlightRegion)} />
+          {!tutorialIsMobile ? (
+            <div style={getTutorialSpotlightBadgeStyle(trackerTutorialStep.spotlightRegion)}>
+              <div
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "10px",
+                  padding: "9px 14px",
+                  borderRadius: "999px",
+                  background: "rgba(8, 12, 24, 0.94)",
+                  color: "#ffffff",
+                  fontSize: "0.78rem",
+                  fontWeight: 700,
+                  letterSpacing: "0.08em",
+                  textTransform: "uppercase",
+                  boxShadow: "0 10px 24px rgba(0,0,0,0.28)",
+                }}
+              >
+                <span
+                  style={{
+                    width: "10px",
+                    height: "10px",
+                    borderRadius: "50%",
+                    background: theme.primary,
+                    boxShadow: `0 0 18px ${theme.glow}`,
+                  }}
+                />
+                Look Here
+              </div>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
+                  marginLeft: "18px",
+                }}
+              >
+                <div
+                  style={{
+                    width: "44px",
+                    height: "2px",
+                    background:
+                      "repeating-linear-gradient(90deg, rgba(255,255,255,0.95) 0 8px, rgba(255,255,255,0) 8px 14px)",
+                    filter: "drop-shadow(0 0 8px rgba(255,255,255,0.45))",
+                  }}
+                />
+                <div
+                  style={{
+                    position: "relative",
+                    width: "18px",
+                    height: "18px",
+                    borderRadius: "50%",
+                    border: "2px solid rgba(255,255,255,0.95)",
+                    background: "rgba(255,255,255,0.12)",
+                    boxShadow: `0 0 0 6px rgba(255,255,255,0.08), 0 0 18px ${theme.glow}`,
+                  }}
+                >
+                  <div
+                    style={{
+                      position: "absolute",
+                      inset: "3px",
+                      borderRadius: "50%",
+                      background: theme.primary,
+                      boxShadow: `0 0 12px ${theme.glow}`,
+                    }}
+                  />
+                </div>
+                <div
+                  style={{
+                    width: 0,
+                    height: 0,
+                    borderTop: "8px solid transparent",
+                    borderBottom: "8px solid transparent",
+                    borderLeft: "12px solid rgba(255,255,255,0.95)",
+                    filter: "drop-shadow(0 0 8px rgba(255,255,255,0.35))",
+                  }}
+                />
+              </div>
+            </div>
+          ) : null}
+          <div
+            style={{
+              ...popupCardStyle(theme),
+              textAlign: "left",
+              width: tutorialIsMobile ? "calc(100vw - 16px)" : "min(560px, calc(100vw - 32px))",
+              position: "fixed",
+              zIndex: 42,
+              margin: 0,
+              padding: tutorialIsMobile ? "18px 16px 18px" : popupCardStyle(theme).padding,
+              maxHeight:
+                tutorialIsMobile ? "min(48vh, 420px)" : "calc(100vh - 48px)",
+              overflowY: "auto",
+              borderRadius: tutorialIsMobile ? "22px 22px 18px 18px" : popupCardStyle(theme).borderRadius,
+              boxShadow: tutorialIsMobile
+                ? "0 -18px 48px rgba(0,0,0,0.36), 0 0 0 1px rgba(255,255,255,0.08), inset 0 1px 0 rgba(255,255,255,0.05)"
+                : popupCardStyle(theme).boxShadow,
+              background: tutorialIsMobile
+                ? darkModeSafe(
+                    theme,
+                    "linear-gradient(180deg, rgba(15, 18, 34, 0.98) 0%, rgba(10, 12, 24, 0.99) 100%)",
+                    "linear-gradient(180deg, rgba(255, 247, 226, 0.985) 0%, rgba(245, 231, 196, 0.992) 100%)"
+                  )
+                : popupCardStyle(theme).background,
+              border: tutorialIsMobile
+                ? darkModeSafe(
+                    theme,
+                    "1px solid rgba(154, 167, 255, 0.16)",
+                    "1px solid rgba(176, 122, 24, 0.18)"
+                  )
+                : popupCardStyle(theme).border,
+              ...getTutorialCalloutPositionStyle(trackerTutorialStep.calloutPosition),
+            }}
+          >
+            <p
+              style={{
+                ...tinyLabelStyle(theme),
+                color: tutorialIsMobile ? theme.subtleText : tinyLabelStyle(theme).color,
+                letterSpacing: tutorialIsMobile ? "0.16em" : tinyLabelStyle(theme).letterSpacing,
+              }}
+            >
+              Tutorial Step {trackerTutorialStepIndex + 1} of {trackerTutorialSteps.length}
+            </p>
+            {tutorialIsMobile ? (
+              <div
+                style={{
+                  marginTop: "12px",
+                  padding: "12px 13px",
+                  borderRadius: "14px",
+                  background: darkModeSafe(
+                    theme,
+                    "rgba(255,255,255,0.05)",
+                    "rgba(255,255,255,0.46)"
+                  ),
+                  border: darkModeSafe(
+                    theme,
+                    "1px solid rgba(255,255,255,0.06)",
+                    "1px solid rgba(176, 122, 24, 0.12)"
+                  ),
+                  color: theme.subtleText,
+                  fontSize: "0.84rem",
+                  lineHeight: 1.5,
+                }}
+              >
+                You can keep using the page normally while this walkthrough explains what matters here.
+              </div>
+            ) : (
+              <div
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "8px",
+                  marginTop: "8px",
+                  color: theme.subtleText,
+                  fontSize: "0.82rem",
+                  fontWeight: 700,
+                  letterSpacing: "0.04em",
+                  textTransform: "uppercase",
+                }}
+              >
+                <span
+                  style={{
+                    width: "10px",
+                    height: "10px",
+                    borderRadius: "50%",
+                    background: theme.primary,
+                    boxShadow: `0 0 16px ${theme.glow}`,
+                  }}
+                />
+                Look at the highlighted area
+              </div>
+            )}
+            <h2
+              style={{
+                ...sectionTitleStyle(theme),
+                marginTop: tutorialIsMobile ? "14px" : "8px",
+                fontSize: tutorialIsMobile ? "1.45rem" : sectionTitleStyle(theme).fontSize,
+                lineHeight: tutorialIsMobile ? 1.1 : sectionTitleStyle(theme).lineHeight,
+              }}
+            >
+              {trackerTutorialStep.title}
+            </h2>
+            <p
+              style={{
+                ...smallInfoStyle(theme),
+                marginTop: tutorialIsMobile ? "12px" : "10px",
+                lineHeight: tutorialIsMobile ? 1.62 : 1.7,
+                fontSize: tutorialIsMobile ? "0.98rem" : smallInfoStyle(theme).fontSize,
+              }}
+            >
+              {trackerTutorialStep.body}
+            </p>
+            <div
+              style={{
+                display: "flex",
+                gap: tutorialIsMobile ? "10px" : "8px",
+                flexWrap: tutorialIsMobile ? "nowrap" : "wrap",
+                marginTop: tutorialIsMobile ? "16px" : "14px",
+                overflowX: tutorialIsMobile ? "auto" : "visible",
+                paddingBottom: tutorialIsMobile ? "6px" : 0,
+              }}
+            >
+              {trackerTutorialSteps.map((step, index) => (
+                <button
+                  key={step.id}
+                  onClick={() => goToTrackerTutorialStep(index)}
+                  style={{
+                    border: theme.border,
+                    background:
+                      index === trackerTutorialStepIndex
+                        ? theme.primary
+                        : theme.softButtonBackground,
+                    color:
+                      index === trackerTutorialStepIndex
+                        ? theme.primaryText
+                        : theme.softButtonText,
+                    borderRadius: "999px",
+                    padding: tutorialIsMobile ? "8px 12px" : "8px 12px",
+                    fontSize: tutorialIsMobile ? "0.78rem" : "0.78rem",
+                    fontWeight: 700,
+                    cursor: "pointer",
+                    minWidth: tutorialIsMobile ? "44px" : "auto",
+                    flex: "0 0 auto",
+                  }}
+                >
+                  {index + 1}
+                </button>
+              ))}
+            </div>
+            <div
+              style={{
+                ...summaryCardStyle(theme),
+                marginTop: tutorialIsMobile ? "18px" : "16px",
+                background: tutorialIsMobile
+                  ? darkModeSafe(
+                      theme,
+                      "rgba(255,255,255,0.045)",
+                      "rgba(255,255,255,0.42)"
+                    )
+                  : summaryCardStyle(theme).background,
+                border: tutorialIsMobile
+                  ? darkModeSafe(
+                      theme,
+                      "1px solid rgba(255,255,255,0.06)",
+                      "1px solid rgba(176, 122, 24, 0.12)"
+                    )
+                  : summaryCardStyle(theme).border,
+              }}
+            >
+              <div style={summaryLabelStyle(theme)}>{tutorialIsMobile ? "Tutorial page" : "Current page"}</div>
+              <div style={summaryValueStyle(theme)}>
+                {trackerNavItems.find((item) => item.key === trackerTutorialStep.pageKey)?.label ||
+                  "Overview"}
+              </div>
+              <div style={summaryNoteStyle(theme)}>
+                {tutorialIsMobile
+                  ? "The tutorial will move between pages for you, but the page itself stays usable underneath."
+                  : "The tutorial can move you between pages while you test it."}
+              </div>
+            </div>
+            {Array.isArray(trackerTutorialStep.focusItems) &&
+            trackerTutorialStep.focusItems.length > 0 ? (
+              <div
+                style={{
+                  ...summaryCardStyle(theme),
+                  marginTop: tutorialIsMobile ? "16px" : "14px",
+                  background: tutorialIsMobile
+                    ? darkModeSafe(
+                        theme,
+                        "rgba(255,255,255,0.045)",
+                        "rgba(255,255,255,0.42)"
+                      )
+                    : summaryCardStyle(theme).background,
+                  border: tutorialIsMobile
+                    ? darkModeSafe(
+                        theme,
+                        "1px solid rgba(255,255,255,0.06)",
+                        "1px solid rgba(176, 122, 24, 0.12)"
+                      )
+                    : summaryCardStyle(theme).border,
+                }}
+              >
+                <div style={summaryLabelStyle(theme)}>
+                  {trackerTutorialStep.focusLabel || "What to notice"}
+                </div>
+                <div style={{ display: "grid", gap: "8px", marginTop: "10px" }}>
+                  {trackerTutorialStep.focusItems.map((item) => (
+                    <div
+                      key={item}
+                      style={{
+                        display: "flex",
+                        gap: "10px",
+                        alignItems: "flex-start",
+                        color: theme.text,
+                        lineHeight: 1.55,
+                        fontSize: "0.95rem",
+                      }}
+                    >
+                      <span style={{ color: theme.primary, fontWeight: 700 }}>•</span>
+                      <span>{item}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+            {trackerTutorialStep.tip ? (
+              <div
+                style={{
+                  marginTop: tutorialIsMobile ? "16px" : "14px",
+                  padding: tutorialIsMobile ? "14px" : "14px 16px",
+                  borderRadius: "18px",
+                  background: tutorialIsMobile
+                    ? darkModeSafe(
+                        theme,
+                        "rgba(255,255,255,0.045)",
+                        "rgba(255,255,255,0.42)"
+                      )
+                    : theme.itemBackground,
+                  border: tutorialIsMobile
+                    ? darkModeSafe(
+                        theme,
+                        "1px solid rgba(255,255,255,0.06)",
+                        "1px solid rgba(176, 122, 24, 0.12)"
+                      )
+                    : theme.border,
+                  color: theme.subtleText,
+                  lineHeight: 1.6,
+                  fontSize: "0.92rem",
+                }}
+              >
+                <strong style={{ color: theme.text }}>Tip:</strong> {trackerTutorialStep.tip}
+              </div>
+            ) : null}
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: tutorialIsMobile ? "1fr 1fr" : "repeat(4, max-content)",
+                gap: "10px",
+                marginTop: tutorialIsMobile ? "20px" : "18px",
+                justifyContent: tutorialIsMobile ? "stretch" : "start",
+              }}
+            >
+              <button
+                style={{ ...softButtonStyle(theme), width: tutorialIsMobile ? "100%" : softButtonStyle(theme).width }}
+                onClick={() => setActivePage(trackerTutorialStep.pageKey || "mission")}
+              >
+                Open This Page Again
+              </button>
+              <button
+                style={{ ...softButtonStyle(theme), width: tutorialIsMobile ? "100%" : softButtonStyle(theme).width }}
+                onClick={goToPreviousTrackerTutorialStep}
+                disabled={trackerTutorialStepIndex === 0}
+              >
+                Back
+              </button>
+              <button
+                style={{ ...primaryButtonStyle(theme), width: tutorialIsMobile ? "100%" : primaryButtonStyle(theme).width }}
+                onClick={goToNextTrackerTutorialStep}
+              >
+                {trackerTutorialStepIndex === trackerTutorialSteps.length - 1
+                  ? "Finish Tutorial"
+                  : "Next"}
+              </button>
+              <button
+                style={{ ...smallRemoveButtonStyle(theme), width: tutorialIsMobile ? "100%" : smallRemoveButtonStyle(theme).width }}
+                onClick={() => closeTrackerTutorial(false)}
+              >
+                Close For Now
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {session && appExperience === "outsider" && showOutsiderTutorial && outsiderTutorialStep ? (
+        <div
+          style={{
+            ...popupOverlayStyle,
+            background: tutorialIsMobile ? "rgba(6, 10, 18, 0.62)" : "rgba(6, 10, 18, 0.54)",
+            zIndex: 41,
+            alignItems: tutorialIsMobile ? "end" : "center",
+            padding: tutorialIsMobile ? "0" : popupOverlayStyle.padding,
+          }}
+        >
+          <div
+            style={{
+              ...popupCardStyle(theme),
+              textAlign: "left",
+              width: tutorialIsMobile ? "calc(100vw - 16px)" : "min(620px, calc(100vw - 32px))",
+              position: "fixed",
+              zIndex: 42,
+              margin: 0,
+              padding: tutorialIsMobile ? "18px 16px 18px" : "22px",
+              maxHeight: tutorialIsMobile ? "min(54vh, 460px)" : "min(84vh, 760px)",
+              overflowY: "auto",
+              borderRadius: tutorialIsMobile ? "22px 22px 18px 18px" : popupCardStyle(theme).borderRadius,
+              boxShadow: tutorialIsMobile
+                ? "0 -18px 48px rgba(0,0,0,0.36), 0 0 0 1px rgba(255,255,255,0.08), inset 0 1px 0 rgba(255,255,255,0.05)"
+                : popupCardStyle(theme).boxShadow,
+              background: tutorialIsMobile
+                ? darkModeSafe(
+                    theme,
+                    "linear-gradient(180deg, rgba(13, 18, 27, 0.985) 0%, rgba(8, 12, 18, 0.995) 100%)",
+                    "linear-gradient(180deg, rgba(250, 246, 236, 0.99) 0%, rgba(233, 227, 212, 0.995) 100%)"
+                  )
+                : popupCardStyle(theme).background,
+              border: tutorialIsMobile
+                ? darkModeSafe(
+                    theme,
+                    "1px solid rgba(103, 222, 185, 0.16)",
+                    "1px solid rgba(98, 88, 66, 0.18)"
+                  )
+                : popupCardStyle(theme).border,
+              ...(tutorialIsMobile
+                ? { left: "8px", right: "8px", bottom: "12px" }
+                : { left: "50%", top: "50%", transform: "translate(-50%, -50%)" }),
+            }}
+          >
+            <p style={tinyLabelStyle(theme)}>
+              Outsider Tutorial Step {outsiderTutorialStepIndex + 1} of {outsiderTutorialSteps.length}
+            </p>
+            <div
+              style={{
+                marginTop: "12px",
+                padding: tutorialIsMobile ? "12px 13px" : "12px 14px",
+                borderRadius: "14px",
+                background: darkModeSafe(
+                  theme,
+                  "rgba(255,255,255,0.05)",
+                  "rgba(255,255,255,0.46)"
+                ),
+                border: darkModeSafe(
+                  theme,
+                  "1px solid rgba(255,255,255,0.06)",
+                  "1px solid rgba(98, 88, 66, 0.12)"
+                ),
+                color: theme.subtleText,
+                fontSize: tutorialIsMobile ? "0.84rem" : "0.9rem",
+                lineHeight: 1.55,
+              }}
+            >
+              This walkthrough will move between outsider pages so each support tool makes sense in context.
+            </div>
+            <h2
+              style={{
+                ...sectionTitleStyle(theme),
+                marginTop: "14px",
+                fontSize: tutorialIsMobile ? "1.45rem" : sectionTitleStyle(theme).fontSize,
+                lineHeight: 1.1,
+              }}
+            >
+              {outsiderTutorialStep.title}
+            </h2>
+            <p
+              style={{
+                ...smallInfoStyle(theme),
+                marginTop: "12px",
+                lineHeight: 1.62,
+                fontSize: tutorialIsMobile ? "0.98rem" : smallInfoStyle(theme).fontSize,
+              }}
+            >
+              {outsiderTutorialStep.body}
+            </p>
+            <div
+              style={{
+                display: "flex",
+                gap: "10px",
+                flexWrap: tutorialIsMobile ? "nowrap" : "wrap",
+                marginTop: "16px",
+                overflowX: tutorialIsMobile ? "auto" : "visible",
+                paddingBottom: tutorialIsMobile ? "6px" : 0,
+              }}
+            >
+              {outsiderTutorialSteps.map((step, index) => (
+                <button
+                  key={step.id}
+                  onClick={() => goToOutsiderTutorialStep(index)}
+                  style={{
+                    border: theme.border,
+                    background:
+                      index === outsiderTutorialStepIndex
+                        ? theme.primary
+                        : theme.softButtonBackground,
+                    color:
+                      index === outsiderTutorialStepIndex
+                        ? theme.primaryText
+                        : theme.softButtonText,
+                    borderRadius: "999px",
+                    padding: "8px 12px",
+                    fontSize: "0.78rem",
+                    fontWeight: 700,
+                    cursor: "pointer",
+                    minWidth: tutorialIsMobile ? "44px" : "auto",
+                    flex: "0 0 auto",
+                  }}
+                >
+                  {index + 1}
+                </button>
+              ))}
+            </div>
+            <div
+              style={{
+                ...summaryCardStyle(theme),
+                marginTop: "18px",
+                background: tutorialIsMobile
+                  ? darkModeSafe(
+                      theme,
+                      "rgba(255,255,255,0.045)",
+                      "rgba(255,255,255,0.42)"
+                    )
+                  : summaryCardStyle(theme).background,
+                border: tutorialIsMobile
+                  ? darkModeSafe(
+                      theme,
+                      "1px solid rgba(255,255,255,0.06)",
+                      "1px solid rgba(98, 88, 66, 0.12)"
+                    )
+                  : summaryCardStyle(theme).border,
+              }}
+            >
+              <div style={summaryLabelStyle(theme)}>{tutorialIsMobile ? "Tutorial page" : "Current outsider page"}</div>
+              <div style={summaryValueStyle(theme)}>
+                {outsiderTutorialStep.pageLabel}
+              </div>
+              <div style={summaryNoteStyle(theme)}>
+                {outsiderTutorialStep.pageNote}
+              </div>
+            </div>
+            {Array.isArray(outsiderTutorialStep.focusItems) && outsiderTutorialStep.focusItems.length > 0 ? (
+              <div
+                style={{
+                  ...summaryCardStyle(theme),
+                  marginTop: "16px",
+                  background: tutorialIsMobile
+                    ? darkModeSafe(
+                        theme,
+                        "rgba(255,255,255,0.045)",
+                        "rgba(255,255,255,0.42)"
+                      )
+                    : summaryCardStyle(theme).background,
+                  border: tutorialIsMobile
+                    ? darkModeSafe(
+                        theme,
+                        "1px solid rgba(255,255,255,0.06)",
+                        "1px solid rgba(98, 88, 66, 0.12)"
+                      )
+                    : summaryCardStyle(theme).border,
+                }}
+              >
+                <div style={summaryLabelStyle(theme)}>
+                  {outsiderTutorialStep.focusLabel || "What to notice"}
+                </div>
+                <div style={{ display: "grid", gap: "8px", marginTop: "10px" }}>
+                  {outsiderTutorialStep.focusItems.map((item) => (
+                    <div
+                      key={item}
+                      style={{
+                        display: "flex",
+                        gap: "10px",
+                        alignItems: "flex-start",
+                        color: theme.text,
+                        lineHeight: 1.55,
+                        fontSize: "0.95rem",
+                      }}
+                    >
+                      <span style={{ color: theme.primary, fontWeight: 700 }}>•</span>
+                      <span>{item}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+            {outsiderTutorialStep.tip ? (
+              <div
+                style={{
+                  marginTop: "16px",
+                  padding: "14px",
+                  borderRadius: "18px",
+                  background: tutorialIsMobile
+                    ? darkModeSafe(
+                        theme,
+                        "rgba(255,255,255,0.045)",
+                        "rgba(255,255,255,0.42)"
+                      )
+                    : theme.itemBackground,
+                  border: tutorialIsMobile
+                    ? darkModeSafe(
+                        theme,
+                        "1px solid rgba(255,255,255,0.06)",
+                        "1px solid rgba(98, 88, 66, 0.12)"
+                      )
+                    : theme.border,
+                  color: theme.subtleText,
+                  lineHeight: 1.6,
+                  fontSize: "0.92rem",
+                }}
+              >
+                <strong style={{ color: theme.text }}>Tip:</strong> {outsiderTutorialStep.tip}
+              </div>
+            ) : null}
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: tutorialIsMobile ? "1fr 1fr" : "repeat(4, max-content)",
+                gap: "10px",
+                marginTop: "20px",
+                justifyContent: tutorialIsMobile ? "stretch" : "start",
+              }}
+            >
+              <button
+                style={{ ...softButtonStyle(theme), width: tutorialIsMobile ? "100%" : softButtonStyle(theme).width }}
+                onClick={() => setOutsiderPage(outsiderTutorialStep.pageKey || "outsiderOverview")}
+              >
+                Open This Page Again
+              </button>
+              <button
+                style={{ ...softButtonStyle(theme), width: tutorialIsMobile ? "100%" : softButtonStyle(theme).width }}
+                onClick={goToPreviousOutsiderTutorialStep}
+                disabled={outsiderTutorialStepIndex === 0}
+              >
+                Back
+              </button>
+              <button
+                style={{ ...primaryButtonStyle(theme), width: tutorialIsMobile ? "100%" : primaryButtonStyle(theme).width }}
+                onClick={goToNextOutsiderTutorialStep}
+              >
+                {outsiderTutorialStepIndex === outsiderTutorialSteps.length - 1
+                  ? "Finish Tutorial"
+                  : "Next"}
+              </button>
+              <button
+                style={{ ...smallRemoveButtonStyle(theme), width: tutorialIsMobile ? "100%" : smallRemoveButtonStyle(theme).width }}
+                onClick={() => closeOutsiderTutorial(false)}
+              >
+                Close For Now
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       {showOutsiderChooser && outsiderPeople.length > 0 ? (
         <div style={popupOverlayStyle}>
@@ -5793,6 +6617,512 @@ function getPublicAppUrl() {
 
 function getFeedbackTone(message = "") {
   return /error|failed|could not|incorrect|not found/i.test(message) ? "error" : "success";
+}
+
+function buildTrackerTutorialSteps(selectedTrackingAreaOptions) {
+  const categorySummary =
+    selectedTrackingAreaOptions.length > 0
+      ? selectedTrackingAreaOptions.map((area) => area.label).join(", ")
+      : "Meds, Food, Hygiene, Sleep, Cleaning, Exercise, and Mood";
+  const firstCategory = selectedTrackingAreaOptions[0];
+  const hasMoodCategory = selectedTrackingAreaOptions.some((area) => area.pageKey === "mood");
+  const secondCategory = selectedTrackingAreaOptions[1] || null;
+
+  return [
+    {
+      id: "overview",
+      pageKey: "mission",
+      title: "This is your main overview",
+      body:
+        "Start here when you want to get oriented. This screen gives you a quick read on today and lets you jump into the areas you picked.",
+      calloutPosition: "bottom-right",
+      spotlightRegion: "overview-orbit",
+      focusLabel: "What to notice here",
+      focusItems: [
+        "The overview is the fastest way to reorient if the app feels busy.",
+        "Most cards here are shortcuts, so tapping them should move you to the matching section.",
+      ],
+      tip: "If someone is unsure where to start, the overview is the safest first stop.",
+    },
+    {
+      id: "categories",
+      pageKey: firstCategory?.pageKey || "mission",
+      title: "Your tracker categories are personalized",
+      body: `Right now your visible categories are ${categorySummary}. The app only shows the sections you chose so the tracker feels lighter.`,
+      calloutPosition: "top-right",
+      spotlightRegion: "tracker-nav",
+      focusLabel: "Why this matters",
+      focusItems: [
+        "People may think categories are missing when they were simply never added.",
+        "The tracker nav changes based on these choices, so two users may not see the same layout.",
+      ],
+      tip: "This is one of the main ideas the tutorial should teach clearly.",
+    },
+    ...(firstCategory
+      ? [
+          {
+            id: "category-log",
+            pageKey: firstCategory.pageKey,
+            title: `Open ${firstCategory.label} to log details`,
+            body: `Each category page is its own logging space. ${firstCategory.description} On smaller screens, these pages are grouped under the main Log area.`,
+            calloutPosition: "top-right",
+            spotlightRegion: "tracking-form-upper",
+            focusLabel: "Try this mentally",
+            focusItems: [
+              `A user opens ${firstCategory.label} when they want to log something specific, not when they want a summary.`,
+              "The chips near the top let people switch between visible categories without going all the way back.",
+            ],
+            tip: "This step is especially important on mobile because Log can hide the category names at first glance.",
+          },
+        ]
+      : []),
+    ...(secondCategory
+      ? [
+          {
+            id: "category-switching",
+            pageKey: secondCategory.pageKey,
+            title: "Switching categories should feel easy",
+            body: `Here is a second example with ${secondCategory.label}. The goal is for users to understand that categories are sibling spaces, not separate apps.`,
+            calloutPosition: "bottom-right",
+            spotlightRegion: "tracking-form-upper",
+            focusLabel: "What to test",
+            focusItems: [
+              "See whether it feels obvious that you can move from one category to another.",
+              "Notice whether the category labels are easy to identify in your current theme.",
+            ],
+            tip: "If this still feels confusing, we can add stronger labels or a persistent category legend next.",
+          },
+        ]
+      : []),
+    ...(hasMoodCategory
+      ? [
+          {
+            id: "mood",
+            pageKey: "mood",
+            title: "Mood is its own check-in",
+            body:
+              "Mood is separate from the other logs. You can set the slider and add a few words so the app captures how the day feels, not just what got done.",
+            calloutPosition: "top-right",
+            spotlightRegion: "mood-checkin",
+            focusLabel: "Potential confusion point",
+            focusItems: [
+              "Mood can feel different from task categories because it is a feeling check-in, not a completion log.",
+              "Users should leave this step understanding that Mood still belongs in the tracker flow.",
+            ],
+            tip: "This is a good place to teach that emotional state is part of the app, not an extra feature.",
+          },
+        ]
+      : []),
+    {
+      id: "goals",
+      pageKey: "goals",
+      title: "Goals turn your logs into streaks",
+      body:
+        "Goals read from your tracker automatically. Once a category is being logged consistently, you can build a simple streak around it here.",
+      calloutPosition: "bottom-right",
+      spotlightRegion: "goals-builder",
+      focusLabel: "What goals depend on",
+      focusItems: [
+        "Goals make more sense after users understand categories.",
+        "This page explains why logging in the right category matters later.",
+      ],
+      tip: "If a user asks why goals are not moving, category logging is the first thing to check.",
+    },
+    {
+      id: "connections",
+      pageKey: "connections",
+      title: "Connections is where outsider access lives",
+      body:
+        "Use this area to create invite links, approve requests, and control what connected outsiders can see.",
+      calloutPosition: "top-right",
+      spotlightRegion: "connections-actions",
+      focusLabel: "What this page is not",
+      focusItems: [
+        "Connections is not part of daily self-tracking.",
+        "It is more like setup and permissions for support people.",
+      ],
+      tip: "Keeping this distinction clear should reduce navigation confusion.",
+    },
+    {
+      id: "settings",
+      pageKey: "settings",
+      title: "Settings lets you change your visible categories later",
+      body:
+        "If a category feels missing, come back here. You can add more tracker areas without logging out or repeating the full account setup.",
+      calloutPosition: "top-right",
+      spotlightRegion: "settings-management",
+      focusLabel: "Most important recovery path",
+      focusItems: [
+        "If someone says a category disappeared, send them here first.",
+        "The Start Tutorial button here is also your safe test area while we keep iterating.",
+      ],
+      tip: "This is the fallback step that explains how to recover from most category confusion.",
+    },
+  ];
+}
+
+function buildOutsiderTutorialSteps(outsiderTrackers, selectedOutsider) {
+  const trackerCount = outsiderTrackers.length;
+  const selectedTrackerName = selectedOutsider?.name || "your selected tracker";
+
+  return [
+    {
+      id: "outsider-overview",
+      pageKey: "outsiderOverview",
+      pageLabel: "Overview",
+      pageNote:
+        trackerCount > 0
+          ? "This page lists your approved trackers and the entry points into the rest of the outsider app."
+          : "This page is where connection requests begin before approved trackers show up.",
+      title: "Overview is your outsider home base",
+      body:
+        trackerCount > 0
+          ? "Start here when you want to orient yourself quickly. Overview shows which trackers you can access and gives you the fastest jump into data, support, or goals."
+          : "Start here when you need to connect to someone. This is where invite codes and links are used, and approved trackers will appear here automatically later.",
+      focusLabel: "What this page is for",
+      focusItems: [
+        "Overview is the setup and launch page for the outsider experience.",
+        "You can connect to trackers here and jump into the right support area from here.",
+      ],
+      tip: "If someone is unsure where to begin in the outsider app, send them to Overview first.",
+    },
+    {
+      id: "outsider-data",
+      pageKey: "outsiderData",
+      pageLabel: "Telemetry",
+      pageNote: `Telemetry is the shared trend view for ${selectedTrackerName}.`,
+      title: "Telemetry is for calm pattern-reading",
+      body:
+        "This page is the outsider read-only dashboard. It gives high-level trend context like mood, routines, sleep, and medication summaries without exposing private journal-style details.",
+      focusLabel: "What to notice",
+      focusItems: [
+        "Telemetry is about patterns over time, not one-off nudges.",
+        "If you need context before reaching out, this is usually the best page to visit first.",
+      ],
+      tip: "Use Telemetry before sending support when you want your message to match the current pattern instead of guessing.",
+    },
+    {
+      id: "outsider-support",
+      pageKey: "outsiderSupport",
+      pageLabel: "Comms",
+      pageNote: "Comms is where outsider support messages and nudges are sent.",
+      title: "Comms is the action page",
+      body:
+        "This page is where encouragement happens. Use the quick support buttons and approved category nudges when you want to send a lightweight reminder or a supportive check-in.",
+      focusLabel: "What this page is not",
+      focusItems: [
+        "Comms is not for reviewing long-term patterns.",
+        "It is for sending simple supportive actions in the moment.",
+      ],
+      tip: "When deciding between Telemetry and Comms: Telemetry helps you understand, Comms helps you act.",
+    },
+    {
+      id: "outsider-goals",
+      pageKey: "outsiderGoals",
+      pageLabel: "Goals",
+      pageNote: "Goals shows only the approved streak and reward summary view.",
+      title: "Goals keeps progress visible without extra detail",
+      body:
+        "This page gives outsiders a lightweight view of current streaks, goals, and rewards that the tracker has chosen to share. It is meant for encouragement, not deep analysis.",
+      focusLabel: "What to use this for",
+      focusItems: [
+        "Use Goals when you want to notice momentum and celebrate progress.",
+        "This page is especially useful when you want to support consistency, not just crisis moments.",
+      ],
+      tip: "Goals is a good place to find positive reinforcement opportunities before sending a nudge.",
+    },
+  ];
+}
+
+const TUTORIAL_CALLOUT_POSITIONS = {
+  "top-left": { top: "24px", left: "24px" },
+  "top-right": { top: "24px", right: "24px" },
+  "bottom-left": { bottom: "24px", left: "24px" },
+  "bottom-right": { bottom: "24px", right: "24px" },
+};
+
+const MOBILE_TUTORIAL_CALLOUT_POSITION = {
+  left: "12px",
+  right: "12px",
+  bottom: "12px",
+};
+
+const TUTORIAL_SPOTLIGHT_REGIONS = {
+  "overview-orbit": {
+    top: "480px",
+    left: "max(240px, 32.5vw)",
+    width: "min(760px, 66vw)",
+    height: "580px",
+    borderRadius: "36px",
+  },
+  "tracker-nav": {
+    left: "16px",
+    right: "16px",
+    bottom: "8px",
+    height: "124px",
+    borderRadius: "32px",
+  },
+  "tracking-form-upper": {
+    top: "190px",
+    left: "max(18px, 9vw)",
+    right: "max(18px, 9vw)",
+    height: "290px",
+  },
+  "mood-checkin": {
+    top: "132px",
+    left: "max(18px, 10vw)",
+    right: "max(18px, 10vw)",
+    bottom: "120px",
+  },
+  "goals-builder": {
+    top: "112px",
+    left: "max(18px, 8vw)",
+    right: "max(18px, 8vw)",
+    height: "330px",
+  },
+  "connections-actions": {
+    top: "112px",
+    left: "max(18px, 8vw)",
+    right: "max(18px, 8vw)",
+    height: "290px",
+  },
+  "settings-management": {
+    top: "430px",
+    left: "220px",
+    right: "430px",
+    height: "460px",
+  },
+  top: {
+    top: "18px",
+    left: "20px",
+    right: "20px",
+    height: "96px",
+  },
+  bottom: {
+    left: "16px",
+    right: "16px",
+    bottom: "12px",
+    height: "108px",
+  },
+  left: {
+    top: "110px",
+    left: "18px",
+    width: "280px",
+    bottom: "96px",
+  },
+  right: {
+    top: "110px",
+    right: "18px",
+    width: "280px",
+    bottom: "96px",
+  },
+  center: {
+    top: "108px",
+    left: "max(18px, 8vw)",
+    right: "max(18px, 8vw)",
+    bottom: "96px",
+  },
+};
+
+const MOBILE_TUTORIAL_SPOTLIGHT_REGIONS = {
+  "overview-orbit": {
+    top: "112px",
+    left: "10px",
+    right: "10px",
+    height: "min(46vh, 320px)",
+    borderRadius: "24px",
+  },
+  "tracker-nav": {
+    left: "10px",
+    right: "10px",
+    bottom: "10px",
+    height: "90px",
+    borderRadius: "24px",
+  },
+  "tracking-form-upper": {
+    top: "112px",
+    left: "10px",
+    right: "10px",
+    height: "min(40vh, 280px)",
+    borderRadius: "24px",
+  },
+  "mood-checkin": {
+    top: "112px",
+    left: "10px",
+    right: "10px",
+    bottom: "128px",
+    borderRadius: "24px",
+  },
+  "goals-builder": {
+    top: "112px",
+    left: "10px",
+    right: "10px",
+    height: "min(38vh, 260px)",
+    borderRadius: "24px",
+  },
+  "connections-actions": {
+    top: "112px",
+    left: "10px",
+    right: "10px",
+    height: "min(34vh, 240px)",
+    borderRadius: "24px",
+  },
+  "settings-management": {
+    top: "212px",
+    left: "10px",
+    right: "10px",
+    bottom: "128px",
+    borderRadius: "24px",
+  },
+  top: {
+    top: "100px",
+    left: "10px",
+    right: "10px",
+    height: "88px",
+    borderRadius: "24px",
+  },
+  bottom: {
+    left: "10px",
+    right: "10px",
+    bottom: "10px",
+    height: "90px",
+    borderRadius: "24px",
+  },
+  left: {
+    top: "112px",
+    left: "10px",
+    right: "10px",
+    height: "min(34vh, 240px)",
+    borderRadius: "24px",
+  },
+  right: {
+    top: "112px",
+    left: "10px",
+    right: "10px",
+    height: "min(34vh, 240px)",
+    borderRadius: "24px",
+  },
+  center: {
+    top: "112px",
+    left: "10px",
+    right: "10px",
+    bottom: "128px",
+    borderRadius: "24px",
+  },
+};
+
+const TUTORIAL_BADGE_POSITIONS = {
+  "overview-orbit": { top: "454px", left: "max(250px, 32.5vw)" },
+  "tracker-nav": { bottom: "148px", left: "24px" },
+  "tracking-form-upper": { top: "166px", left: "max(24px, 9vw)" },
+  "mood-checkin": { top: "140px", left: "max(24px, 10vw)" },
+  "goals-builder": { top: "120px", left: "max(24px, 8vw)" },
+  "connections-actions": { top: "120px", left: "max(24px, 8vw)" },
+  "settings-management": { top: "406px", left: "max(24px, 8vw)" },
+  center: { top: "116px", left: "max(24px, 8vw)" },
+};
+
+const MOBILE_TUTORIAL_BADGE_POSITIONS = {
+  "overview-orbit": { top: "100px", left: "16px" },
+  "tracker-nav": { bottom: "108px", left: "16px" },
+  "tracking-form-upper": { top: "100px", left: "16px" },
+  "mood-checkin": { top: "100px", left: "16px" },
+  "goals-builder": { top: "100px", left: "16px" },
+  "connections-actions": { top: "100px", left: "16px" },
+  "settings-management": { top: "196px", left: "16px" },
+  center: { top: "100px", left: "16px" },
+};
+
+function isMobileTutorialViewport() {
+  return typeof window !== "undefined" && window.innerWidth < 768;
+}
+
+function getTutorialCalloutPositionStyle(position = "bottom-right") {
+  if (isMobileTutorialViewport()) {
+    return MOBILE_TUTORIAL_CALLOUT_POSITION;
+  }
+
+  return TUTORIAL_CALLOUT_POSITIONS[position] || TUTORIAL_CALLOUT_POSITIONS["bottom-right"];
+}
+
+function getTutorialSpotlightStyle(region = "center") {
+  const mobile = isMobileTutorialViewport();
+
+  if (mobile) {
+    return {
+      display: "none",
+    };
+  }
+
+  const baseStyle = {
+    position: "fixed",
+    zIndex: 41,
+    pointerEvents: "none",
+    borderRadius: "28px",
+    border: "3px solid rgba(255,255,255,0.88)",
+    boxShadow:
+      "0 0 0 9999px rgba(4, 8, 18, 0.74), 0 0 0 1px rgba(255,255,255,0.45), 0 18px 40px rgba(0,0,0,0.34), 0 0 32px rgba(255,255,255,0.24), inset 0 0 0 999px rgba(255,255,255,0.02)",
+  };
+  return {
+    ...baseStyle,
+    ...(TUTORIAL_SPOTLIGHT_REGIONS[region] || TUTORIAL_SPOTLIGHT_REGIONS.center),
+  };
+}
+
+function getTutorialSpotlightBadgeStyle(region = "center") {
+  const baseStyle = {
+    position: "fixed",
+    zIndex: 42,
+    pointerEvents: "none",
+    display: "grid",
+    gap: "8px",
+  };
+  return {
+    ...baseStyle,
+    ...(isMobileTutorialViewport()
+      ? MOBILE_TUTORIAL_BADGE_POSITIONS[region] || MOBILE_TUTORIAL_BADGE_POSITIONS.center
+      : TUTORIAL_BADGE_POSITIONS[region] || TUTORIAL_BADGE_POSITIONS.center),
+  };
+}
+
+function getMobileTutorialScrollTop(region = "center") {
+  switch (region) {
+    case "overview-orbit":
+      return 0;
+    case "tracking-form-upper":
+      return 80;
+    case "mood-checkin":
+      return 72;
+    case "goals-builder":
+      return 60;
+    case "connections-actions":
+      return 60;
+    case "settings-management":
+      return 260;
+    case "tracker-nav":
+      return 0;
+    default:
+      return 0;
+  }
+}
+
+function scrollTutorialStepIntoView(step) {
+  if (typeof window === "undefined" || !isMobileTutorialViewport()) {
+    return;
+  }
+
+  const targetTop = getMobileTutorialScrollTop(step?.spotlightRegion);
+
+  const scrollToTarget = () => {
+    window.scrollTo({
+      top: targetTop,
+      behavior: "smooth",
+    });
+  };
+
+  window.requestAnimationFrame(() => {
+    window.requestAnimationFrame(scrollToTarget);
+  });
 }
 
 function renderFeedbackMessage(message, theme) {

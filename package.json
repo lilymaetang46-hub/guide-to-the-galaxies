@@ -9,6 +9,7 @@
     "build:mobile": "vite build",
     "assets:mobile": "powershell -ExecutionPolicy Bypass -File ./scripts/generate-mobile-assets.ps1",
     "lint": "eslint .",
+    "test:e2e": "playwright test",
     "preview": "vite preview",
     "cap:sync": "npx cap sync android",
     "cap:open:android": "npx cap open android",
@@ -29,6 +30,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.39.4",
+    "@playwright/test": "^1.58.2",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.0",

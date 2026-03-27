@@ -51,6 +51,7 @@ function TrackerLayout({
   themeToggleStyle,
   softButtonStyle,
   statusBadgeStyle,
+  tutorialActive,
   children,
 }) {
   const [navOpen, setNavOpen] = useState(
@@ -97,7 +98,7 @@ function TrackerLayout({
           style={{
             width: "100%",
             minHeight: "100vh",
-            paddingBottom: isMobile ? "124px" : "170px",
+            paddingBottom: tutorialActive ? "32px" : isMobile ? "124px" : "170px",
             position: "relative",
             color: theme.text,
             fontFamily: theme.trackerBodyFamily,
@@ -372,7 +373,7 @@ function TrackerLayout({
         <main
           style={{
             paddingTop: isMobile ? "92px" : "128px",
-            paddingBottom: isMobile ? "84px" : "96px",
+            paddingBottom: tutorialActive ? "32px" : isMobile ? "84px" : "96px",
             paddingInline: isMobile ? "12px" : "24px",
             maxWidth: "1600px",
             margin: "0 auto",
@@ -383,6 +384,7 @@ function TrackerLayout({
           {children}
         </main>
 
+        {!tutorialActive ? (
         <nav
           style={{
             position: "fixed",
@@ -467,6 +469,7 @@ function TrackerLayout({
             );
           })}
         </nav>
+        ) : null}
       </div>
     );
   }
@@ -489,7 +492,7 @@ function TrackerLayout({
         style={{
           width: "100%",
           minHeight: "100vh",
-          paddingBottom: isMobile ? "112px" : "140px",
+          paddingBottom: tutorialActive ? "32px" : isMobile ? "124px" : "170px",
           position: "relative",
           color: theme.text,
           fontFamily: theme.trackerBodyFamily,
@@ -572,125 +575,109 @@ function TrackerLayout({
             top: 0,
             left: 0,
             right: 0,
-            zIndex: 40,
+            zIndex: 50,
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
-            padding: isMobile ? "14px 16px" : "18px 28px",
-            background: "rgba(255,255,255,0.3)",
-            backdropFilter: "blur(20px)",
+            padding: isMobile ? "16px 14px" : "24px 32px",
+            background: "rgba(255, 248, 230, 0.56)",
+            backdropFilter: "blur(24px)",
             borderBottom: "1px solid rgba(230,126,34,0.12)",
           }}
         >
-          <div
-            style={{
-              fontFamily: theme.trackerHeadingFamily,
-              fontStyle: "italic",
-              fontSize: isMobile ? "1.1rem" : "1.7rem",
-              color: theme.trackerAccent,
-              letterSpacing: "-0.02em",
-              position: "relative",
-              zIndex: 2,
-            }}
-          >
-            The Observer
+          <div style={{ display: "flex", flexDirection: "column" }}>
+            <div
+              style={{
+                fontFamily: theme.trackerHeadingFamily,
+                fontStyle: "italic",
+                fontSize: isMobile ? "1.3rem" : "2rem",
+                color: theme.trackerAccent,
+                textShadow: "0 0 12px rgba(255,193,7,0.22)",
+              }}
+            >
+              The Observer
+            </div>
+            <span
+              style={{
+                fontSize: isMobile ? "7px" : "8px",
+                letterSpacing: isMobile ? "0.28em" : "0.4em",
+                textTransform: "uppercase",
+                color: "rgba(122, 82, 18, 0.5)",
+                fontWeight: 700,
+              }}
+            >
+              Vessel ID: 00-HELIOCENTRIC
+            </span>
           </div>
 
-          <div
-            style={{
-              display: isMobile ? "none" : "flex",
-              alignItems: "center",
-              gap: "14px",
-              position: "absolute",
-              left: "50%",
-              transform: "translateX(-50%)",
-              zIndex: 1,
-            }}
-          >
-            {SOLAR_NAV_ITEMS.map((item) => (
-              <button
-                key={item.key}
-                onClick={() =>
-                  handleSelectPage(
-                    item.key === "tracking"
-                      ? trackerNavItems.find((navItem) =>
-                          ["meds", "food", "sleep", "hygiene", "cleaning", "exercise", "mood"].includes(navItem.key)
-                        )?.key || "mood"
-                      : item.key
-                  )
-                }
-                style={{
-                  border: "none",
-                  background: solarNavActive(item.key) ? "rgba(255,255,255,0.28)" : "rgba(255,193,7,0.08)",
-                  color: solarNavActive(item.key) ? theme.trackerAccent : `${theme.text}aa`,
-                  fontFamily: theme.trackerBodyFamily,
-                  fontWeight: solarNavActive(item.key) ? 700 : 500,
-                  padding: "10px 18px",
-                  borderRadius: "999px",
-                  fontSize: "1.05rem",
-                  boxShadow: solarNavActive(item.key) ? "0 8px 24px rgba(230,126,34,0.12)" : "none",
-                }}
-              >
-                {item.label}
-              </button>
-            ))}
-          </div>
-
-          <div style={{ display: "flex", alignItems: "center", gap: isMobile ? "10px" : "16px", position: "relative", zIndex: 2 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: isMobile ? "10px" : "24px" }}>
+            <div style={{ display: isMobile ? "none" : "flex", flexDirection: "column", alignItems: "flex-end", marginRight: "12px" }}>
+              <span style={{ fontSize: "9px", color: "rgba(122, 82, 18, 0.6)", textTransform: "uppercase", letterSpacing: "0.2em" }}>
+                Solar Flux
+              </span>
+              <div style={{ display: "flex", gap: "4px", marginTop: "6px" }}>
+                {[true, true, true, false].map((active, index) => (
+                  <div
+                    key={`solar-sig-${index}`}
+                    style={{
+                      width: "4px",
+                      height: "12px",
+                      borderRadius: "999px",
+                      background: active ? theme.trackerAccent : "rgba(230,126,34,0.16)",
+                    }}
+                  />
+                ))}
+              </div>
+            </div>
             <button
               onClick={() => setDarkMode(!darkMode)}
-              style={{ border: "none", background: "transparent", color: theme.text, padding: 0 }}
+              style={{ background: "transparent", border: "none", color: theme.text, padding: 0 }}
               aria-label="Switch tracker theme mode"
             >
               <span className="material-symbols-outlined">flare</span>
             </button>
             <button
-              onClick={() => setActivePage("support")}
-              style={{ border: "none", background: "transparent", color: theme.text, padding: 0 }}
-              aria-label="Open support"
+              onClick={() => setActivePage("settings")}
+              style={{ background: "transparent", border: "none", color: theme.text, padding: 0 }}
+              aria-label="Open settings"
             >
-              <span className="material-symbols-outlined">notifications</span>
+              <span className="material-symbols-outlined">account_circle</span>
             </button>
           </div>
         </nav>
 
         <main
           style={{
+            paddingTop: isMobile ? "92px" : "128px",
+            paddingBottom: tutorialActive ? "32px" : isMobile ? "84px" : "96px",
+            paddingInline: isMobile ? "12px" : "24px",
+            maxWidth: "1600px",
+            margin: "0 auto",
             position: "relative",
             zIndex: 10,
-            minHeight: "100vh",
-            paddingTop: isMobile ? "84px" : "102px",
-            paddingBottom: isMobile ? "128px" : "72px",
-            paddingInline: isMobile ? "16px" : "24px",
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
           }}
         >
           {children}
         </main>
 
+        {!tutorialActive ? (
         <nav
           style={{
             position: "fixed",
-            left: isMobile ? 0 : "50%",
-            right: isMobile ? 0 : "auto",
-            bottom: isMobile ? 0 : "18px",
-            transform: isMobile ? "none" : "translateX(-50%)",
-            zIndex: 45,
+            bottom: isMobile ? "12px" : "32px",
+            left: "50%",
+            transform: "translateX(-50%)",
+            width: isMobile ? "calc(100% - 16px)" : "min(94%, 680px)",
+            zIndex: 50,
             display: "flex",
             justifyContent: "space-around",
             alignItems: "center",
-            padding: isMobile ? "14px 12px 28px" : "12px 16px",
-            background: "rgba(255,255,255,0.5)",
-            backdropFilter: "blur(24px)",
-            borderTop: "1px solid rgba(230,126,34,0.16)",
-            borderTopLeftRadius: isMobile ? "3rem" : "999px",
-            borderTopRightRadius: isMobile ? "3rem" : "999px",
-            borderBottomLeftRadius: isMobile ? 0 : "999px",
-            borderBottomRightRadius: isMobile ? 0 : "999px",
-            boxShadow: "0 -10px 40px rgba(230,126,34,0.1)",
-            width: isMobile ? "100%" : "min(94%, 900px)",
+            padding: isMobile ? "12px 10px" : "16px 24px",
+            background: "rgba(255, 248, 230, 0.66)",
+            backdropFilter: "blur(32px) saturate(160%)",
+            borderRadius: "999px",
+            border: "1px solid rgba(230,126,34,0.14)",
+            boxShadow: "0 20px 50px rgba(124,72,16,0.16)",
           }}
         >
           {SOLAR_NAV_ITEMS.map((item) => {
@@ -708,40 +695,65 @@ function TrackerLayout({
                   )
                 }
                 style={{
-                  border: "none",
-                  background: active ? theme.secondary : "transparent",
-                  color: active ? "#ffffff" : `${theme.text}99`,
-                  borderRadius: "999px",
-                  padding: active ? (isMobile ? "9px 12px" : "12px 18px") : isMobile ? "9px 10px" : "12px 16px",
+                  position: "relative",
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: active ? theme.trackerAccent : "rgba(122, 82, 18, 0.48)",
+                  background: active ? "rgba(255,255,255,0.42)" : "transparent",
+                  border: active ? "1px solid rgba(230,126,34,0.22)" : "none",
+                  borderRadius: active ? "999px" : "0",
+                  padding: active ? (isMobile ? "9px 10px" : "14px 20px") : "0",
+                  marginTop: active ? (isMobile ? "-20px" : "-40px") : "0",
+                  minWidth: active ? (isMobile ? "58px" : "84px") : "auto",
                   display: "flex",
                   flexDirection: "column",
                   alignItems: "center",
                   justifyContent: "center",
                   gap: "4px",
-                  minWidth: isMobile ? "58px" : "86px",
-                  boxShadow: active ? "0 10px 24px rgba(230,126,34,0.18)" : "none",
+                  boxShadow: active ? "0 12px 24px rgba(230,126,34,0.16)" : "none",
+                  borderWidth: active ? "1px" : 0,
                 }}
               >
                 <span
                   className="material-symbols-outlined"
-                  style={{ fontSize: isMobile ? "20px" : "22px", fontVariationSettings: active ? "'FILL' 1" : undefined }}
+                  style={{
+                    fontSize: active ? (isMobile ? "24px" : "32px") : isMobile ? "20px" : "24px",
+                    fontVariationSettings: active ? "'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24" : undefined,
+                  }}
                 >
                   {item.icon}
                 </span>
                 <span
                   style={{
-                    fontSize: isMobile ? "9px" : "11px",
+                    fontSize: active ? (isMobile ? "7px" : "9px") : isMobile ? "7px" : "8px",
                     textTransform: "uppercase",
-                    letterSpacing: isMobile ? "0.08em" : "0.16em",
-                    fontWeight: active ? 700 : 500,
+                    letterSpacing: isMobile ? "0.06em" : "0.15em",
+                    marginTop: "4px",
                   }}
                 >
                   {item.label}
                 </span>
+                {active ? (
+                  <div
+                    style={{
+                      position: "absolute",
+                      top: isMobile ? "-2px" : "-4px",
+                      right: isMobile ? "6px" : "10px",
+                      width: isMobile ? "6px" : "8px",
+                      height: isMobile ? "6px" : "8px",
+                      borderRadius: "50%",
+                      background: theme.trackerAccent,
+                      boxShadow: "0 0 20px rgba(230,126,34,0.28)",
+                    }}
+                  />
+                ) : null}
               </button>
             );
           })}
         </nav>
+        ) : null}
       </div>
     );
   }
