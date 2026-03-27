@@ -26,6 +26,8 @@ import OutsiderGoalsPage from "./pages/outsider/GoalsPage";
 
 const PENDING_SIGNUP_PROFILE_KEY = "pendingSignupProfile";
 const PREFERRED_APP_EXPERIENCE_KEY = "preferredAppExperience";
+const TRACKER_DARK_MODE_KEY = "trackerDarkMode";
+const OUTSIDER_DARK_MODE_KEY = "outsiderDarkMode";
 const TRACKER_TUTORIAL_SEEN_KEY = "trackerTutorialSeen";
 const OUTSIDER_TUTORIAL_SEEN_KEY = "outsiderTutorialSeen";
 const DEFAULT_PUBLIC_APP_URL = "https://guide-to-the-galaxies.app";
@@ -270,9 +272,17 @@ function App() {
   const [entryId, setEntryId] = useState(null);
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState("");
-  const [darkMode, setDarkMode] = useState(() => {
-    const savedTheme = localStorage.getItem("darkMode");
+  const [trackerDarkMode, setTrackerDarkMode] = useState(() => {
+    const savedTheme = localStorage.getItem(TRACKER_DARK_MODE_KEY) ?? localStorage.getItem("darkMode");
     return savedTheme === null ? true : savedTheme === "true";
+  });
+  const [outsiderDarkMode, setOutsiderDarkMode] = useState(() => {
+    const savedTheme = localStorage.getItem(OUTSIDER_DARK_MODE_KEY);
+    if (savedTheme !== null) {
+      return savedTheme === "true";
+    }
+    const legacyTrackerTheme = localStorage.getItem(TRACKER_DARK_MODE_KEY) ?? localStorage.getItem("darkMode");
+    return legacyTrackerTheme === null ? true : legacyTrackerTheme === "true";
   });
   const [session, setSession] = useState(null);
   const [user, setUser] = useState(null);
@@ -286,6 +296,18 @@ function App() {
   const [appExperience, setAppExperience] = useState(
     () => localStorage.getItem(PREFERRED_APP_EXPERIENCE_KEY) || "tracker"
   );
+  const darkMode = appExperience === "outsider" ? outsiderDarkMode : trackerDarkMode;
+  const setDarkMode = (nextValue) => {
+    const apply = (currentValue) =>
+      typeof nextValue === "function" ? nextValue(currentValue) : nextValue;
+
+    if (appExperience === "outsider") {
+      setOutsiderDarkMode((currentValue) => apply(currentValue));
+      return;
+    }
+
+    setTrackerDarkMode((currentValue) => apply(currentValue));
+  };
   const [authEmail, setAuthEmail] = useState("");
   const [authPassword, setAuthPassword] = useState("");
   const [authConfirmPassword, setAuthConfirmPassword] = useState("");
@@ -505,7 +527,7 @@ function App() {
       setSecondaryDisplayName(data.secondary_display_name || "");
       setProfilePin(data.pin || "");
       setThemeFamily(data.tracker_theme_family || "galaxy");
-      setDarkMode((data.tracker_mode || "dark") === "dark");
+      setTrackerDarkMode((data.tracker_mode || "dark") === "dark");
       const normalizedAreas = normalizeTrackedAreas(data.tracked_areas).length
         ? normalizeTrackedAreas(data.tracked_areas)
         : fallbackAreas;
@@ -595,7 +617,7 @@ function App() {
       display_name: displayName.trim(),
       secondary_display_name: secondaryDisplayName.trim() || null,
       tracker_theme_family: themeFamily,
-      tracker_mode: darkMode ? "dark" : "light",
+      tracker_mode: trackerDarkMode ? "dark" : "light",
       pin: profilePin,
       updated_at: new Date().toISOString(),
     };
@@ -626,7 +648,7 @@ function App() {
       display_name: displayName.trim() || "Stargazer",
       secondary_display_name: secondaryDisplayName.trim() || null,
       tracker_theme_family: themeFamily,
-      tracker_mode: darkMode ? "dark" : "light",
+      tracker_mode: trackerDarkMode ? "dark" : "light",
       tracked_areas: normalizedAreas,
       pin: profilePin || "0000",
       updated_at: new Date().toISOString(),
@@ -842,7 +864,7 @@ function App() {
         display_name: displayName.trim() || "Stargazer",
         secondary_display_name: secondaryDisplayName.trim() || null,
         tracker_theme_family: themeFamily,
-        tracker_mode: darkMode ? "dark" : "light",
+        tracker_mode: trackerDarkMode ? "dark" : "light",
         pin: nextPin,
         updated_at: new Date().toISOString(),
       });
@@ -900,7 +922,7 @@ function App() {
       display_name: displayName.trim() || "Stargazer",
       secondary_display_name: secondaryDisplayName.trim() || null,
       tracker_theme_family: themeFamily,
-      tracker_mode: darkMode ? "dark" : "light",
+      tracker_mode: trackerDarkMode ? "dark" : "light",
       pin: nextPin,
       updated_at: new Date().toISOString(),
     });
@@ -1005,7 +1027,7 @@ function App() {
     );
 
     setThemeFamily(signupThemeFamily);
-    setDarkMode(signupMode === "dark");
+    setTrackerDarkMode(signupMode === "dark");
     setAuthMode("login");
     setSignupStep(1);
     setAuthPassword("");
@@ -3046,8 +3068,13 @@ function App() {
   }, [appExperience, outsiderPage, user]);
 
   useEffect(() => {
-    localStorage.setItem("darkMode", darkMode);
-  }, [darkMode]);
+    localStorage.setItem(TRACKER_DARK_MODE_KEY, String(trackerDarkMode));
+    localStorage.setItem("darkMode", String(trackerDarkMode));
+  }, [trackerDarkMode]);
+
+  useEffect(() => {
+    localStorage.setItem(OUTSIDER_DARK_MODE_KEY, String(outsiderDarkMode));
+  }, [outsiderDarkMode]);
 
   useEffect(() => {
     localStorage.setItem(PREFERRED_APP_EXPERIENCE_KEY, appExperience);
@@ -3814,6 +3841,112 @@ function App() {
 
       to {
         transform: rotate(-360deg);
+      }
+    }
+
+    .reef-caustics {
+      animation: reef-caustics 8s ease-in-out infinite;
+      transform-origin: center;
+    }
+
+    .reef-float {
+      animation: reef-float 6s ease-in-out infinite;
+    }
+
+    .reef-float-slow {
+      animation: reef-float-slow 10s ease-in-out infinite;
+    }
+
+    .reef-sway {
+      animation: reef-sway 4s ease-in-out infinite;
+      transform-origin: center;
+    }
+
+    .reef-drift {
+      animation: reef-drift 20s linear infinite;
+    }
+
+    .reef-pulse-soft {
+      animation: reef-pulse-soft 4s ease-in-out infinite;
+    }
+
+    .reef-waveform-primary {
+      stroke-dasharray: 900;
+      stroke-dashoffset: 900;
+      animation: reef-waveform-draw 5s linear infinite, reef-pulse-soft 4s ease-in-out infinite;
+    }
+
+    .reef-waveform-secondary {
+      stroke-dasharray: 900;
+      stroke-dashoffset: 900;
+      animation: reef-waveform-draw 6.5s linear infinite;
+    }
+
+    @keyframes reef-float {
+      0%, 100% {
+        transform: translateY(0px);
+      }
+
+      50% {
+        transform: translateY(-20px);
+      }
+    }
+
+    @keyframes reef-float-slow {
+      0%, 100% {
+        transform: translateY(0px);
+      }
+
+      50% {
+        transform: translateY(-12px);
+      }
+    }
+
+    @keyframes reef-sway {
+      0%, 100% {
+        transform: rotate(-2deg);
+      }
+
+      50% {
+        transform: rotate(2deg);
+      }
+    }
+
+    @keyframes reef-caustics {
+      0%, 100% {
+        opacity: 0.3;
+        transform: scale(1) translate(0, 0);
+      }
+
+      50% {
+        opacity: 0.6;
+        transform: scale(1.08) translate(2%, 2%);
+      }
+    }
+
+    @keyframes reef-drift {
+      0% {
+        transform: translateX(-10%);
+      }
+
+      100% {
+        transform: translateX(110%);
+      }
+    }
+
+    @keyframes reef-pulse-soft {
+      0%, 100% {
+        opacity: 0.4;
+      }
+
+      50% {
+        opacity: 0.7;
+      }
+    }
+
+    @keyframes reef-waveform-draw {
+      to {
+        stroke-dashoffset: 0;
       }
     }
 
@@ -5188,33 +5321,34 @@ const themeFamilyOverrides = {
     light: {
       themeFamily: "underwater",
       pageBackground:
-        "radial-gradient(circle at 16% 20%, rgba(169,232,244,0.76) 0%, rgba(169,232,244,0) 20%), radial-gradient(circle at 78% 18%, rgba(146,198,255,0.42) 0%, rgba(146,198,255,0) 26%), radial-gradient(circle at 60% 74%, rgba(214,249,255,0.46) 0%, rgba(214,249,255,0) 28%), radial-gradient(circle at 36% 88%, rgba(196,241,255,0.26) 0%, rgba(196,241,255,0) 22%), linear-gradient(180deg, #edfafd 0%, #dcf2fb 34%, #d7ecf7 68%, #e7f8fc 100%)",
+        "radial-gradient(circle at 18% 16%, rgba(255,140,148,0.18) 0%, rgba(255,140,148,0) 18%), radial-gradient(circle at 82% 18%, rgba(79,209,217,0.18) 0%, rgba(79,209,217,0) 22%), radial-gradient(circle at 50% 48%, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0) 36%), linear-gradient(180deg, #007a7c 0%, #004d4f 42%, #001f21 100%)",
       heroBackground:
-        "radial-gradient(circle at 20% 18%, rgba(255,255,255,0.24) 0%, rgba(255,255,255,0) 22%), linear-gradient(145deg, rgba(238,252,255,0.98) 0%, rgba(223,244,250,0.94) 55%, rgba(214,235,247,0.94) 100%)",
+        "linear-gradient(135deg, rgba(79, 209, 217, 0.4) 0%, rgba(0, 77, 79, 0.8) 100%)",
       cardBackground:
-        "radial-gradient(circle at 82% 24%, rgba(179,235,246,0.22) 0%, rgba(179,235,246,0) 26%), linear-gradient(180deg, rgba(242,253,255,0.95) 0%, rgba(226,246,251,0.92) 100%)",
-      text: "#1f3d48",
-      subtleText: "#426675",
-      faintText: "#628291",
-      inputBackground: "rgba(247,254,255,0.9)",
-      inputBorder: "#b6dbe7",
-      itemBackground: "rgba(228,248,252,0.86)",
-      softButtonBackground: "linear-gradient(180deg, #d6f5f9 0%, #beeaf2 100%)",
-      softButtonText: "#25596a",
-      navInactive: "rgba(224,246,250,0.78)",
-      navActive: "linear-gradient(135deg, #58c6d8 0%, #4f9fe6 100%)",
-      navText: "#1f5364",
-      toggleText: "#0f4856",
-      primary: "linear-gradient(135deg, #58c6d8 0%, #4f9fe6 100%)",
-      toggleBackground: "linear-gradient(135deg, #66d8e6 0%, #4f9fe6 100%)",
-      border: "1px solid rgba(112,184,205,0.22)",
-      shadow: "0 22px 36px rgba(93,165,198,0.16)",
-      heroShadow: "0 28px 48px rgba(92,160,194,0.18)",
-      glow: "rgba(88, 198, 216, 0.28)",
-      track: "#c9eaf2",
-      chartSurface: "rgba(239,252,255,0.78)",
-      chartGrid: "rgba(84,139,158,0.14)",
-      chartLabel: "#4d7281",
+        "linear-gradient(135deg, rgba(79, 209, 217, 0.4) 0%, rgba(0, 77, 79, 0.8) 100%)",
+      text: "#ffffff",
+      subtleText: "rgba(255,255,255,0.82)",
+      faintText: "rgba(255,255,255,0.64)",
+      inputBackground: "rgba(255,255,255,0.1)",
+      inputBorder: "rgba(255,255,255,0.22)",
+      itemBackground: "rgba(255,255,255,0.12)",
+      softButtonBackground: "linear-gradient(135deg, rgba(255,140,148,0.5) 0%, rgba(179,27,37,0.7) 100%)",
+      softButtonText: "#ffffff",
+      navInactive: "rgba(255,255,255,0.12)",
+      navActive: "linear-gradient(135deg, rgba(79,209,217,0.42) 0%, rgba(0,77,79,0.88) 100%)",
+      navText: "#ffffff",
+      toggleText: "#053436",
+      primary: "linear-gradient(135deg, rgba(79,209,217,0.92) 0%, rgba(0,102,104,0.96) 100%)",
+      primaryText: "#ffffff",
+      toggleBackground: "linear-gradient(135deg, rgba(82,242,245,0.94) 0%, rgba(0,102,104,0.92) 100%)",
+      border: "1px solid rgba(255,255,255,0.24)",
+      shadow: "0 12px 40px -10px rgba(0, 43, 44, 0.6)",
+      heroShadow: "0 12px 40px -10px rgba(0, 43, 44, 0.6)",
+      glow: "rgba(79,209,217,0.32)",
+      track: "rgba(255,255,255,0.16)",
+      chartSurface: "rgba(0,0,0,0.18)",
+      chartGrid: "rgba(255,255,255,0.18)",
+      chartLabel: "rgba(255,255,255,0.72)",
       heroRadius: "38px 28px 40px 26px / 28px 38px 30px 42px",
       featureRadius: "36px 26px 38px 24px / 28px 40px 30px 42px",
       sectionRadius: "34px 24px 36px 24px / 26px 38px 28px 40px",
@@ -5226,37 +5360,70 @@ const themeFamilyOverrides = {
       observerBorder: "1px solid rgba(113,178,197,0.18)",
       observerShadow: "0 18px 28px rgba(91,152,181,0.14)",
       observerRadius: "18px",
+      trackerReef: true,
+      trackerHeadingFamily: "'Epilogue', 'Segoe UI', sans-serif",
+      trackerBodyFamily: "'Newsreader', serif",
+      trackerUiFamily: "'Epilogue', 'Segoe UI', sans-serif",
+      trackerAccent: "#4fd1d9",
+      trackerAccentSoft: "#ff8c94",
+      trackerError: "#ff8c94",
+      trackerGlassBackground: "rgba(255,255,255,0.12)",
+      trackerReefBackground:
+        "radial-gradient(circle at center, #007a7c 0%, #004d4f 40%, #001f21 100%)",
+      trackerReefCaustics:
+        "linear-gradient(135deg, rgba(255,255,255,0.1) 0%, transparent 50%, rgba(255,255,255,0.1) 100%)",
+      trackerReefGlow:
+        "radial-gradient(circle at 18% 78%, rgba(255,140,148,0.16) 0%, rgba(255,140,148,0) 28%), radial-gradient(circle at 78% 22%, rgba(79,209,217,0.18) 0%, rgba(79,209,217,0) 30%), radial-gradient(circle at 50% 50%, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0) 34%)",
+      trackerReefPanelTeal:
+        "linear-gradient(135deg, rgba(79, 209, 217, 0.4) 0%, rgba(0, 77, 79, 0.8) 100%)",
+      trackerReefPanelPink:
+        "linear-gradient(135deg, rgba(255, 140, 148, 0.5) 0%, rgba(179, 27, 37, 0.7) 100%)",
+      trackerReefPanelPeach:
+        "linear-gradient(135deg, rgba(255, 179, 138, 0.6) 0%, rgba(160, 58, 15, 0.8) 100%)",
+      trackerReefPanelBorder: "rgba(255,255,255,0.28)",
+      trackerReefMutedBorder: "rgba(255,255,255,0.16)",
+      trackerReefChipText: "#ffffff",
+      chartPalette: {
+        mood: "#ff8c94",
+        focus: "#4fd1d9",
+        energy: "#ffb38a",
+        meals: "#4fd1d9",
+        meds: "#ff8c94",
+        hygiene: "#ffffff",
+        exercise: "#ffb38a",
+      },
     },
     dark: {
       themeFamily: "underwater",
       pageBackground:
-        "radial-gradient(circle at 14% 18%, rgba(47,148,179,0.3) 0%, rgba(47,148,179,0) 22%), radial-gradient(circle at 82% 16%, rgba(63,124,201,0.26) 0%, rgba(63,124,201,0) 22%), radial-gradient(circle at 58% 76%, rgba(63,197,191,0.16) 0%, rgba(63,197,191,0) 28%), radial-gradient(circle at 30% 86%, rgba(135,223,255,0.08) 0%, rgba(135,223,255,0) 18%), linear-gradient(180deg, #06141d 0%, #0b202d 30%, #0d2938 56%, #103344 100%)",
+        "radial-gradient(circle at 50% 8%, rgba(4,42,50,0.54) 0%, rgba(4,42,50,0) 28%), radial-gradient(circle at 22% 20%, rgba(0,107,118,0.16) 0%, rgba(0,107,118,0) 26%), radial-gradient(circle at 82% 18%, rgba(217,70,239,0.08) 0%, rgba(217,70,239,0) 18%), linear-gradient(180deg, #02080a 0%, #041014 34%, #031116 66%, #02090b 100%)",
       heroBackground:
-        "radial-gradient(circle at 82% 20%, rgba(88,210,215,0.16) 0%, rgba(88,210,215,0) 24%), linear-gradient(145deg, rgba(11,34,46,0.96) 0%, rgba(15,48,63,0.93) 55%, rgba(22,61,79,0.9) 100%)",
+        "radial-gradient(circle at 84% 16%, rgba(34,211,238,0.12) 0%, rgba(34,211,238,0) 22%), linear-gradient(145deg, rgba(3,16,19,0.98) 0%, rgba(4,22,28,0.94) 55%, rgba(6,30,38,0.92) 100%)",
       cardBackground:
-        "radial-gradient(circle at 18% 18%, rgba(69,175,193,0.14) 0%, rgba(69,175,193,0) 26%), linear-gradient(180deg, rgba(11,28,40,0.94) 0%, rgba(18,42,56,0.9) 100%)",
-      text: "#ecfbff",
-      subtleText: "#bedce5",
-      faintText: "#90b7c3",
-      inputBackground: "rgba(8,25,34,0.9)",
-      inputBorder: "#285267",
-      itemBackground: "rgba(14,38,50,0.84)",
-      softButtonBackground: "linear-gradient(180deg, #174359 0%, #12384c 100%)",
-      softButtonText: "#eefcff",
-      navInactive: "rgba(20,50,67,0.76)",
-      navActive: "linear-gradient(135deg, #2f8ccf 0%, #47d1c8 100%)",
-      navText: "#eafcff",
-      primary: "linear-gradient(135deg, #2f8ccf 0%, #47d1c8 100%)",
-      toggleBackground: "linear-gradient(135deg, #2f8ccf 0%, #47d1c8 100%)",
-      toggleText: "#07202a",
-      border: "1px solid rgba(90,166,190,0.16)",
-      shadow: "0 24px 42px rgba(1,14,21,0.42)",
-      heroShadow: "0 30px 58px rgba(0,12,18,0.44)",
-      glow: "rgba(71, 209, 200, 0.24)",
-      track: "#1c4759",
-      chartSurface: "rgba(8,24,34,0.76)",
-      chartGrid: "rgba(121,185,206,0.14)",
-      chartLabel: "#b6d9e4",
+        "radial-gradient(circle at 18% 18%, rgba(34,211,238,0.1) 0%, rgba(34,211,238,0) 22%), linear-gradient(180deg, rgba(3,18,22,0.92) 0%, rgba(3,21,26,0.88) 100%)",
+      text: "#e2f8f9",
+      subtleText: "rgba(226,248,249,0.72)",
+      faintText: "rgba(226,248,249,0.38)",
+      inputBackground: "rgba(2,18,22,0.72)",
+      inputBorder: "rgba(34,211,238,0.18)",
+      itemBackground: "rgba(1,15,18,0.54)",
+      softButtonBackground: "linear-gradient(180deg, rgba(4,29,35,0.94) 0%, rgba(1,18,22,0.98) 100%)",
+      softButtonText: "#e2f8f9",
+      navInactive: "rgba(1,15,18,0.78)",
+      navActive: "linear-gradient(135deg, rgba(34,211,238,0.16) 0%, rgba(0,77,82,0.62) 100%)",
+      navText: "rgba(226,248,249,0.7)",
+      primary: "linear-gradient(135deg, rgba(34,211,238,0.96) 0%, rgba(24,176,210,0.88) 100%)",
+      primaryText: "#021114",
+      toggleBackground: "linear-gradient(135deg, rgba(34,211,238,0.94) 0%, rgba(20,143,175,0.88) 100%)",
+      toggleText: "#021114",
+      border: "1px solid rgba(255,255,255,0.05)",
+      shadow: "0 10px 40px -10px rgba(0,0,0,0.5)",
+      heroShadow: "0 20px 54px rgba(0,0,0,0.44)",
+      glow: "rgba(34,211,238,0.24)",
+      track: "rgba(0,77,82,0.48)",
+      chartSurface: "rgba(1,15,18,0.64)",
+      chartGrid: "rgba(34,211,238,0.14)",
+      chartLabel: "rgba(226,248,249,0.62)",
       heroRadius: "40px 28px 42px 28px / 30px 42px 32px 44px",
       featureRadius: "36px 26px 40px 26px / 28px 40px 30px 42px",
       sectionRadius: "34px 24px 38px 24px / 26px 40px 30px 42px",
@@ -5268,6 +5435,37 @@ const themeFamilyOverrides = {
       observerBorder: "1px solid rgba(82,149,170,0.16)",
       observerShadow: "0 18px 30px rgba(3,13,20,0.28)",
       observerRadius: "18px",
+      trackerAbyss: true,
+      trackerHeadingFamily: "'Newsreader', serif",
+      trackerBodyFamily: "'Newsreader', serif",
+      trackerUiFamily: "'Space Grotesk', 'Segoe UI', sans-serif",
+      trackerAccent: "#22d3ee",
+      trackerAccentSoft: "#d946ef",
+      trackerError: "#d946ef",
+      trackerGlassBackground: "rgba(1, 15, 18, 0.4)",
+      trackerAbyssBackground:
+        "radial-gradient(circle at 50% 10%, #031c21 0%, #02080a 80%)",
+      trackerAbyssRays:
+        "linear-gradient(105deg, transparent 20%, rgba(34,211,238,0.03) 25%, transparent 30%, rgba(34,211,238,0.01) 40%, transparent 50%, rgba(34,211,238,0.04) 60%, transparent 70%)",
+      trackerAbyssGlow:
+        "radial-gradient(circle at 50% 44%, rgba(3,28,33,0.26) 0%, rgba(3,28,33,0) 52%), radial-gradient(circle at 78% 20%, rgba(34,211,238,0.08) 0%, rgba(34,211,238,0) 22%), radial-gradient(circle at 80% 72%, rgba(217,70,239,0.06) 0%, rgba(217,70,239,0) 20%)",
+      trackerAbyssPanel: "rgba(1, 15, 18, 0.4)",
+      trackerAbyssPanelStrong: "rgba(1, 15, 18, 0.58)",
+      trackerAbyssPanelBorder: "rgba(255,255,255,0.05)",
+      trackerAbyssMutedBorder: "rgba(34,211,238,0.14)",
+      trackerAbyssDepthText: "rgba(226,248,249,0.26)",
+      trackerAbyssTealDark: "#004d52",
+      trackerAbyssSnow:
+        "radial-gradient(circle at 12% 18%, rgba(255,255,255,0.15) 0 1px, transparent 1.6px), radial-gradient(circle at 32% 62%, rgba(255,255,255,0.08) 0 1.1px, transparent 1.8px), radial-gradient(circle at 74% 26%, rgba(34,211,238,0.12) 0 1px, transparent 1.7px), radial-gradient(circle at 84% 72%, rgba(217,70,239,0.1) 0 1px, transparent 1.7px), radial-gradient(circle at 62% 84%, rgba(255,255,255,0.08) 0 1px, transparent 1.6px)",
+      chartPalette: {
+        mood: "#22d3ee",
+        focus: "#7de8f5",
+        energy: "#d946ef",
+        meals: "#32d4ff",
+        meds: "#d946ef",
+        hygiene: "#88fff0",
+        exercise: "#59e4d5",
+      },
     },
   },
   forest: {
@@ -5495,6 +5693,164 @@ function getTrackerExperienceTheme(theme, isDarkMode) {
 }
 
 function getObserverExperienceTheme(theme, isDarkMode) {
+  if (theme.themeFamily === "underwater") {
+    return isDarkMode
+      ? {
+          ...theme,
+          observerConsole: false,
+          observerAbyssBridge: true,
+          pageBackground:
+            "linear-gradient(180deg, #01080a 0%, #020b0d 28%, #020305 100%)",
+          heroBackground:
+            "linear-gradient(180deg, rgba(32, 37, 42, 0.98) 0%, rgba(22, 25, 29, 0.98) 100%)",
+          observerHeroBackground:
+            "linear-gradient(180deg, rgba(30, 34, 38, 0.98) 0%, rgba(17, 20, 23, 0.99) 100%)",
+          cardBackground:
+            "linear-gradient(180deg, rgba(38, 43, 48, 0.98) 0%, rgba(25, 29, 33, 0.99) 100%)",
+          observerCardBackground:
+            "linear-gradient(180deg, rgba(38, 43, 48, 0.99) 0%, rgba(22, 25, 29, 0.995) 100%)",
+          itemBackground: "rgba(42,45,49,0.96)",
+          inputBackground: "rgba(1,2,3,0.96)",
+          inputBorder: "#33373b",
+          softButtonBackground: "linear-gradient(180deg, #35393e 0%, #1f2327 100%)",
+          softButtonText: "#d5e5e7",
+          primary: "linear-gradient(180deg, #22d3ee 0%, #008ba3 100%)",
+          primaryText: "#021518",
+          navInactive: "linear-gradient(180deg, rgba(43,46,50,0.98) 0%, rgba(24,27,30,0.98) 100%)",
+          navActive: "linear-gradient(180deg, #22d3ee 0%, #008ba3 100%)",
+          navText: "#dff7f8",
+          text: "#e2f8f9",
+          subtleText: "#95b0b4",
+          faintText: "#607a7d",
+          border: "1px solid rgba(61, 66, 71, 0.92)",
+          observerBorder: "1px solid rgba(61, 66, 71, 0.98)",
+          shadow: "10px 15px 40px rgba(0,0,0,0.85)",
+          observerShadow:
+            "inset 1px 1px 2px rgba(255,255,255,0.15), inset -1px -1px 3px rgba(0,0,0,0.6), 10px 15px 40px rgba(0,0,0,0.85)",
+          glow: "rgba(34, 211, 238, 0.18)",
+          track: "#151719",
+          chartSurface: "rgba(1,2,3,0.94)",
+          chartGrid: "rgba(96,122,125,0.2)",
+          chartLabel: "#95b0b4",
+          chartPalette: {
+            mood: "#22d3ee",
+            focus: "#ffd709",
+            energy: "#ff716c",
+            meals: "#7ce8f8",
+            meds: "#ff51fa",
+            hygiene: "#95b0b4",
+            exercise: "#00f4fe",
+          },
+          observerRadius: "8px",
+          heroRadius: "8px",
+          featureRadius: "8px",
+          sectionRadius: "8px",
+          heroShadow: "10px 15px 40px rgba(0,0,0,0.85)",
+          observerAccent: "#22d3ee",
+          observerAccentAlt: "#ff51fa",
+          observerAlert: "#ff716c",
+          observerPanelFrame:
+            "linear-gradient(180deg, rgba(42,45,49,0.98) 0%, rgba(18,20,22,0.995) 100%)",
+          observerChrome:
+            "linear-gradient(180deg, rgba(33,36,40,0.98) 0%, rgba(18,20,22,0.995) 100%)",
+          observerChartMode: "stepped",
+          observerFontFamily: "'Manrope', 'Segoe UI', sans-serif",
+          observerHeadingFamily: "'Epilogue', 'Segoe UI', sans-serif",
+          observerUiFamily: "'Space Grotesk', 'Segoe UI', sans-serif",
+          observerIndustrialPanel:
+            "linear-gradient(170deg, rgba(255,255,255,0.08) 0%, transparent 40%, rgba(0,0,0,0.3) 100%), repeating-linear-gradient(90deg, transparent, transparent 2px, rgba(255,255,255,0.02) 2px, rgba(255,255,255,0.02) 4px), linear-gradient(180deg, #2a2d31 0%, #24272b 100%)",
+          observerIndustrialPanelBase: "#2a2d31",
+          observerIndustrialBorder: "#3d4247",
+          observerIndustrialShadow:
+            "inset 1px 1px 2px rgba(255,255,255,0.15), inset -1px -1px 3px rgba(0,0,0,0.6), 10px 15px 40px rgba(0,0,0,0.85)",
+          observerIndustrialEdge: "#33373b",
+          observerIndustrialBottomEdge: "#121416",
+          observerIndustrialText: "#e2f8f9",
+          observerIndustrialMuted: "#95b0b4",
+          observerIndustrialRivet: "#8c9196",
+          observerIndustrialRust: "rgba(101, 53, 15, 0.5)",
+          observerIndustrialWell: "#010203",
+          observerIndustrialBeam: "#2a2d31",
+        }
+      : {
+          ...theme,
+          observerConsole: false,
+          observerAbyssBridge: true,
+          pageBackground:
+            "linear-gradient(180deg, #f7f0e6 0%, #e9e1d7 40%, #dbd3c8 100%)",
+          heroBackground:
+            "linear-gradient(180deg, rgba(233,225,215,0.98) 0%, rgba(219,211,200,0.98) 100%)",
+          observerHeroBackground:
+            "linear-gradient(180deg, rgba(238,231,221,0.99) 0%, rgba(219,211,200,0.99) 100%)",
+          cardBackground:
+            "linear-gradient(180deg, rgba(233,225,215,0.98) 0%, rgba(219,211,200,0.99) 100%)",
+          observerCardBackground:
+            "linear-gradient(180deg, rgba(238,231,221,0.99) 0%, rgba(219,211,200,0.995) 100%)",
+          itemBackground: "rgba(233,225,215,0.96)",
+          inputBackground: "rgba(255,255,255,0.92)",
+          inputBorder: "#9d958b",
+          softButtonBackground: "linear-gradient(180deg, #ebe3d8 0%, #cfc5b8 100%)",
+          softButtonText: "#2f3436",
+          primary: "linear-gradient(180deg, #4fd1d9 0%, #006668 100%)",
+          primaryText: "#f4fffe",
+          navInactive: "linear-gradient(180deg, rgba(239,233,225,0.98) 0%, rgba(217,208,198,0.98) 100%)",
+          navActive: "linear-gradient(180deg, #4fd1d9 0%, #006668 100%)",
+          navText: "#273537",
+          text: "#312e28",
+          subtleText: "#5f5b54",
+          faintText: "#7b766f",
+          border: "1px solid rgba(144, 137, 129, 0.7)",
+          observerBorder: "1px solid rgba(144, 137, 129, 0.82)",
+          shadow: "10px 15px 32px rgba(98,84,62,0.2)",
+          observerShadow:
+            "inset 1px 1px 2px rgba(255,255,255,0.46), inset -1px -1px 3px rgba(94,74,48,0.14), 10px 15px 32px rgba(98,84,62,0.2)",
+          glow: "rgba(79, 209, 217, 0.14)",
+          track: "#cfc5b8",
+          chartSurface: "rgba(255,255,255,0.82)",
+          chartGrid: "rgba(123,118,111,0.18)",
+          chartLabel: "#5f5b54",
+          chartPalette: {
+            mood: "#006668",
+            focus: "#a03a0f",
+            energy: "#ff8c94",
+            meals: "#4fd1d9",
+            meds: "#a900a9",
+            hygiene: "#7b766f",
+            exercise: "#00675f",
+          },
+          observerRadius: "8px",
+          heroRadius: "8px",
+          featureRadius: "8px",
+          sectionRadius: "8px",
+          heroShadow: "10px 15px 32px rgba(98,84,62,0.2)",
+          observerAccent: "#006668",
+          observerAccentAlt: "#a900a9",
+          observerAlert: "#b31b25",
+          observerPanelFrame:
+            "linear-gradient(180deg, rgba(233,225,215,0.98) 0%, rgba(214,204,194,0.995) 100%)",
+          observerChrome:
+            "linear-gradient(180deg, rgba(238,231,221,0.99) 0%, rgba(216,207,197,0.995) 100%)",
+          observerChartMode: "stepped",
+          observerFontFamily: "'Manrope', 'Segoe UI', sans-serif",
+          observerHeadingFamily: "'Epilogue', 'Segoe UI', sans-serif",
+          observerUiFamily: "'Space Grotesk', 'Segoe UI', sans-serif",
+          observerIndustrialPanel:
+            "linear-gradient(170deg, rgba(255,255,255,0.28) 0%, transparent 40%, rgba(125,108,87,0.12) 100%), repeating-linear-gradient(90deg, transparent, transparent 2px, rgba(95,91,84,0.03) 2px, rgba(95,91,84,0.03) 4px), linear-gradient(180deg, #ece3d7 0%, #d7cbbd 100%)",
+          observerIndustrialPanelBase: "#ece3d7",
+          observerIndustrialBorder: "#b2aca4",
+          observerIndustrialShadow:
+            "inset 1px 1px 2px rgba(255,255,255,0.52), inset -1px -1px 3px rgba(120,98,71,0.14), 10px 15px 30px rgba(119,100,72,0.18)",
+          observerIndustrialEdge: "#9d958b",
+          observerIndustrialBottomEdge: "#bdb3a6",
+          observerIndustrialText: "#312e28",
+          observerIndustrialMuted: "#5f5b54",
+          observerIndustrialRivet: "#a29c94",
+          observerIndustrialRust: "rgba(160, 58, 15, 0.24)",
+          observerIndustrialWell: "#f8f3ed",
+          observerIndustrialBeam: "#d9cfc3",
+        };
+  }
+
   if (theme.themeFamily !== "galaxy") {
     return {
       ...theme,
@@ -5584,7 +5940,7 @@ function getObserverExperienceTheme(theme, isDarkMode) {
     inputBorder: "#74848b",
     softButtonBackground: "linear-gradient(180deg, #c6cfd4 0%, #aab6bc 100%)",
     softButtonText: "#22343a",
-    primary: "linear-gradient(180deg, #ffc54f 0%, #e09018 100%)",
+    primary: "linear-gradient(180deg, #f2b545 0%, #c97a12 100%)",
     primaryText: "#241506",
     navInactive: "linear-gradient(180deg, rgba(202,209,213,0.98) 0%, rgba(178,187,192,0.98) 100%)",
     navActive: "linear-gradient(180deg, #ffc54f 0%, #e09018 100%)",
@@ -5597,27 +5953,27 @@ function getObserverExperienceTheme(theme, isDarkMode) {
     shadow: "0 18px 30px rgba(68,79,88,0.14)",
     observerShadow:
       "inset 0 2px 4px rgba(100,111,119,0.22), 0 18px 28px rgba(68,79,88,0.12)",
-    glow: "rgba(255, 197, 79, 0.18)",
+    glow: "rgba(199, 123, 17, 0.18)",
     track: "#c6d0d3",
     chartSurface: "rgba(243,245,245,0.96)",
     chartGrid: "rgba(90, 105, 113, 0.2)",
     chartLabel: "#486067",
     chartPalette: {
-      mood: "#c77b11",
-      focus: "#1b8a69",
-      energy: "#b44a35",
-      meals: "#2c9ba1",
-      meds: "#d76740",
-      hygiene: "#8766c9",
-      exercise: "#4c7d2e",
+      mood: "#ad6b0e",
+      focus: "#176f5b",
+      energy: "#a64633",
+      meals: "#267f97",
+      meds: "#c45735",
+      hygiene: "#4f6ea8",
+      exercise: "#456f2a",
     },
     observerRadius: "14px",
     heroRadius: "14px",
     featureRadius: "14px",
     sectionRadius: "14px",
     heroShadow: "0 18px 30px rgba(80,90,100,0.14)",
-    observerAccent: "#ffc54f",
-    observerAccentAlt: "#1b8a69",
+    observerAccent: "#c77b11",
+    observerAccentAlt: "#176f5b",
     observerAlert: "#bf5544",
     observerPanelFrame:
       "linear-gradient(180deg, rgba(193,201,206,0.98) 0%, rgba(165,175,182,0.98) 100%)",
@@ -5631,6 +5987,10 @@ function getObserverExperienceTheme(theme, isDarkMode) {
 
 function isSpaceConsoleTheme(theme) {
   return Boolean(theme?.observerConsole && theme?.themeFamily === "galaxy");
+}
+
+function isAbyssOutsiderTheme(theme) {
+  return Boolean(theme?.observerAbyssBridge && theme?.themeFamily === "underwater");
 }
 
 function isObservatoryTrackerTheme(theme) {
@@ -6531,13 +6891,17 @@ const chartStackStyle = {
 
 const chartCardStyle = (theme) => ({
   background: isSpaceConsoleTheme(theme)
-    ? "linear-gradient(180deg, rgba(7,10,17,0.95) 0%, rgba(13,18,28,0.98) 100%)"
+    ? theme.modeName === "Solar"
+      ? "linear-gradient(180deg, rgba(245, 239, 227, 0.98) 0%, rgba(225, 217, 203, 0.995) 100%)"
+      : "linear-gradient(180deg, rgba(7,10,17,0.95) 0%, rgba(13,18,28,0.98) 100%)"
     : `linear-gradient(160deg, ${theme.chartSurface} 0%, rgba(255,255,255,0.03) 100%)`,
   borderRadius: isSpaceConsoleTheme(theme) ? "12px" : "22px",
   padding: "18px",
   border: isSpaceConsoleTheme(theme) ? theme.observerBorder || theme.border : theme.border,
   boxShadow: isSpaceConsoleTheme(theme)
-    ? "inset 0 2px 4px rgba(0,0,0,0.52), 0 12px 24px rgba(0,0,0,0.18)"
+    ? theme.modeName === "Solar"
+      ? "inset 0 1px 0 rgba(255,255,255,0.35), 0 12px 24px rgba(116,100,78,0.12)"
+      : "inset 0 2px 4px rgba(0,0,0,0.52), 0 12px 24px rgba(0,0,0,0.18)"
     : `${theme.shadow}, 0 16px 30px ${theme.glow}`,
 });
 

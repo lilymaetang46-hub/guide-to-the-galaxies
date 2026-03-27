@@ -26,12 +26,27 @@ function getSignalBars(value) {
 function telemetryPanelStyle(theme, accent = "primary") {
   const accentColor =
     accent === "warning" ? "#fd8b00" : accent === "neutral" ? "#929095" : theme.observerAccent;
+  const isSolarMode = theme.modeName === "Solar";
 
   return {
-    background: accent === "warning" ? "rgba(253, 139, 0, 0.1)" : "rgba(0,0,0,0.22)",
+    background:
+      accent === "warning"
+        ? isSolarMode
+          ? "linear-gradient(180deg, rgba(240, 210, 169, 0.96) 0%, rgba(214, 183, 141, 0.99) 100%)"
+          : "linear-gradient(180deg, rgba(79, 53, 25, 0.94) 0%, rgba(43, 28, 15, 0.98) 100%)"
+        : isSolarMode
+        ? "linear-gradient(180deg, rgba(241, 235, 224, 0.98) 0%, rgba(215, 208, 198, 0.995) 100%)"
+        : "linear-gradient(180deg, rgba(33, 45, 61, 0.96) 0%, rgba(16, 23, 35, 0.985) 100%)",
     border: `1px solid ${accent === "warning" ? "rgba(253, 139, 0, 0.35)" : `${accentColor}26`}`,
     padding: "16px",
     minHeight: 0,
+    borderRadius: "16px",
+    boxShadow: isSolarMode
+      ? "inset 0 1px 0 rgba(255,255,255,0.3), 0 12px 20px rgba(122,104,78,0.12)"
+      : "inset 0 1px 0 rgba(255,255,255,0.05), 0 14px 24px rgba(0,0,0,0.16)",
+    position: "relative",
+    overflow: "hidden",
+    isolation: "isolate",
   };
 }
 
@@ -219,12 +234,29 @@ function OutsiderTrackerDataPage({ app }) {
     1,
     ...latestChartWindow.map((item) => Math.max(item.medsCount ?? 0, item.medsTaken ?? 0))
   );
+  const warningTextColor = theme.modeName === "Solar" ? "#9a5710" : "#fd8b00";
 
   if (theme.observerConsole) {
+    const panelChrome = (accent = "primary") => ({
+      position: "absolute",
+      inset: 0,
+      pointerEvents: "none",
+      zIndex: 0,
+      background:
+        accent === "warning"
+          ? "linear-gradient(90deg, rgba(255,171,92,0.22) 0%, rgba(255,171,92,0.04) 14%, rgba(0,0,0,0) 26%), linear-gradient(180deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0) 16%)"
+          : "linear-gradient(90deg, rgba(111,196,255,0.18) 0%, rgba(111,196,255,0.04) 14%, rgba(0,0,0,0) 26%), linear-gradient(180deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0) 16%)",
+    });
     const mobileTelemetryCardStyle = {
-      background: "rgba(0,0,0,0.16)",
+      background:
+        theme.modeName === "Solar"
+          ? "linear-gradient(180deg, rgba(241, 235, 224, 0.98) 0%, rgba(215, 208, 198, 0.995) 100%)"
+          : "linear-gradient(180deg, rgba(33, 45, 61, 0.94) 0%, rgba(16, 23, 35, 0.98) 100%)",
       border: `1px solid ${theme.observerAccent}22`,
       padding: "14px",
+      borderRadius: "16px",
+      position: "relative",
+      overflow: "hidden",
     };
 
     return (
@@ -237,6 +269,7 @@ function OutsiderTrackerDataPage({ app }) {
           }}
         >
           <div style={telemetryPanelStyle(theme)}>
+            <div style={panelChrome()} />
             <div style={{ display: "flex", justifyContent: "space-between", gap: "12px", marginBottom: "18px" }}>
               <span style={labelStyle()}>[01] MOOD_TREND_ANALYTICS</span>
               <span style={labelStyle(theme.observerAccent)}>SIGMA_V.04</span>
@@ -295,6 +328,7 @@ function OutsiderTrackerDataPage({ app }) {
 
           <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
             <div style={telemetryPanelStyle(theme)}>
+              <div style={panelChrome()} />
               <span style={labelStyle()}>[02] SIGNAL_STRENGTH</span>
               <div style={{ display: "grid", gap: "14px", marginTop: "16px" }}>
                 {[
@@ -325,19 +359,19 @@ function OutsiderTrackerDataPage({ app }) {
             </div>
 
             <div style={telemetryPanelStyle(theme, "warning")}>
-              <span style={labelStyle("#fd8b00")}>[03] CORE_TEMP_WARNING</span>
+              <span style={labelStyle(warningTextColor)}>[03] CORE_TEMP_WARNING</span>
               <div style={{ display: "flex", alignItems: "baseline", gap: "8px", marginTop: "10px" }}>
                 <p
                   style={{
                     margin: 0,
                     fontFamily: "Newsreader, serif",
                     fontSize: "clamp(1.4rem, 3vw, 2rem)",
-                    color: "#fd8b00",
+                    color: warningTextColor,
                   }}
                 >
                   {selectedOutsiderPermissions.mood ? "Over_Nominal" : "Standby"}
                 </p>
-                <span className="material-symbols-outlined" style={{ color: "#fd8b00", fontSize: "18px" }}>
+                <span className="material-symbols-outlined" style={{ color: warningTextColor, fontSize: "18px" }}>
                   warning
                 </span>
               </div>
@@ -415,6 +449,7 @@ function OutsiderTrackerDataPage({ app }) {
               {wellbeingSeries.length > 0 ? (
                 isMobile ? (
                   <div style={mobileTelemetryCardStyle}>
+                    <div style={panelChrome()} />
                     <p style={labelStyle(theme.observerAccent)}>WELLBEING_TREND</p>
                     <div style={mobileChartScrollerStyle(theme)}>
                       <div style={{ minWidth: "560px" }}>
@@ -446,6 +481,7 @@ function OutsiderTrackerDataPage({ app }) {
               {routineSeries.length > 0 ? (
                 isMobile ? (
                   <div style={mobileTelemetryCardStyle}>
+                    <div style={panelChrome()} />
                     <p style={labelStyle(theme.observerAccent)}>DAILY_ROUTINES</p>
                     <div style={mobileChartScrollerStyle(theme)}>
                       <div style={{ minWidth: "560px" }}>
@@ -477,6 +513,7 @@ function OutsiderTrackerDataPage({ app }) {
               {medsSeries.length > 0 ? (
                 isMobile ? (
                   <div style={mobileTelemetryCardStyle}>
+                    <div style={panelChrome()} />
                     <p style={labelStyle(theme.observerAccent)}>MEDICATION_SUPPORT</p>
                     <div style={mobileChartScrollerStyle(theme)}>
                       <div style={{ minWidth: "560px" }}>

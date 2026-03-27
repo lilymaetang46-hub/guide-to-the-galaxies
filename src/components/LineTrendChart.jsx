@@ -28,6 +28,7 @@ function buildSteppedLinePath(points) {
 
 function LineTrendChart({ title, subtitle, data, yMax, series, theme, chartCardStyle }) {
   const isConsoleChart = theme.observerChartMode === "stepped";
+  const isSolarConsole = isConsoleChart && theme.modeName === "Solar";
   const width = 640;
   const height = 260;
   const padding = { top: 24, right: 18, bottom: 40, left: 40 };
@@ -68,8 +69,8 @@ function LineTrendChart({ title, subtitle, data, yMax, series, theme, chartCardS
               gap: "8px",
               padding: "7px 10px",
               borderRadius: isConsoleChart ? "10px" : "999px",
-              background: theme.itemBackground,
-              color: theme.subtleText,
+              background: isSolarConsole ? "rgba(255,255,255,0.45)" : theme.itemBackground,
+              color: isSolarConsole ? theme.text : theme.subtleText,
               fontSize: "0.88rem",
               fontWeight: "bold",
               fontFamily: theme.observerFontFamily,
@@ -83,7 +84,7 @@ function LineTrendChart({ title, subtitle, data, yMax, series, theme, chartCardS
                 height: "10px",
                 borderRadius: "50%",
                 backgroundColor: item.color,
-                boxShadow: `0 0 10px ${item.color}`,
+                boxShadow: isSolarConsole ? "none" : `0 0 10px ${item.color}`,
               }}
             />
             {item.label}
@@ -158,13 +159,13 @@ function LineTrendChart({ title, subtitle, data, yMax, series, theme, chartCardS
                 strokeWidth={isConsoleChart ? "5" : "8"}
                 strokeLinecap={isConsoleChart ? "square" : "round"}
                 strokeLinejoin={isConsoleChart ? "miter" : "round"}
-                opacity={isConsoleChart ? "0.08" : "0.14"}
+                opacity={isSolarConsole ? "0.04" : isConsoleChart ? "0.08" : "0.14"}
               />
               <path
                 d={path}
                 fill="none"
                 stroke={item.color}
-                strokeWidth={isConsoleChart ? "1.8" : "3"}
+                strokeWidth={isSolarConsole ? "2.2" : isConsoleChart ? "1.8" : "3"}
                 strokeLinecap={isConsoleChart ? "square" : "round"}
                 strokeLinejoin={isConsoleChart ? "miter" : "round"}
               />
@@ -186,7 +187,7 @@ function LineTrendChart({ title, subtitle, data, yMax, series, theme, chartCardS
                         width="4"
                         height="4"
                         fill={item.color}
-                        stroke={theme.chartSurface}
+                        stroke={isSolarConsole ? "rgba(255,255,255,0.65)" : theme.chartSurface}
                         strokeWidth="1"
                       />
                     </>

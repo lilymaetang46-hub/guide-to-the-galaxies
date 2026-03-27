@@ -26,6 +26,31 @@ function isSolarTrackerTheme(theme) {
   return Boolean(theme?.trackerSolar && theme?.themeFamily === "galaxy");
 }
 
+function isAbyssTrackerTheme(theme) {
+  return Boolean(theme?.trackerAbyss && theme?.themeFamily === "underwater");
+}
+
+function isReefTrackerTheme(theme) {
+  return Boolean(theme?.trackerReef && theme?.themeFamily === "underwater");
+}
+
+const CANONICAL_TRACKER_SHELL_PADDING_BOTTOM = {
+  mobile: "124px",
+  desktop: "170px",
+};
+
+const CANONICAL_TRACKER_MAIN_PADDING_BOTTOM = {
+  mobile: "84px",
+  desktop: "96px",
+};
+
+const CANONICAL_TRACKER_MAIN_PADDING_TOP = {
+  mobile: "92px",
+  desktop: "128px",
+};
+
+const CANONICAL_TRACKER_MAIN_WIDTH = "1600px";
+
 function TrackerLayout({
   theme,
   title,
@@ -75,6 +100,545 @@ function TrackerLayout({
       setNavOpen(false);
     }
   };
+
+  if (isReefTrackerTheme(theme)) {
+    const underwaterTrackingPage =
+      trackerNavItems.find((navItem) =>
+        ["meds", "food", "sleep", "hygiene", "cleaning", "exercise", "mood"].includes(navItem.key)
+      )?.key || "mood";
+    const reefNavItems = [
+      { key: "charts", label: "Current", icon: "query_stats" },
+      { key: "tracking", label: "Flow", icon: "explore" },
+      { key: "orbit", label: "Reef", icon: "waves" },
+      { key: "support", label: "Pings", icon: "sailing" },
+      { key: "connections", label: "Portal", icon: "blur_on" },
+      { key: "settings", label: "Config", icon: "settings" },
+    ];
+    const reefNavActive = (itemKey) => {
+      if (itemKey === "orbit") {
+        return activePage === "mission" || activePage === "dashboard";
+      }
+
+      if (itemKey === "tracking") {
+        return ["meds", "food", "sleep", "hygiene", "cleaning", "exercise", "mood"].includes(activePage);
+      }
+
+      return activePage === itemKey;
+    };
+
+    return (
+      <div
+        style={{
+          width: "100%",
+          minHeight: "100vh",
+          paddingBottom:
+            tutorialActive
+              ? "32px"
+              : isMobile
+              ? CANONICAL_TRACKER_SHELL_PADDING_BOTTOM.mobile
+              : CANONICAL_TRACKER_SHELL_PADDING_BOTTOM.desktop,
+          position: "relative",
+          color: theme.text,
+          fontFamily: theme.trackerBodyFamily,
+          overflow: "hidden",
+          background: "transparent",
+          isolation: "isolate",
+        }}
+      >
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 0,
+            background: theme.trackerReefBackground || theme.pageBackground,
+          }}
+        />
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 1,
+            pointerEvents: "none",
+            background: theme.trackerReefGlow || "transparent",
+          }}
+        />
+        <div
+          className="reef-caustics"
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 2,
+            pointerEvents: "none",
+            opacity: 0.4,
+            background: theme.trackerReefCaustics || "transparent",
+            backgroundSize: "200% 200%",
+          }}
+        />
+
+        <header
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            zIndex: 50,
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            gap: "16px",
+            padding: isMobile ? "16px 14px" : "24px 32px",
+            background: "rgba(0,0,0,0.18)",
+            backdropFilter: "blur(24px)",
+            borderBottom: `1px solid ${theme.trackerReefMutedBorder || theme.inputBorder}`,
+          }}
+        >
+          <div style={{ display: "flex", flexDirection: "column" }}>
+            <div
+              style={{
+                fontFamily: theme.trackerHeadingFamily,
+                fontStyle: "italic",
+                fontSize: isMobile ? "1.3rem" : "2rem",
+                color: theme.trackerAccent,
+                textShadow: "0 0 10px rgba(79,209,217,0.28)",
+              }}
+            >
+              ReefTracker
+            </div>
+            <span
+              style={{
+                fontSize: isMobile ? "7px" : "8px",
+                letterSpacing: isMobile ? "0.28em" : "0.4em",
+                textTransform: "uppercase",
+                color: "rgba(255,255,255,0.48)",
+                fontWeight: 700,
+              }}
+            >
+              Vessel ID: 00-PELAGIC
+            </span>
+          </div>
+
+          <div style={{ display: "flex", alignItems: "center", gap: isMobile ? "8px" : "14px" }}>
+            <div style={{ display: isMobile ? "none" : "flex", flexDirection: "column", alignItems: "flex-end", marginRight: "12px" }}>
+              <span style={{ fontSize: "9px", color: "rgba(255,255,255,0.62)", textTransform: "uppercase", letterSpacing: "0.2em" }}>
+                Current Drift
+              </span>
+              <div style={{ display: "flex", gap: "4px", marginTop: "6px" }}>
+                {[true, true, true, false].map((active, index) => (
+                  <div
+                    key={`reef-sig-${index}`}
+                    style={{
+                      width: "4px",
+                      height: "12px",
+                      borderRadius: "999px",
+                      background: active ? theme.trackerAccent : "rgba(255,255,255,0.16)",
+                    }}
+                  />
+                ))}
+              </div>
+            </div>
+            <button
+              onClick={() => setDarkMode(!darkMode)}
+              style={{ background: "transparent", border: "none", color: theme.trackerAccent, padding: 0 }}
+              aria-label="Switch tracker theme mode"
+            >
+              <span className="material-symbols-outlined">flare</span>
+            </button>
+            <button
+              onClick={() => setActivePage("settings")}
+              style={{ background: "transparent", border: "none", color: theme.trackerAccentSoft, padding: 0 }}
+              aria-label="Open settings"
+            >
+              <span className="material-symbols-outlined">account_circle</span>
+            </button>
+          </div>
+        </header>
+
+        <main
+          style={{
+            paddingTop: isMobile ? CANONICAL_TRACKER_MAIN_PADDING_TOP.mobile : CANONICAL_TRACKER_MAIN_PADDING_TOP.desktop,
+            paddingBottom:
+              tutorialActive
+                ? "32px"
+                : isMobile
+                ? CANONICAL_TRACKER_MAIN_PADDING_BOTTOM.mobile
+                : CANONICAL_TRACKER_MAIN_PADDING_BOTTOM.desktop,
+            paddingInline: isMobile ? "12px" : "24px",
+            maxWidth: CANONICAL_TRACKER_MAIN_WIDTH,
+            margin: "0 auto",
+            position: "relative",
+            zIndex: 10,
+          }}
+        >
+          {children}
+        </main>
+
+        {!tutorialActive ? (
+          <nav
+            style={{
+              position: "fixed",
+              bottom: isMobile ? "12px" : "32px",
+              left: "50%",
+              transform: "translateX(-50%)",
+              width: isMobile ? "calc(100% - 16px)" : "min(94%, 680px)",
+              zIndex: 50,
+              display: "flex",
+              justifyContent: "space-around",
+              alignItems: "center",
+              padding: isMobile ? "12px 10px" : "16px 24px",
+              background: "rgba(0,0,0,0.56)",
+              backdropFilter: "blur(32px) saturate(160%)",
+              borderRadius: "999px",
+              border: `1px solid ${theme.trackerReefMutedBorder || theme.inputBorder}`,
+              boxShadow: "0 20px 50px rgba(0,0,0,0.28)",
+            }}
+          >
+            {reefNavItems.map((item) => {
+              const active = reefNavActive(item.key);
+
+              return (
+                <button
+                  key={item.key}
+                  onClick={() =>
+                    handleSelectPage(
+                      item.key === "tracking"
+                        ? underwaterTrackingPage
+                        : item.key === "orbit"
+                        ? "mission"
+                        : item.key
+                    )
+                  }
+                  style={{
+                    position: "relative",
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    color: active ? theme.trackerAccent : "rgba(255,255,255,0.42)",
+                    background: active ? "rgba(255,255,255,0.1)" : "transparent",
+                    border: active ? `1px solid ${theme.trackerReefPanelBorder || theme.inputBorder}` : "none",
+                    borderRadius: active ? "999px" : "0",
+                    padding: active ? (isMobile ? "9px 10px" : "14px 20px") : "0",
+                    marginTop: active ? (isMobile ? "-20px" : "-40px") : "0",
+                    minWidth: active ? (isMobile ? "58px" : "84px") : "auto",
+                    cursor: "pointer",
+                    boxShadow: active ? `0 12px 24px ${theme.glow}` : "none",
+                  }}
+                >
+                  <span
+                    className="material-symbols-outlined"
+                    style={{
+                      fontSize: active ? (isMobile ? "24px" : "32px") : isMobile ? "20px" : "24px",
+                      fontVariationSettings: active ? "'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24" : undefined,
+                    }}
+                  >
+                    {item.icon}
+                  </span>
+                  <span
+                    style={{
+                      fontSize: active ? (isMobile ? "7px" : "9px") : isMobile ? "7px" : "8px",
+                      fontWeight: 700,
+                      textTransform: "uppercase",
+                      letterSpacing: isMobile ? "0.06em" : "0.15em",
+                      marginTop: "4px",
+                    }}
+                  >
+                    {item.label}
+                  </span>
+                  {active ? (
+                    <div
+                      style={{
+                        position: "absolute",
+                        top: isMobile ? "-2px" : "-4px",
+                        right: isMobile ? "6px" : "10px",
+                        width: isMobile ? "6px" : "8px",
+                        height: isMobile ? "6px" : "8px",
+                        borderRadius: "50%",
+                        background: theme.trackerAccent,
+                        boxShadow: `0 0 20px ${theme.trackerAccent}`,
+                      }}
+                    />
+                  ) : null}
+                </button>
+              );
+            })}
+          </nav>
+        ) : null}
+      </div>
+    );
+  }
+
+  if (isAbyssTrackerTheme(theme)) {
+    const underwaterTrackingPage =
+      trackerNavItems.find((navItem) =>
+        ["meds", "food", "sleep", "hygiene", "cleaning", "exercise", "mood"].includes(navItem.key)
+      )?.key || "mood";
+    const abyssNavItems = [
+      { key: "charts", label: "Logs", icon: "query_stats" },
+      { key: "tracking", label: "Biometrics", icon: "monitor_heart" },
+      { key: "orbit", label: "Depth", icon: "water_lux" },
+      { key: "support", label: "Signal", icon: "rss_feed" },
+      { key: "connections", label: "Portal", icon: "blur_on" },
+      { key: "settings", label: "Settings", icon: "settings" },
+    ];
+    const abyssNavActive = (itemKey) => {
+      if (itemKey === "tracking") {
+        return ["meds", "food", "sleep", "hygiene", "cleaning", "exercise", "mood"].includes(activePage);
+      }
+
+      if (itemKey === "orbit") {
+        return activePage === "mission" || activePage === "dashboard";
+      }
+
+      return activePage === itemKey;
+    };
+
+    return (
+      <div
+        style={{
+          width: "100%",
+          minHeight: "100vh",
+          paddingBottom:
+            tutorialActive
+              ? "32px"
+              : isMobile
+              ? CANONICAL_TRACKER_SHELL_PADDING_BOTTOM.mobile
+              : CANONICAL_TRACKER_SHELL_PADDING_BOTTOM.desktop,
+          position: "relative",
+          color: theme.text,
+          fontFamily: theme.trackerBodyFamily,
+          overflow: "hidden",
+          background: "transparent",
+          isolation: "isolate",
+        }}
+      >
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 0,
+            background: theme.trackerAbyssBackground || theme.pageBackground,
+          }}
+        />
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 1,
+            pointerEvents: "none",
+            background: theme.trackerAbyssGlow || "transparent",
+          }}
+        />
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 2,
+            pointerEvents: "none",
+            opacity: 0.72,
+            background: theme.trackerAbyssRays || "transparent",
+            filter: "blur(40px)",
+            transform: "scale(1.35) rotate(-4deg)",
+          }}
+        />
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 3,
+            pointerEvents: "none",
+            opacity: 0.65,
+            backgroundImage: theme.trackerAbyssSnow,
+            backgroundSize: "260px 260px, 320px 320px, 420px 420px, 520px 520px, 620px 620px",
+            backgroundPosition: "0 0, 40px 90px, 120px 20px, 180px 150px, 240px 60px",
+          }}
+        />
+
+        <header
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            zIndex: 50,
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            gap: "16px",
+            padding: isMobile ? "16px 14px" : "24px 32px",
+            background: "rgba(2, 8, 10, 0.72)",
+            backdropFilter: "blur(18px)",
+            borderBottom: `1px solid ${theme.trackerAbyssMutedBorder || theme.inputBorder}`,
+          }}
+        >
+          <div style={{ display: "flex", flexDirection: "column" }}>
+            <div
+              style={{
+                fontFamily: theme.trackerHeadingFamily,
+                fontStyle: "italic",
+                fontSize: isMobile ? "1.3rem" : "2rem",
+                color: theme.trackerAccent,
+                textShadow: "0 0 10px rgba(34,211,238,0.3)",
+              }}
+            >
+              The Abyss
+            </div>
+            <span style={{ fontSize: isMobile ? "7px" : "8px", letterSpacing: isMobile ? "0.28em" : "0.4em", textTransform: "uppercase", color: "rgba(226,248,249,0.4)", fontWeight: 700 }}>
+              Vessel ID: 00-BATHYPELAGIC
+            </span>
+          </div>
+
+          <div style={{ display: "flex", alignItems: "center", gap: isMobile ? "8px" : "14px" }}>
+            {!isMobile ? (
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", marginRight: "12px" }}>
+                <span style={{ fontSize: "9px", color: "rgba(226,248,249,0.6)", textTransform: "uppercase", letterSpacing: "0.2em" }}>
+                  Signal Strength
+                </span>
+                <div style={{ display: "flex", gap: "4px", marginTop: "6px" }}>
+                  {[true, true, true, false].map((active, index) => (
+                    <div
+                      key={`abyss-sig-${index}`}
+                      style={{
+                        width: "4px",
+                        height: "12px",
+                        borderRadius: "999px",
+                        background: active ? theme.trackerAccent : "rgba(226,248,249,0.16)",
+                      }}
+                    />
+                  ))}
+                </div>
+              </div>
+            ) : null}
+            <button
+              onClick={() => setDarkMode(!darkMode)}
+              style={{ background: "transparent", border: "none", color: theme.trackerAccent, padding: 0 }}
+              aria-label="Switch tracker theme mode"
+            >
+              <span className="material-symbols-outlined">flare</span>
+            </button>
+            <button
+              onClick={() => setActivePage("settings")}
+              style={{ background: "transparent", border: "none", color: theme.trackerAccentSoft, padding: 0 }}
+              aria-label="Open settings"
+            >
+              <span className="material-symbols-outlined">account_circle</span>
+            </button>
+          </div>
+        </header>
+
+        <main
+          style={{
+            paddingTop: isMobile ? CANONICAL_TRACKER_MAIN_PADDING_TOP.mobile : CANONICAL_TRACKER_MAIN_PADDING_TOP.desktop,
+            paddingBottom:
+              tutorialActive
+                ? "32px"
+                : isMobile
+                ? CANONICAL_TRACKER_MAIN_PADDING_BOTTOM.mobile
+                : CANONICAL_TRACKER_MAIN_PADDING_BOTTOM.desktop,
+            paddingInline: isMobile ? "12px" : "24px",
+            maxWidth: CANONICAL_TRACKER_MAIN_WIDTH,
+            margin: "0 auto",
+            position: "relative",
+            zIndex: 10,
+          }}
+        >
+          {children}
+        </main>
+
+        {!tutorialActive ? (
+          <nav
+            style={{
+              position: "fixed",
+              left: "50%",
+              bottom: isMobile ? "12px" : "32px",
+              transform: "translateX(-50%)",
+              zIndex: 50,
+              width: isMobile ? "calc(100% - 16px)" : "min(94%, 680px)",
+              padding: isMobile ? "12px 10px" : "16px 24px",
+              borderRadius: "999px",
+              background: "rgba(1,15,18,0.58)",
+              border: `1px solid ${theme.trackerAbyssPanelBorder || theme.border}`,
+              boxShadow: "0 20px 50px rgba(0,0,0,0.42)",
+              backdropFilter: "blur(32px) saturate(160%)",
+              display: "flex",
+              justifyContent: "space-around",
+              alignItems: "center",
+            }}
+          >
+            {abyssNavItems.map((item) => {
+              const active = abyssNavActive(item.key);
+
+              return (
+                <button
+                  key={item.key}
+                  onClick={() =>
+                    handleSelectPage(
+                      item.key === "tracking"
+                        ? underwaterTrackingPage
+                        : item.key === "orbit"
+                        ? "mission"
+                        : item.key
+                    )
+                  }
+                  style={{
+                    position: "relative",
+                    border: active ? "1px solid rgba(34,211,238,0.24)" : "none",
+                    background: active ? "rgba(34,211,238,0.12)" : "transparent",
+                    color: active ? theme.trackerAccent : theme.faintText,
+                    borderRadius: active ? "999px" : "0",
+                    padding: active ? (isMobile ? "9px 10px" : "14px 20px") : "0",
+                    marginTop: active ? (isMobile ? "-20px" : "-40px") : "0",
+                    minWidth: active ? (isMobile ? "58px" : "84px") : "auto",
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: "4px",
+                    cursor: "pointer",
+                    boxShadow: active ? "0 12px 24px rgba(34,211,238,0.16)" : "none",
+                  }}
+                >
+                  <span
+                    className="material-symbols-outlined"
+                    style={{
+                      fontSize: active ? (isMobile ? "24px" : "32px") : isMobile ? "20px" : "24px",
+                      fontVariationSettings: active ? "'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24" : undefined,
+                    }}
+                  >
+                    {item.icon}
+                  </span>
+                  <span
+                    style={{
+                      fontSize: active ? (isMobile ? "7px" : "9px") : isMobile ? "7px" : "8px",
+                      textTransform: "uppercase",
+                      letterSpacing: isMobile ? "0.06em" : "0.15em",
+                      marginTop: "4px",
+                      fontWeight: 700,
+                    }}
+                  >
+                    {item.label}
+                  </span>
+                  {active ? (
+                    <div
+                      style={{
+                        position: "absolute",
+                        top: isMobile ? "-2px" : "-4px",
+                        right: isMobile ? "6px" : "10px",
+                        width: isMobile ? "6px" : "8px",
+                        height: isMobile ? "6px" : "8px",
+                        borderRadius: "50%",
+                        background: theme.trackerAccent,
+                        boxShadow: `0 0 20px ${theme.trackerAccent}`,
+                      }}
+                    />
+                  ) : null}
+                </button>
+              );
+            })}
+          </nav>
+        ) : null}
+      </div>
+    );
+  }
 
   if (isObservatoryTrackerTheme(theme)) {
     const mobileNavActive = (itemKey) => {

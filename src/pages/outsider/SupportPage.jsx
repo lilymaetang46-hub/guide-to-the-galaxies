@@ -1,11 +1,26 @@
 function consolePanel(theme, accent = "primary") {
   const borderColor =
     accent === "warning" ? "rgba(253, 139, 0, 0.35)" : `${theme.observerAccent}26`;
+  const isSolarMode = theme.modeName === "Solar";
 
   return {
-    background: accent === "warning" ? "rgba(253, 139, 0, 0.08)" : "rgba(0,0,0,0.22)",
+    background:
+      accent === "warning"
+        ? isSolarMode
+          ? "linear-gradient(180deg, rgba(240, 210, 169, 0.96) 0%, rgba(214, 183, 141, 0.99) 100%)"
+          : "linear-gradient(180deg, rgba(79, 53, 25, 0.94) 0%, rgba(43, 28, 15, 0.98) 100%)"
+        : isSolarMode
+        ? "linear-gradient(180deg, rgba(241, 235, 224, 0.98) 0%, rgba(215, 208, 198, 0.995) 100%)"
+        : "linear-gradient(180deg, rgba(33, 45, 61, 0.96) 0%, rgba(16, 23, 35, 0.985) 100%)",
     border: `1px solid ${borderColor}`,
     padding: "16px",
+    borderRadius: "16px",
+    boxShadow: isSolarMode
+      ? "inset 0 1px 0 rgba(255,255,255,0.3), 0 12px 20px rgba(122,104,78,0.12)"
+      : "inset 0 1px 0 rgba(255,255,255,0.05), 0 14px 24px rgba(0,0,0,0.16)",
+    position: "relative",
+    overflow: "hidden",
+    isolation: "isolate",
   };
 }
 
@@ -71,6 +86,18 @@ function OutsiderSupportPage({ app }) {
   }
 
   if (theme.observerConsole) {
+    const warningTextColor = theme.modeName === "Solar" ? "#9a5710" : "#fd8b00";
+    const warningMutedColor = theme.modeName === "Solar" ? "#7a6247" : "#d39b66";
+    const panelChrome = (accent = "primary") => ({
+      position: "absolute",
+      inset: 0,
+      pointerEvents: "none",
+      zIndex: 0,
+      background:
+        accent === "warning"
+          ? "linear-gradient(90deg, rgba(255,171,92,0.22) 0%, rgba(255,171,92,0.04) 14%, rgba(0,0,0,0) 26%), linear-gradient(180deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0) 16%)"
+          : "linear-gradient(90deg, rgba(111,196,255,0.18) 0%, rgba(111,196,255,0.04) 14%, rgba(0,0,0,0) 26%), linear-gradient(180deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0) 16%)",
+    });
     const generalMessages = [
       "Good job",
       "Proud of you",
@@ -98,6 +125,7 @@ function OutsiderSupportPage({ app }) {
           }}
         >
           <div style={consolePanel(theme)}>
+            <div style={panelChrome()} />
             <div style={{ display: "flex", justifyContent: "space-between", gap: "12px", marginBottom: "14px" }}>
               <span style={consoleLabel()}>[01] CURRENT_CHANNEL</span>
               <span style={consoleLabel(theme.observerAccent)}>COMMS_OPEN</span>
@@ -120,11 +148,12 @@ function OutsiderSupportPage({ app }) {
           </div>
 
           <div style={consolePanel(theme, "warning")}>
-            <span style={consoleLabel("#fd8b00")}>[02] TRANSMISSION_WINDOW</span>
-            <p style={{ margin: "8px 0 0", fontFamily: "Newsreader, serif", fontSize: "1.7rem", color: "#fd8b00" }}>
+            <div style={panelChrome("warning")} />
+            <span style={consoleLabel(warningTextColor)}>[02] TRANSMISSION_WINDOW</span>
+            <p style={{ margin: "8px 0 0", fontFamily: "Newsreader, serif", fontSize: "1.7rem", color: warningTextColor }}>
               {outsiderCooldownUntil ? "Cooldown_Active" : "Ready_To_Transmit"}
             </p>
-            <p style={{ margin: "8px 0 0", color: "#d39b66", fontSize: "12px", lineHeight: 1.7 }}>
+            <p style={{ margin: "8px 0 0", color: warningMutedColor, fontSize: "12px", lineHeight: 1.7 }}>
               {outsiderCooldownUntil ? `Next reminder available at ${outsiderCooldownUntil}` : "A reminder can be sent now."}
             </p>
           </div>
@@ -138,6 +167,7 @@ function OutsiderSupportPage({ app }) {
           }}
         >
           <div style={consolePanel(theme)}>
+            <div style={panelChrome()} />
             <div style={{ display: "flex", justifyContent: "space-between", gap: "12px", marginBottom: "14px" }}>
               <span style={consoleLabel()}>[03] GENERAL_SUPPORT</span>
               <span style={consoleLabel(theme.observerAccent)}>TEXT_QUEUE</span>
@@ -152,6 +182,7 @@ function OutsiderSupportPage({ app }) {
           </div>
 
           <div style={consolePanel(theme)}>
+            <div style={panelChrome()} />
             <div style={{ display: "flex", justifyContent: "space-between", gap: "12px", marginBottom: "14px" }}>
               <span style={consoleLabel()}>[04] CATEGORY_NUDGES</span>
               <span style={consoleLabel(theme.observerAccent)}>APPROVED_ONLY</span>

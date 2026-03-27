@@ -1,11 +1,26 @@
 function consolePanel(theme, accent = "primary") {
   const borderColor =
     accent === "warning" ? "rgba(253, 139, 0, 0.35)" : `${theme.observerAccent}26`;
+  const isSolarMode = theme.modeName === "Solar";
 
   return {
-    background: accent === "warning" ? "rgba(253, 139, 0, 0.08)" : "rgba(0,0,0,0.22)",
+    background:
+      accent === "warning"
+        ? isSolarMode
+          ? "linear-gradient(180deg, rgba(240, 210, 169, 0.96) 0%, rgba(214, 183, 141, 0.99) 100%)"
+          : "linear-gradient(180deg, rgba(79, 53, 25, 0.94) 0%, rgba(43, 28, 15, 0.98) 100%)"
+        : isSolarMode
+        ? "linear-gradient(180deg, rgba(241, 235, 224, 0.98) 0%, rgba(215, 208, 198, 0.995) 100%)"
+        : "linear-gradient(180deg, rgba(33, 45, 61, 0.96) 0%, rgba(16, 23, 35, 0.985) 100%)",
     border: `1px solid ${borderColor}`,
     padding: "16px",
+    borderRadius: "16px",
+    boxShadow: isSolarMode
+      ? "inset 0 1px 0 rgba(255,255,255,0.3), 0 12px 20px rgba(122,104,78,0.12)"
+      : "inset 0 1px 0 rgba(255,255,255,0.05), 0 14px 24px rgba(0,0,0,0.16)",
+    position: "relative",
+    overflow: "hidden",
+    isolation: "isolate",
   };
 }
 
@@ -68,6 +83,17 @@ function OutsiderGoalsPage({ app }) {
   }
 
   if (theme.observerConsole) {
+    const warningTextColor = theme.modeName === "Solar" ? "#9a5710" : "#fd8b00";
+    const panelChrome = (accent = "primary") => ({
+      position: "absolute",
+      inset: 0,
+      pointerEvents: "none",
+      zIndex: 0,
+      background:
+        accent === "warning"
+          ? "linear-gradient(90deg, rgba(255,171,92,0.22) 0%, rgba(255,171,92,0.04) 14%, rgba(0,0,0,0) 26%), linear-gradient(180deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0) 16%)"
+          : "linear-gradient(90deg, rgba(111,196,255,0.18) 0%, rgba(111,196,255,0.04) 14%, rgba(0,0,0,0) 26%), linear-gradient(180deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0) 16%)",
+    });
     const goalCards =
       selectedOutsider.activeGoals?.length > 0
         ? selectedOutsider.activeGoals.map((goal) => ({
@@ -85,6 +111,7 @@ function OutsiderGoalsPage({ app }) {
       <div style={{ display: "grid", gap: "24px", marginTop: "8px" }}>
         <div style={{ display: "flex", justifyContent: "space-between", gap: "16px", flexWrap: "wrap", flexDirection: isMobile ? "column" : "row" }}>
           <div style={consolePanel(theme)}>
+            <div style={panelChrome()} />
             <p style={consoleLabel()}>[01] CURRENT_TRACKER</p>
             <p style={{ margin: "6px 0 0", fontFamily: "Newsreader, serif", fontSize: isMobile ? "1.45rem" : "1.8rem", color: theme.text }}>
               {selectedOutsider.name}
@@ -112,6 +139,7 @@ function OutsiderGoalsPage({ app }) {
         >
           {selectedOutsiderPermissions.streaks ? (
             <div style={consolePanel(theme)}>
+              <div style={panelChrome()} />
               <div style={{ display: "flex", justifyContent: "space-between", gap: "12px", marginBottom: "14px" }}>
                 <span style={consoleLabel()}>{observerLabels.streaks}</span>
                 <span style={consoleLabel(theme.observerAccent)}>TRACKED</span>
@@ -131,14 +159,15 @@ function OutsiderGoalsPage({ app }) {
 
           {selectedOutsiderPermissions.rewards ? (
             <div style={consolePanel(theme, "warning")}>
+              <div style={panelChrome("warning")} />
               <div style={{ display: "flex", justifyContent: "space-between", gap: "12px", marginBottom: "14px" }}>
-                <span style={consoleLabel("#fd8b00")}>{observerLabels.rewards}</span>
-                <span style={consoleLabel("#fd8b00")}>UNLOCKED</span>
+                <span style={consoleLabel(warningTextColor)}>{observerLabels.rewards}</span>
+                <span style={consoleLabel(warningTextColor)}>UNLOCKED</span>
               </div>
               <div style={{ display: "grid", gap: "12px" }}>
                 {selectedOutsider.rewards.map((item) => (
                   <div key={item} style={{ border: "1px solid rgba(253, 139, 0, 0.25)", padding: "14px" }}>
-                    <p style={{ margin: 0, fontFamily: "Newsreader, serif", fontSize: "1.3rem", color: "#fd8b00" }}>
+                    <p style={{ margin: 0, fontFamily: "Newsreader, serif", fontSize: "1.3rem", color: warningTextColor }}>
                       {item}
                     </p>
                   </div>
