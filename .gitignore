@@ -25,6 +25,7 @@ dist-ssr
 
 .vercel
 supabase/.temp
+test-results
 
 # Capacitor native build outputs
 android\.gradle

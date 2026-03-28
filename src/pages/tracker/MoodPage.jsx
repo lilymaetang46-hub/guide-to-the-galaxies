@@ -6,6 +6,7 @@ function TrackerMoodPage({ app }) {
     trackerLabels,
     trackerNavItems,
     setActivePage,
+    trackerSectionSwitcherButtonStyle,
     sliderValueStyle,
     mood,
     rangeStyle,
@@ -46,21 +47,7 @@ function TrackerMoodPage({ app }) {
               <button
                 key={item.key}
                 onClick={() => setActivePage(item.key)}
-                style={{
-                  border: theme.trackerSolar ? "1px solid rgba(255, 193, 7, 0.28)" : theme.border,
-                  background: active
-                    ? theme.primary
-                    : theme.trackerSolar
-                    ? "rgba(255,255,255,0.34)"
-                    : theme.softButtonBackground,
-                  color: active ? theme.primaryText : theme.softButtonText,
-                  borderRadius: "999px",
-                  padding: "10px 14px",
-                  fontWeight: 700,
-                  fontSize: "0.88rem",
-                  letterSpacing: "0.04em",
-                  boxShadow: active ? `0 10px 24px ${theme.glow}` : "none",
-                }}
+                style={trackerSectionSwitcherButtonStyle(active, theme)}
               >
                 {item.label}
               </button>
@@ -70,7 +57,7 @@ function TrackerMoodPage({ app }) {
       ) : null}
       <p style={sliderValueStyle(theme)}>{`${trackerLabels.mood}: ${mood}/5`}</p>
       <input
-        style={rangeStyle}
+        style={rangeStyle(theme)}
         type="range"
         min="1"
         max="5"

@@ -98,7 +98,6 @@ function OutsiderTrackerDataPage({ app }) {
     selectedOutsiderChartData,
     outsiderMoodLabel,
     summaryNoteStyle,
-    chartStackStyle,
     chartCardStyle,
   } = app;
 

@@ -11,7 +11,7 @@ function isAbyssOutsiderTheme(theme) {
   return Boolean(theme?.observerAbyssBridge && theme?.themeFamily === "underwater");
 }
 
-function steelTextureOverlay(theme, opacity = 1) {
+function steelTextureOverlay(theme) {
   return `linear-gradient(170deg, rgba(255,255,255,${theme.modeName === "Reef" ? 0.24 : 0.08}) 0%, transparent 40%, rgba(0,0,0,${theme.modeName === "Reef" ? 0.12 : 0.3}) 100%), repeating-linear-gradient(90deg, transparent, transparent 2px, rgba(255,255,255,${theme.modeName === "Reef" ? 0.025 : 0.02}) 2px, rgba(255,255,255,${theme.modeName === "Reef" ? 0.025 : 0.02}) 4px), radial-gradient(circle at 12% 18%, ${theme.observerIndustrialRust} 0%, rgba(0,0,0,0) 22%), radial-gradient(circle at 72% 22%, ${theme.observerIndustrialRust} 0%, rgba(0,0,0,0) 16%), radial-gradient(circle at 22% 82%, rgba(72,34,12,${theme.modeName === "Reef" ? 0.08 : 0.18}) 0%, rgba(0,0,0,0) 18%), radial-gradient(circle at 84% 78%, rgba(255,255,255,${theme.modeName === "Reef" ? 0.08 : 0.04}) 0%, rgba(255,255,255,0) 20%), ${theme.observerIndustrialPanel}`;
 }
 
@@ -906,9 +906,6 @@ function OutsiderLayout({
         ? outsiderPage === "outsiderOverview"
         : outsiderPage === item.key,
   }));
-
-  const activeItem =
-    CONSOLE_NAV_ITEMS.find((item) => item.key === outsiderPage) || CONSOLE_NAV_ITEMS[0];
 
   const pageTitle =
     outsiderPage === "outsiderData"

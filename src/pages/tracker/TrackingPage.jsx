@@ -5,6 +5,7 @@ function TrackerTrackingPage({ app, pageKey }) {
     renderSectionHeader,
     trackerNavItems,
     setActivePage,
+    trackerSectionSwitcherButtonStyle,
     inputStyle,
     primaryButtonStyle,
     countTextStyle,
@@ -110,21 +111,7 @@ function TrackerTrackingPage({ app, pageKey }) {
           <button
             key={item.key}
             onClick={() => setActivePage(item.key)}
-            style={{
-              border: theme.trackerSolar ? "1px solid rgba(255, 193, 7, 0.28)" : theme.border,
-              background: active
-                ? theme.primary
-                : theme.trackerSolar
-                ? "rgba(255,255,255,0.34)"
-                : theme.softButtonBackground,
-              color: active ? theme.primaryText : theme.softButtonText,
-              borderRadius: "999px",
-              padding: "10px 14px",
-              fontWeight: 700,
-              fontSize: "0.88rem",
-              letterSpacing: "0.04em",
-              boxShadow: active ? `0 10px 24px ${theme.glow}` : "none",
-            }}
+            style={trackerSectionSwitcherButtonStyle(active, theme)}
           >
             {item.label}
           </button>
@@ -148,7 +135,7 @@ function TrackerTrackingPage({ app, pageKey }) {
         <p style={countTextStyle(theme)}>Meds logged today: {meds.length}</p>
         <p style={smallInfoStyle(theme)}>Quick toggle: {medTaken ? `Taken at ${medsTime}` : "Not marked"}</p>
         <div style={{ marginTop: "10px" }}>
-          <button style={medTaken ? successButtonStyle : softButtonStyle(theme)} onClick={toggleMed}>
+          <button style={medTaken ? successButtonStyle(theme) : softButtonStyle(theme)} onClick={toggleMed}>
             {medTaken ? "Taken" : "Not Taken"}
           </button>
         </div>
@@ -228,7 +215,7 @@ function TrackerTrackingPage({ app, pageKey }) {
         </div>
         <div style={{ marginTop: "16px" }}>
           <button
-            style={usedScreensBeforeBed ? successButtonStyle : softButtonStyle(theme)}
+            style={usedScreensBeforeBed ? successButtonStyle(theme) : softButtonStyle(theme)}
             onClick={toggleUsedScreensBeforeBed}
           >
             {usedScreensBeforeBed ? "Screens Before Bed Done" : "Used Screens Before Bed"}
@@ -236,7 +223,7 @@ function TrackerTrackingPage({ app, pageKey }) {
         </div>
         <div style={{ marginTop: "16px" }}>
           <p style={sliderValueStyle(theme)}>Sleep quality: {sleepQuality}/5</p>
-          <input style={rangeStyle} type="range" min="1" max="5" value={sleepQuality} onChange={(e) => handleSleepQualityChange(e.target.value)} />
+          <input style={rangeStyle(theme)} type="range" min="1" max="5" value={sleepQuality} onChange={(e) => handleSleepQualityChange(e.target.value)} />
         </div>
       </section>
     );
@@ -248,13 +235,13 @@ function TrackerTrackingPage({ app, pageKey }) {
         {renderSectionHeader("Hygiene", "Quick check-off hygiene tasks.", "Star", "Star")}
         {sectionSwitcher}
         <div style={buttonWrapStyle}>
-          <button style={showered ? successButtonStyle : softButtonStyle(theme)} onClick={toggleShowered}>
+          <button style={showered ? successButtonStyle(theme) : softButtonStyle(theme)} onClick={toggleShowered}>
             {showered ? "Showered Done" : "Shower"}
           </button>
-          <button style={brushedTeeth ? successButtonStyle : softButtonStyle(theme)} onClick={toggleBrushedTeeth}>
+          <button style={brushedTeeth ? successButtonStyle(theme) : softButtonStyle(theme)} onClick={toggleBrushedTeeth}>
             {brushedTeeth ? "Brushed Teeth Done" : "Brush Teeth"}
           </button>
-          <button style={skincare ? successButtonStyle : softButtonStyle(theme)} onClick={toggleSkincare}>
+          <button style={skincare ? successButtonStyle(theme) : softButtonStyle(theme)} onClick={toggleSkincare}>
             {skincare ? "Skincare Done" : "Skincare"}
           </button>
         </div>
@@ -273,13 +260,13 @@ function TrackerTrackingPage({ app, pageKey }) {
         {renderSectionHeader("Cleaning", "Track small cleaning wins.", "Comet", "Spark")}
         {sectionSwitcher}
         <div style={buttonWrapStyle}>
-          <button style={laundryDone ? successButtonStyle : softButtonStyle(theme)} onClick={toggleLaundry}>
+          <button style={laundryDone ? successButtonStyle(theme) : softButtonStyle(theme)} onClick={toggleLaundry}>
             {laundryDone ? "Laundry Done" : "Laundry"}
           </button>
-          <button style={bedsheetsDone ? successButtonStyle : softButtonStyle(theme)} onClick={toggleBedsheets}>
+          <button style={bedsheetsDone ? successButtonStyle(theme) : softButtonStyle(theme)} onClick={toggleBedsheets}>
             {bedsheetsDone ? "Bedsheets Done" : "Bedsheets"}
           </button>
-          <button style={roomCleaned ? successButtonStyle : softButtonStyle(theme)} onClick={toggleRoomCleaned}>
+          <button style={roomCleaned ? successButtonStyle(theme) : softButtonStyle(theme)} onClick={toggleRoomCleaned}>
             {roomCleaned ? "Room Cleaned Done" : "Room Cleaned"}
           </button>
         </div>
@@ -301,7 +288,7 @@ function TrackerTrackingPage({ app, pageKey }) {
         </div>
         <div style={{ marginTop: "16px" }}>
           <p style={sliderValueStyle(theme)}>Worth it: {cleaningWorthIt}/5</p>
-          <input style={rangeStyle} type="range" min="1" max="5" value={cleaningWorthIt} onChange={(e) => handleCleaningWorthItChange(e.target.value)} />
+          <input style={rangeStyle(theme)} type="range" min="1" max="5" value={cleaningWorthIt} onChange={(e) => handleCleaningWorthItChange(e.target.value)} />
         </div>
       </section>
     );
@@ -312,10 +299,10 @@ function TrackerTrackingPage({ app, pageKey }) {
       {renderSectionHeader("Exercise", "Track movement and how it felt.", "Orbit", "Star")}
       {sectionSwitcher}
       <div style={buttonWrapStyle}>
-        <button style={exerciseDone ? successButtonStyle : softButtonStyle(theme)} onClick={toggleExerciseDone}>
+        <button style={exerciseDone ? successButtonStyle(theme) : softButtonStyle(theme)} onClick={toggleExerciseDone}>
           {exerciseDone ? "Exercise Done" : "Mark Exercise"}
         </button>
-        <button style={extraWalk ? successButtonStyle : softButtonStyle(theme)} onClick={toggleExtraWalk}>
+        <button style={extraWalk ? successButtonStyle(theme) : softButtonStyle(theme)} onClick={toggleExtraWalk}>
           {extraWalk ? "Extra Walk Done" : "Extra Walk"}
         </button>
       </div>

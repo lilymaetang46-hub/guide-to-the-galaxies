@@ -174,6 +174,19 @@ function TrackerLayout({
             backgroundSize: "200% 200%",
           }}
         />
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 3,
+            pointerEvents: "none",
+            opacity: 0.3,
+            backgroundImage:
+              "radial-gradient(circle at 12% 18%, rgba(255,255,255,0.24) 0 2px, transparent 2.8px), radial-gradient(circle at 72% 32%, rgba(79,209,217,0.18) 0 1.6px, transparent 2.4px), radial-gradient(circle at 42% 78%, rgba(255,140,148,0.14) 0 1.5px, transparent 2.2px)",
+            backgroundSize: "220px 220px, 280px 280px, 340px 340px",
+            backgroundPosition: "0 0, 60px 90px, 120px 30px",
+          }}
+        />
 
         <header
           style={{
@@ -450,6 +463,19 @@ function TrackerLayout({
             backgroundImage: theme.trackerAbyssSnow,
             backgroundSize: "260px 260px, 320px 320px, 420px 420px, 520px 520px, 620px 620px",
             backgroundPosition: "0 0, 40px 90px, 120px 20px, 180px 150px, 240px 60px",
+          }}
+        />
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 4,
+            pointerEvents: "none",
+            opacity: 0.22,
+            backgroundImage:
+              "radial-gradient(circle at 18% 22%, rgba(226,248,249,0.18) 0 1.4px, transparent 2.1px), radial-gradient(circle at 76% 40%, rgba(34,211,238,0.14) 0 1.2px, transparent 1.8px), radial-gradient(circle at 46% 82%, rgba(217,70,239,0.1) 0 1.1px, transparent 1.7px)",
+            backgroundSize: "240px 240px, 320px 320px, 420px 420px",
+            backgroundPosition: "0 0, 80px 120px, 140px 40px",
           }}
         />
 
@@ -877,7 +903,6 @@ function TrackerLayout({
             justifyContent: "space-between",
             alignItems: "center",
             padding: isMobile ? "16px 14px" : "24px 32px",
-            background: "rgba(255,255,255,0.94)",
             background: "rgba(0,0,0,0.42)",
             backdropFilter: "blur(24px)",
             borderBottom: "1px solid rgba(255,255,255,0.05)",
@@ -957,7 +982,6 @@ function TrackerLayout({
             transform: "translateX(-50%)",
             width: isMobile ? "calc(100% - 16px)" : "min(94%, 680px)",
             zIndex: 50,
-            background: "rgba(4, 4, 10, 0.75)",
             background: "rgba(4, 4, 10, 0.56)",
             backdropFilter: "blur(32px) saturate(160%)",
             borderRadius: "999px",
@@ -1271,10 +1295,6 @@ function TrackerLayout({
                   padding: active ? (isMobile ? "9px 10px" : "14px 20px") : "0",
                   marginTop: active ? (isMobile ? "-20px" : "-40px") : "0",
                   minWidth: active ? (isMobile ? "58px" : "84px") : "auto",
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "center",
-                  justifyContent: "center",
                   gap: "4px",
                   boxShadow: active ? "0 12px 24px rgba(230,126,34,0.16)" : "none",
                   borderWidth: active ? "1px" : 0,

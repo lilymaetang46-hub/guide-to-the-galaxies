@@ -47,6 +47,12 @@ const CANONICAL_OVERVIEW_ORBIT_CORE_SIZE = {
   desktop: 180,
 };
 
+const CANONICAL_OVERVIEW_LOWER_PANEL_MAX_WIDTH = "620px";
+const REEF_OVERVIEW_ORBIT_TRANSLATE_Y = {
+  mobile: "0px",
+  desktop: "72px",
+};
+
 const CANONICAL_OVERVIEW_ORBIT_POSITIONS = {
   meds: { x: "44%", y: "82%" },
   food: { x: "14%", y: "38%" },
@@ -102,34 +108,45 @@ function TrackerOverviewPage({ app }) {
     connectedOutsiders,
     trackedAreas,
     selectedTrackingAreaOptions,
-    energyFlowCards,
   } = app;
+  const getDashboardStat = (key) => dashboardStats.find((item) => item.key === key);
+  const getDashboardValue = (key, fallback = "Not logged") => getDashboardStat(key)?.value ?? fallback;
+  const getDashboardNote = (key, fallback = "No update yet") => getDashboardStat(key)?.note ?? fallback;
+  const wellbeingPercent = Math.round(((mood + focus + energy) / 15) * 100);
+  const activeGoalsCount = goals.filter((goal) => !goal.completed).length;
+  const completedGoalsCount = goals.filter((goal) => goal.completed).length;
+  const latestSupportPreview =
+    supportInbox[0]?.message ||
+    "No support messages yet. Connected outsiders will show up here when they send one.";
+  const recentTrackerEvents = (recentActivityItems || []).slice(0, 3);
+  const moodStateLabel = mood >= 4 ? "Strong" : mood >= 3 ? "Steady" : mood >= 2 ? "Low" : "Heavy";
 
   if (isReefTrackerTheme(theme)) {
     const trackerUiFamily = theme.trackerUiFamily || theme.trackerBodyFamily;
-    const tideLogs = [
-      {
-        time: "08:42 AM",
-        color: theme.trackerAccentSoft,
-        detail:
-          recentActivityItems[0]?.title ||
-          "Kelp forest density increased by 12% near sector 7.",
-      },
-      {
-        time: "07:15 AM",
-        color: "#ffffff",
-        detail:
-          dashboardStats.find((item) => item.key === "sleep")?.note ||
-          "Thermal vent stabilization complete. Flow rate steady.",
-      },
-      {
-        time: "05:30 AM",
-        color: "#ffb38a",
-        detail:
-          dashboardStats.find((item) => item.key === "mood")?.note ||
-          "Migration currents remain calm across the reef.",
-      },
-    ];
+    const tideLogs =
+      recentTrackerEvents.length > 0
+        ? recentTrackerEvents.map((item, index) => ({
+            time: index === 0 ? "Most Recent" : `Update ${index + 1}`,
+            color: index === 0 ? theme.trackerAccentSoft : index === 1 ? "#ffffff" : "#ffb38a",
+            detail: `${item.label}: ${item.detail}`,
+          }))
+        : [
+            {
+              time: "Today",
+              color: theme.trackerAccentSoft,
+              detail: getDashboardNote("food", "No meals logged yet."),
+            },
+            {
+              time: "Today",
+              color: "#ffffff",
+              detail: getDashboardNote("sleep", "Sleep details have not been logged yet."),
+            },
+            {
+              time: "Today",
+              color: "#ffb38a",
+              detail: `Mood ${mood}/5, focus ${focus}/5, energy ${energy}/5.`,
+            },
+          ];
     const hudItems =
       (selectedTrackingAreaOptions?.length
         ? selectedTrackingAreaOptions.map((item) => ({
@@ -176,9 +193,15 @@ function TrackerOverviewPage({ app }) {
               value: dashboardStats.find((stat) => stat.key === "sleep")?.value || "Rested",
             },
           ]).slice(0, 4);
-    const currentSpeed = ((mood + focus + energy) / 3 + 10.7).toFixed(1);
-    const surfaceTemp =
-      dashboardStats.find((item) => item.key === "sleep")?.value || "24.5";
+    const currentSpeed = wellbeingPercent;
+    const reefStatusLine = `Mood ${mood}/5 • Focus ${focus}/5 • Energy ${energy}/5`;
+    const reefVitalityBars = [
+      { label: "Mood", value: Math.max(Math.round((mood / 5) * 100), 18), color: "rgba(79,209,217,0.7)" },
+      { label: "Focus", value: Math.max(Math.round((focus / 5) * 100), 18), color: "rgba(255,140,148,0.7)" },
+      { label: "Energy", value: Math.max(Math.round((energy / 5) * 100), 18), color: "#ffffff" },
+      { label: "Goals", value: Math.max(Math.min(activeGoalsCount * 20, 100), 18), color: "rgba(255,140,148,0.7)" },
+      { label: "Support", value: Math.max(Math.min(unreadSupportCount * 24, 100), 18), color: "rgba(79,209,217,0.7)" },
+    ];
 
     const reefPanelStyle = (variant = "teal") => ({
       background:
@@ -264,16 +287,16 @@ function TrackerOverviewPage({ app }) {
             }}
           >
             <h3 style={{ margin: 0, fontFamily: theme.trackerBodyFamily, fontStyle: "italic", fontSize: isMobile ? "1.8rem" : "2rem", color: theme.text, marginBottom: "20px" }}>
-              Coral Vitality
+              Daily Readings
             </h3>
             <div style={{ height: "120px", display: "flex", alignItems: "end", gap: "10px" }}>
-              {[45, 70, 90, 60, 75].map((height, index) => (
+              {reefVitalityBars.map((item, index) => (
                 <div
-                  key={`reef-bar-${index}`}
+                  key={item.label}
                   style={{
                     flex: 1,
-                    height: `${height}%`,
-                    background: index === 2 ? "#ffffff" : index % 2 === 0 ? "rgba(79,209,217,0.7)" : "rgba(255,140,148,0.7)",
+                    height: `${item.value}%`,
+                    background: item.color,
                     borderRadius: "999px 999px 0 0",
                     borderTop: "1px solid rgba(255,255,255,0.4)",
                     boxShadow: index === 2 ? "0 0 20px rgba(255,255,255,0.35)" : "none",
@@ -281,10 +304,25 @@ function TrackerOverviewPage({ app }) {
                 />
               ))}
             </div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(5, minmax(0, 1fr))", gap: "8px", marginTop: "14px" }}>
+              {reefVitalityBars.map((item) => (
+                <span key={item.label} style={{ textAlign: "center", fontFamily: trackerUiFamily, fontSize: "9px", letterSpacing: "0.12em", textTransform: "uppercase", color: "rgba(255,255,255,0.74)" }}>
+                  {item.label}
+                </span>
+              ))}
+            </div>
           </section>
         </aside>
 
-        <section style={{ display: "grid", gap: isMobile ? "18px" : "26px", justifyItems: "center", order: isMobile ? 1 : 0 }}>
+        <section style={{ display: "grid", gap: isMobile ? "18px" : "32px", justifyItems: "center", alignContent: "start", paddingTop: isMobile ? "8px" : "24px", order: isMobile ? 1 : 0 }}>
+          <div style={{ textAlign: "center", marginBottom: isMobile ? "8px" : "0px" }}>
+            <h1 style={{ margin: 0, fontFamily: theme.trackerHeadingFamily, fontWeight: 900, fontSize: isMobile ? "clamp(2.9rem, 14vw, 4.8rem)" : "clamp(4.4rem, 8.4vw, 5.8rem)", color: theme.text, letterSpacing: "-0.04em", lineHeight: isMobile ? 0.98 : 1.04 }}>
+              Reef Overview
+            </h1>
+            <p style={{ margin: isMobile ? "12px 0 0" : "18px 0 0", fontFamily: theme.trackerBodyFamily, fontStyle: "italic", fontSize: isMobile ? "1.4rem" : "1.8rem", color: theme.trackerAccent }}>
+              {reefStatusLine}
+            </p>
+          </div>
           <div
             style={{
               position: "relative",
@@ -294,6 +332,8 @@ function TrackerOverviewPage({ app }) {
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
+              marginTop: isMobile ? "18px" : "0px",
+              transform: `translateY(${isMobile ? REEF_OVERVIEW_ORBIT_TRANSLATE_Y.mobile : REEF_OVERVIEW_ORBIT_TRANSLATE_Y.desktop})`,
             }}
           >
             <div className="reef-sway" style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", opacity: 0.3, pointerEvents: "none" }}>
@@ -323,10 +363,10 @@ function TrackerOverviewPage({ app }) {
                 <div style={{ marginTop: "10px" }}>
                   <span style={{ display: "block", fontFamily: theme.trackerUiFamily, fontSize: isMobile ? "2.6rem" : "3.6rem", fontWeight: 900, color: theme.text }}>
                     {currentSpeed}
-                    <span style={{ fontSize: isMobile ? "1rem" : "1.5rem", color: theme.trackerAccent, marginLeft: "4px" }}>kn</span>
+                    <span style={{ fontSize: isMobile ? "1rem" : "1.5rem", color: theme.trackerAccent, marginLeft: "4px" }}>%</span>
                   </span>
                   <span style={{ fontFamily: theme.trackerBodyFamily, fontStyle: "italic", fontSize: isMobile ? "1.2rem" : "1.7rem", color: theme.text }}>
-                    Surface Drift
+                    Day Snapshot
                   </span>
                 </div>
               </div>
@@ -334,9 +374,9 @@ function TrackerOverviewPage({ app }) {
 
             <div className="observatory-orbit-spin" style={{ position: "absolute", inset: 0 }}>
               {[
-                { icon: "water_drop", value: "84%", top: CANONICAL_OVERVIEW_ORBIT_POSITIONS.exercise.y, left: CANONICAL_OVERVIEW_ORBIT_POSITIONS.exercise.x, variant: "teal" },
-                { icon: "flare", value: "LUME", top: CANONICAL_OVERVIEW_ORBIT_POSITIONS.food.y, left: CANONICAL_OVERVIEW_ORBIT_POSITIONS.food.x, variant: "pink" },
-                { icon: "waves", value: "Calm", top: CANONICAL_OVERVIEW_ORBIT_POSITIONS.sleep.y, left: CANONICAL_OVERVIEW_ORBIT_POSITIONS.sleep.x, variant: "peach" },
+                { icon: "medication", value: getDashboardValue("meds", "Open"), top: CANONICAL_OVERVIEW_ORBIT_POSITIONS.exercise.y, left: CANONICAL_OVERVIEW_ORBIT_POSITIONS.exercise.x, variant: "teal" },
+                { icon: "restaurant", value: getDashboardValue("food", "Open"), top: CANONICAL_OVERVIEW_ORBIT_POSITIONS.food.y, left: CANONICAL_OVERVIEW_ORBIT_POSITIONS.food.x, variant: "pink" },
+                { icon: "bedtime", value: getDashboardValue("sleep", "Open"), top: CANONICAL_OVERVIEW_ORBIT_POSITIONS.sleep.y, left: CANONICAL_OVERVIEW_ORBIT_POSITIONS.sleep.x, variant: "peach" },
               ].map((chip) => (
                 <div
                   key={chip.icon}
@@ -372,16 +412,7 @@ function TrackerOverviewPage({ app }) {
             </div>
           </div>
 
-          <div style={{ textAlign: "center", marginTop: "4px" }}>
-            <h1 style={{ margin: 0, fontFamily: theme.trackerHeadingFamily, fontWeight: 900, fontSize: isMobile ? "clamp(2.9rem, 14vw, 4.8rem)" : "clamp(4.6rem, 9vw, 6rem)", color: theme.text, letterSpacing: "-0.04em" }}>
-              The Shallows
-            </h1>
-            <p style={{ margin: "12px 0 0", fontFamily: theme.trackerBodyFamily, fontStyle: "italic", fontSize: isMobile ? "1.4rem" : "2rem", color: theme.trackerAccent }}>
-              {`High Noon Current - ${surfaceTemp} C`}
-            </p>
-          </div>
-
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(0, 1fr))", gap: isMobile ? "12px" : "24px", width: "100%", maxWidth: "760px", paddingInline: isMobile ? "4px" : "16px" }}>
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(2, minmax(0, 1fr))" : "repeat(4, minmax(0, 1fr))", gap: isMobile ? "12px" : "18px", width: "100%", maxWidth: CANONICAL_OVERVIEW_LOWER_PANEL_MAX_WIDTH, paddingInline: isMobile ? "4px" : "8px" }}>
             {hudItems.map((item, index) => (
               <button
                 key={item.key}
@@ -427,7 +458,7 @@ function TrackerOverviewPage({ app }) {
             }}
           >
             <h2 style={{ margin: 0, fontFamily: theme.trackerBodyFamily, fontStyle: "italic", fontSize: isMobile ? "2rem" : "2.4rem", color: theme.text, marginBottom: "24px" }}>
-              Frequency
+              Quick Readings
             </h2>
             <div style={{ position: "relative", height: "176px", width: "100%", overflow: "hidden", borderRadius: "24px", background: "rgba(0,0,0,0.4)", marginBottom: "24px", border: "1px solid rgba(255,255,255,0.2)" }}>
               <svg viewBox="0 0 400 200" style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }}>
@@ -437,9 +468,9 @@ function TrackerOverviewPage({ app }) {
             </div>
             <div style={{ display: "grid", gap: "16px" }}>
               {[
-                { label: "Oscillation", value: "42.8 Hz", color: theme.text },
-                { label: "Amplitude", value: "1.4m", color: "#ffb38a" },
-                { label: "Status", value: "ACTIVE", color: theme.trackerAccentSoft },
+                { label: "Mood", value: `${mood}/5`, color: theme.text },
+                { label: "Focus", value: `${focus}/5`, color: "#ffb38a" },
+                { label: "Energy", value: `${energy}/5`, color: theme.trackerAccentSoft },
               ].map((item) => (
                 <div key={item.label} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingBottom: "12px", borderBottom: "1px solid rgba(255,255,255,0.1)" }}>
                   <span style={{ fontFamily: trackerUiFamily, fontSize: "12px", textTransform: "uppercase", letterSpacing: "0.14em", color: "rgba(255,255,255,0.8)" }}>
@@ -468,10 +499,10 @@ function TrackerOverviewPage({ app }) {
                 favorite
               </span>
               <h4 style={{ margin: 0, fontFamily: theme.trackerHeadingFamily, fontWeight: 900, fontSize: isMobile ? "2rem" : "2.6rem", lineHeight: 1.05, color: theme.text }}>
-                98% Integrity
+                {unreadSupportCount > 0 ? `${unreadSupportCount} New Message${unreadSupportCount === 1 ? "" : "s"}` : `${connectedOutsiders.length} Connected`}
               </h4>
               <p style={{ margin: "12px 0 0", fontFamily: theme.trackerBodyFamily, fontStyle: "italic", fontSize: isMobile ? "1.2rem" : "1.5rem", color: theme.text }}>
-                Sector 12 thriving.
+                {latestSupportPreview}
               </p>
             </div>
           </section>
@@ -485,7 +516,7 @@ function TrackerOverviewPage({ app }) {
     const moodPercent = Math.round((mood / 5) * 100);
     const focusPercent = Math.round((focus / 5) * 100);
     const energyPercent = Math.round((energy / 5) * 100);
-    const centerDepth = Math.round(760 + mood * 10 + focus * 6 + energy * 8);
+    const centerDepth = wellbeingPercent;
     const telemetryItems = [
       {
         time: "09:12",
@@ -493,7 +524,7 @@ function TrackerOverviewPage({ app }) {
         detail:
           recentActivityItems[0]?.title ||
           dashboardStats.find((item) => item.key === "food")?.note ||
-          "Nutrient intake verified.",
+          "No recent tracker updates yet.",
       },
       {
         time: "08:00",
@@ -507,7 +538,7 @@ function TrackerOverviewPage({ app }) {
         color: theme.trackerAccent,
         detail:
           dashboardStats.find((item) => item.key === "mood")?.note ||
-          `Pressure sensors recalibrated. Current mood reading ${mood}/5.`,
+          `Mood ${mood}/5, focus ${focus}/5, energy ${energy}/5.`,
       },
     ];
     const abyssQuickCards =
@@ -525,9 +556,9 @@ function TrackerOverviewPage({ app }) {
             value: dashboardStats.find((stat) => stat.key === item)?.value || "Stable",
           }))).slice(0, 2);
     const restCard =
-      dashboardStats.find((item) => item.key === "sleep")?.value || "REM Stage";
+      dashboardStats.find((item) => item.key === "sleep")?.value || "Not logged";
     const ritualCard =
-      rewards[0]?.name || nextRewardGoal?.name || "Deep Sleep";
+      rewards[0]?.name || nextRewardGoal?.name || "No reward yet";
 
     const panelStyle = (accent = "teal") => ({
       background: theme.trackerAbyssPanel || "rgba(1, 15, 18, 0.4)",
@@ -644,7 +675,7 @@ function TrackerOverviewPage({ app }) {
           </section>
         </aside>
 
-        <section style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: isMobile ? "18px" : "26px", order: isMobile ? 1 : 0 }}>
+        <section style={{ display: "grid", justifyItems: "center", alignContent: "start", gap: isMobile ? "18px" : "26px", order: isMobile ? 1 : 0 }}>
           <div style={{ textAlign: "center", marginBottom: "8px" }}>
             <h1
               style={{
@@ -722,13 +753,13 @@ function TrackerOverviewPage({ app }) {
             </div>
             <div style={{ position: "relative", zIndex: 2, textAlign: "center" }}>
               <span style={{ display: "block", fontFamily: trackerUiFamily, fontSize: isMobile ? "10px" : "11px", textTransform: "uppercase", letterSpacing: "0.5em", color: "rgba(34,211,238,0.7)", marginBottom: "10px" }}>
-                Depth Status
+                Today
               </span>
               <h1 style={{ margin: 0, fontFamily: theme.trackerHeadingFamily, fontWeight: 300, fontStyle: "italic", fontSize: isMobile ? "clamp(4rem, 24vw, 6.4rem)" : "clamp(6rem, 13vw, 8.5rem)", lineHeight: 0.88, color: theme.text, textShadow: "0 0 40px rgba(34,211,238,0.12)" }}>
                 {centerDepth}
               </h1>
               <span style={{ display: "block", marginTop: "16px", fontFamily: trackerUiFamily, fontSize: isMobile ? "10px" : "12px", textTransform: "uppercase", letterSpacing: "0.18em", color: theme.trackerAbyssDepthText || theme.faintText }}>
-                Meters Below Shelf
+                Percent Logged / Steady
               </span>
             </div>
             <div
@@ -745,7 +776,7 @@ function TrackerOverviewPage({ app }) {
               }}
             >
               <span style={{ display: "block", fontFamily: trackerUiFamily, fontSize: "10px", textTransform: "uppercase", letterSpacing: "0.18em", color: theme.trackerAccentSoft }}>
-                Ritual
+                Next Reward
               </span>
               <span style={{ display: "block", marginTop: "8px", fontFamily: theme.trackerHeadingFamily, fontStyle: "italic", fontSize: isMobile ? "1.35rem" : "2.2rem", lineHeight: 0.95, color: theme.text }}>
                 {ritualCard}
@@ -769,10 +800,10 @@ function TrackerOverviewPage({ app }) {
               cursor: "pointer",
             }}
           >
-            Re-Align Sonar
+            Open Charts
           </button>
           <p style={{ margin: 0, fontFamily: trackerUiFamily, fontSize: "10px", textTransform: "uppercase", letterSpacing: "0.16em", color: theme.faintText }}>
-            Automatic sync in 04:20
+            {activeGoalsCount} active goal{activeGoalsCount === 1 ? "" : "s"} tracked
           </p>
         </section>
 
@@ -786,8 +817,8 @@ function TrackerOverviewPage({ app }) {
               <path d="M0 35 Q 25 15, 50 35 T 100 35 T 150 35 T 200 35" fill="none" stroke={theme.trackerAccent} strokeWidth="1.1" />
             </svg>
             <div style={{ marginTop: "12px", display: "flex", justifyContent: "space-between", alignItems: "center", fontFamily: trackerUiFamily, fontSize: "10px", textTransform: "uppercase", letterSpacing: "0.12em", color: theme.faintText }}>
-              <span>Alpha Waves</span>
-              <span style={{ color: theme.trackerAccentSoft, fontWeight: 700 }}>Synced</span>
+              <span>Recent Pattern</span>
+              <span style={{ color: theme.trackerAccentSoft, fontWeight: 700 }}>{moodStateLabel}</span>
             </div>
           </section>
 
@@ -799,9 +830,9 @@ function TrackerOverviewPage({ app }) {
               <span className="material-symbols-outlined" style={{ color: theme.trackerAccent }}>analytics</span>
             </div>
             <div style={{ display: "grid", gap: "22px" }}>
-              {metricBar("Mood / Serenity", `${moodPercent}%`, theme.trackerAccent, `${moodPercent}%`)}
-              {metricBar("Osmosis Balance", focus >= 4 ? "Optimal" : "Stable", theme.trackerAccentSoft, `${Math.max(focusPercent, 24)}%`)}
-              {metricBar("Kinetic Energy", dashboardStats.find((item) => item.key === "exercise")?.value || `${energyPercent}%`, theme.trackerAccent, `${energyPercent}%`)}
+              {metricBar("Mood", `${mood}/5`, theme.trackerAccent, `${moodPercent}%`)}
+              {metricBar("Focus", `${focus}/5`, theme.trackerAccentSoft, `${Math.max(focusPercent, 24)}%`)}
+              {metricBar("Energy", `${energy}/5`, theme.trackerAccent, `${energyPercent}%`)}
             </div>
           </section>
 
@@ -843,7 +874,7 @@ function TrackerOverviewPage({ app }) {
               </div>
               <div>
                 <span style={{ display: "block", fontFamily: trackerUiFamily, fontSize: "10px", textTransform: "uppercase", letterSpacing: "0.18em", color: theme.trackerAccentSoft }}>
-                  Sleep Depth
+                  Sleep Summary
                 </span>
                 <span style={{ display: "block", marginTop: "4px", fontFamily: theme.trackerHeadingFamily, fontStyle: "italic", fontSize: isMobile ? "1.8rem" : "2.2rem", color: theme.text }}>
                   {restCard}
@@ -873,25 +904,25 @@ function TrackerOverviewPage({ app }) {
   if (isObservatoryTrackerTheme(theme)) {
     const telemetryItems = [
       {
-        time: "22:41:04 UTC",
-        title: "Orbital Alignment Confirmed",
-        detail: `Core resonance synced with mood ${mood}/5 and energy ${energy}/5.`,
+        time: "Current",
+        title: "Mood and Energy Check",
+        detail: `Mood ${mood}/5, focus ${focus}/5, energy ${energy}/5.`,
         active: true,
       },
       {
-        time: "19:15:22 UTC",
-        title: "Deep Space Meditation",
-        detail: moodTags.length > 0 ? `${moodTags.join(", ")} logged across the current orbit.` : "Mood words still drifting in the field.",
+        time: "Mood",
+        title: "Mood Tags",
+        detail: moodTags.length > 0 ? `${moodTags.join(", ")} logged for today.` : "No mood tags selected yet.",
       },
       {
-        time: "14:02:59 UTC",
-        title: "Sustenance Intake",
-        detail: dashboardStats.find((item) => item.key === "food")?.note || "Fuel ritual awaiting a log.",
+        time: "Tracker",
+        title: "Food and Routine",
+        detail: getDashboardNote("food", "No food update yet."),
       },
       {
-        time: "08:30:11 UTC",
-        title: "Wake Sequence Initiation",
-        detail: `Last action: ${today}`,
+        time: "Today",
+        title: "Most Recent Activity",
+        detail: recentTrackerEvents[0] ? `${recentTrackerEvents[0].label}: ${recentTrackerEvents[0].detail}` : `Last logged date: ${today}`,
         dim: true,
       },
     ];
@@ -904,8 +935,7 @@ function TrackerOverviewPage({ app }) {
       { key: "hygiene", label: "Hygiene", icon: "self_care", size: 68, ...CANONICAL_OVERVIEW_ORBIT_POSITIONS.hygiene },
     ].filter((node) => trackedAreas.includes(node.key));
 
-    const supportQuote =
-      supportInbox[0]?.message || "The stars are but beacons of your progress. Keep the orbit steady.";
+    const supportQuote = latestSupportPreview;
 
     return (
       <div
@@ -960,7 +990,7 @@ function TrackerOverviewPage({ app }) {
               }}
               onClick={() => setActivePage("charts")}
             >
-              View All Streams
+              Open Charts
             </button>
           </section>
 
@@ -969,7 +999,7 @@ function TrackerOverviewPage({ app }) {
               Support Uplink
             </h3>
             <p style={{ margin: "8px 0 0", fontSize: "12px", color: theme.subtleText, lineHeight: 1.7 }}>
-              The Outsider is reaching out. Frequency clear.
+              Latest support and quick access to the tracker inbox.
             </p>
             <div
               style={{
@@ -1005,15 +1035,15 @@ function TrackerOverviewPage({ app }) {
               }}
               onClick={() => setActivePage("support")}
             >
-              Transmit Support
+              Open Support Inbox
             </button>
             <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: "12px", marginTop: "16px" }}>
-              <button style={{ padding: "10px 12px", border: "1px solid rgba(216,185,255,0.3)", borderRadius: "999px", background: "transparent", color: theme.trackerAccentSoft, fontSize: "10px", textTransform: "uppercase" }}>
-                Steady Orbit
-              </button>
-              <button style={{ padding: "10px 12px", border: "1px solid rgba(216,185,255,0.3)", borderRadius: "999px", background: "transparent", color: theme.trackerAccentSoft, fontSize: "10px", textTransform: "uppercase" }}>
-                Spark Pulse
-              </button>
+              <div style={{ padding: "10px 12px", border: "1px solid rgba(216,185,255,0.3)", borderRadius: "999px", background: "transparent", color: theme.trackerAccentSoft, fontSize: "10px", textTransform: "uppercase", textAlign: "center" }}>
+                {unreadSupportCount} unread
+              </div>
+              <div style={{ padding: "10px 12px", border: "1px solid rgba(216,185,255,0.3)", borderRadius: "999px", background: "transparent", color: theme.trackerAccentSoft, fontSize: "10px", textTransform: "uppercase", textAlign: "center" }}>
+                {connectedOutsiders.length} connected
+              </div>
             </div>
           </section>
         </aside>
@@ -1031,10 +1061,10 @@ function TrackerOverviewPage({ app }) {
                 lineHeight: 0.95,
               }}
             >
-              Ritual Alignment
+              Tracker Overview
             </h1>
             <p style={{ margin: "18px 0 0", color: "rgba(216,185,255,0.6)", letterSpacing: isMobile ? "0.16em" : "0.35em", textTransform: "uppercase", fontSize: "10px", lineHeight: 1.7 }}>
-              Synchronizing your biological pulse with the celestial tide
+              Your current tracker areas orbit around today's mood, routines, and progress
             </p>
           </section>
 
@@ -1060,7 +1090,10 @@ function TrackerOverviewPage({ app }) {
                   auto_awesome
                 </span>
                 <div style={{ marginTop: "8px", fontSize: "10px", letterSpacing: isMobile ? "0.16em" : "0.3em", textTransform: "uppercase", color: theme.trackerAccent, fontWeight: 700 }}>
-                  The Pulse
+                  Day Snapshot
+                </div>
+                <div style={{ marginTop: "6px", fontFamily: theme.trackerHeadingFamily, fontStyle: "italic", fontSize: isMobile ? "1.25rem" : "1.55rem", color: theme.text }}>
+                  {wellbeingPercent}%
                 </div>
               </div>
             </div>
@@ -1111,17 +1144,17 @@ function TrackerOverviewPage({ app }) {
             </div>
           </div>
 
-          <section style={{ ...glassPanelStyle(theme), width: "100%", maxWidth: "620px", padding: isMobile ? "20px 16px" : "28px 40px", borderRadius: isMobile ? "24px" : "32px" }}>
+          <section style={{ ...glassPanelStyle(theme), width: "100%", maxWidth: CANONICAL_OVERVIEW_LOWER_PANEL_MAX_WIDTH, padding: isMobile ? "20px 16px" : "28px 40px", borderRadius: isMobile ? "24px" : "32px" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: isMobile ? "24px" : "34px", gap: "12px", flexWrap: "wrap" }}>
-              <span style={trackerSectionLabel(theme.subtleText)}>Resonance Map</span>
-              <span style={trackerSectionLabel(theme.trackerAccent)}>Harmonizing...</span>
+              <span style={trackerSectionLabel(theme.subtleText)}>Mood Check-In</span>
+              <span style={trackerSectionLabel(theme.trackerAccent)}>{moodStateLabel}</span>
             </div>
             <div style={{ position: "relative", height: "96px", display: "flex", alignItems: "center" }}>
               <div style={{ position: "absolute", width: "100%", height: "2px", background: "linear-gradient(90deg, rgba(253,111,133,0.3) 0%, rgba(216,185,255,0.3) 50%, rgba(255,240,195,0.3) 100%)", borderRadius: "999px" }} />
               <div style={{ position: "absolute", width: "100%", display: "flex", justifyContent: "space-between", top: "-8px" }}>
-                <span style={{ ...trackerSectionLabel(theme.trackerError), fontSize: "10px" }}>Void</span>
-                <span style={{ ...trackerSectionLabel(theme.trackerAccentSoft), fontSize: "10px" }}>Ether</span>
-                <span style={{ ...trackerSectionLabel(theme.trackerAccent), fontSize: "10px" }}>Supernova</span>
+                <span style={{ ...trackerSectionLabel(theme.trackerError), fontSize: "10px" }}>Low</span>
+                <span style={{ ...trackerSectionLabel(theme.trackerAccentSoft), fontSize: "10px" }}>Steady</span>
+                <span style={{ ...trackerSectionLabel(theme.trackerAccent), fontSize: "10px" }}>High</span>
               </div>
               <input type="range" min="1" max="5" value={mood} readOnly style={{ width: "100%", height: "48px", background: "transparent", position: "relative", zIndex: 10 }} />
             </div>
@@ -1131,19 +1164,19 @@ function TrackerOverviewPage({ app }) {
         <aside style={{ display: "grid", gap: isMobile ? "18px" : "32px", order: isMobile ? 3 : 0 }}>
           <section style={glassPanelStyle(theme)}>
             <h3 style={{ margin: 0, fontFamily: theme.trackerHeadingFamily, fontStyle: "italic", fontSize: isMobile ? "1.45rem" : "2rem", color: theme.trackerAccent }}>
-              Signal Protocol
+              Daily Summary
             </h3>
             <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: "16px", marginTop: "24px", marginBottom: "28px" }}>
               <div>
                 <span style={{ ...trackerSectionLabel("rgba(216,185,255,0.6)"), display: "block", marginBottom: "6px" }}>Orbit Status</span>
                 <span style={{ fontSize: "13px", color: theme.trackerAccent, display: "flex", alignItems: "center", gap: "8px" }}>
                   <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: theme.trackerAccent }} />
-                  STABLE
+                  {moodStateLabel.toUpperCase()}
                 </span>
               </div>
               <div>
                 <span style={{ ...trackerSectionLabel("rgba(216,185,255,0.6)"), display: "block", marginBottom: "6px" }}>Core Frequency</span>
-                <span style={{ fontSize: "13px", color: theme.trackerAccent }}>432 Hz</span>
+                <span style={{ fontSize: "13px", color: theme.trackerAccent }}>{activeGoalsCount} active goals</span>
               </div>
             </div>
 
@@ -1176,10 +1209,10 @@ function TrackerOverviewPage({ app }) {
             <div style={{ ...glassPanelStyle(theme), background: "rgba(0,0,0,0.46)" }}>
               <span style={trackerSectionLabel("rgba(169,199,255,0.6)")}>Stellar Phase</span>
               <h4 style={{ margin: "10px 0 0", fontFamily: theme.trackerHeadingFamily, fontStyle: "italic", fontSize: isMobile ? "1.45rem" : "2rem", color: theme.text }}>
-                Waxing Resonance
+                Support Snapshot
               </h4>
               <p style={{ margin: "12px 0 0", fontSize: "12px", color: theme.subtleText, lineHeight: 1.7 }}>
-                Your ritual alignment is 84% congruent. Energy peaks expected in 12h.
+                {latestSupportPreview}
               </p>
             </div>
             <div style={{ ...glassPanelStyle(theme), background: "rgba(0,0,0,0.46)" }}>
@@ -1187,7 +1220,7 @@ function TrackerOverviewPage({ app }) {
                 <div style={{ width: "100%", height: "100%", background: "radial-gradient(circle at 45% 40%, rgba(253,111,133,0.35) 0%, rgba(216,185,255,0.16) 20%, rgba(0,0,0,0) 55%), radial-gradient(circle at 55% 45%, rgba(255,240,195,0.22) 0%, rgba(0,0,0,0) 20%), linear-gradient(135deg, #05070f 0%, #120815 42%, #090f1f 100%)" }} />
               </div>
               <h4 style={{ margin: 0, fontFamily: theme.trackerHeadingFamily, fontStyle: "italic", fontSize: isMobile ? "1.45rem" : "2rem", color: theme.text }}>
-                Nebula Tracking
+                Sleep and Recovery
               </h4>
               <p style={{ margin: "12px 0 0", fontSize: "12px", color: theme.subtleText, lineHeight: 1.7 }}>
                 {dashboardStats.find((item) => item.key === "sleep")?.note || "Sleep hygiene has drifted. Recalibrate core rest protocols."}
@@ -1204,17 +1237,17 @@ function TrackerOverviewPage({ app }) {
       dashboardStats.find((item) => item.key === "meds")?.value || "Sync";
     const sleepCardValue =
       dashboardStats.find((item) => item.key === "sleep")?.value || "8.2h";
-    const outputValue = ((mood + focus + energy) / 3 + 0.49).toFixed(2);
+    const outputValue = wellbeingPercent;
     const moodWord =
-      mood >= 4 ? "Zenith" : mood >= 3 ? "Radiant" : mood >= 2 ? "Drift" : "Low Sun";
+      mood >= 4 ? "Strong" : mood >= 3 ? "Steady" : mood >= 2 ? "Low" : "Heavy";
     const leftTelemetryNote =
       dashboardStats.find((item) => item.key === "mood")?.note ||
-      "Surface turbulence remains within predicted ritual alignment parameters.";
+      "Today's mood note will appear here after you log one.";
     const rightSignalTitle =
-      dashboardStats.find((item) => item.key === "sleep")?.value || "X-Class 2.4";
+      dashboardStats.find((item) => item.key === "sleep")?.value || "Not logged";
     const rightSignalNote =
       dashboardStats.find((item) => item.key === "sleep")?.note ||
-      "Rest signal remains warm and steady through the current cycle.";
+      "Sleep details have not been logged yet.";
     const solarTrackingPage =
       selectedTrackingAreaOptions.find((item) =>
         ["meds", "food", "sleep", "hygiene", "cleaning", "exercise", "mood"].includes(
@@ -1305,22 +1338,22 @@ function TrackerOverviewPage({ app }) {
         <aside style={{ display: "grid", gap: isMobile ? "18px" : "32px", order: isMobile ? 2 : 0 }}>
           <section style={{ ...glassPlateStyle, padding: isMobile ? "18px" : "24px" }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-              <span style={{ fontSize: "10px", textTransform: "uppercase", letterSpacing: "0.18em", fontWeight: 700, color: "#7b5a00" }}>Telemetry</span>
+              <span style={{ fontSize: "10px", textTransform: "uppercase", letterSpacing: "0.18em", fontWeight: 700, color: "#7b5a00" }}>Mood / Energy</span>
               <span className="material-symbols-outlined" style={{ color: theme.secondary, fontSize: "16px", fontVariationSettings: "'FILL' 1" }}>
                 sensors
               </span>
             </div>
             <div style={{ marginTop: "16px", display: "grid", gap: "14px" }}>
               <div>
-                <p style={{ margin: 0, fontSize: "13px", color: theme.subtleText, fontWeight: 600 }}>Flux Density</p>
+                <p style={{ margin: 0, fontSize: "13px", color: theme.subtleText, fontWeight: 600 }}>Mood</p>
                 <div style={{ marginTop: "8px", height: "4px", borderRadius: "999px", background: "rgba(255,255,255,0.36)", overflow: "hidden" }}>
-                  <div style={{ width: "74%", height: "100%", background: theme.primary, boxShadow: "0 0 8px rgba(255,193,7,0.8)" }} />
+                  <div style={{ width: `${Math.max(Math.round((mood / 5) * 100), 8)}%`, height: "100%", background: theme.primary, boxShadow: "0 0 8px rgba(255,193,7,0.8)" }} />
                 </div>
               </div>
               <div>
-                <p style={{ margin: 0, fontSize: "13px", color: theme.subtleText, fontWeight: 600 }}>Magnetic Variance</p>
+                <p style={{ margin: 0, fontSize: "13px", color: theme.subtleText, fontWeight: 600 }}>Energy</p>
                 <div style={{ marginTop: "8px", height: "4px", borderRadius: "999px", background: "rgba(255,255,255,0.36)", overflow: "hidden" }}>
-                  <div style={{ width: "42%", height: "100%", background: theme.secondary, boxShadow: "0 0 8px rgba(230,126,34,0.8)" }} />
+                  <div style={{ width: `${Math.max(Math.round((energy / 5) * 100), 8)}%`, height: "100%", background: theme.secondary, boxShadow: "0 0 8px rgba(230,126,34,0.8)" }} />
                 </div>
               </div>
             </div>
@@ -1331,7 +1364,7 @@ function TrackerOverviewPage({ app }) {
 
           <section style={{ ...glassPlateStyle, padding: isMobile ? "18px" : "24px" }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-              <span style={{ fontSize: "10px", textTransform: "uppercase", letterSpacing: "0.18em", fontWeight: 700, color: "#7b5a00" }}>Solar Phase</span>
+              <span style={{ fontSize: "10px", textTransform: "uppercase", letterSpacing: "0.18em", fontWeight: 700, color: "#7b5a00" }}>Mood State</span>
               <span className="material-symbols-outlined" style={{ color: theme.secondary, fontSize: "16px" }}>
                 wb_sunny
               </span>
@@ -1340,7 +1373,7 @@ function TrackerOverviewPage({ app }) {
               {moodWord}
             </h3>
             <p style={{ margin: "10px 0 0", color: theme.subtleText, lineHeight: 1.6 }}>
-              Output is tracking at {outputValue} YW. Warmth and momentum stay centered when the daily rituals remain visible.
+              Today's overall snapshot is {outputValue}%. This combines mood, focus, and energy into one quick read.
             </p>
           </section>
         </aside>
@@ -1358,10 +1391,10 @@ function TrackerOverviewPage({ app }) {
                 lineHeight: 0.95,
               }}
             >
-              Ritual Alignment
+              Tracker Overview
             </h1>
             <p style={{ margin: "18px 0 0", color: "rgba(122,82,18,0.62)", letterSpacing: isMobile ? "0.16em" : "0.35em", textTransform: "uppercase", fontSize: "10px", lineHeight: 1.7 }}>
-              Synchronizing your biological pulse with the solar tide
+              Quick links for the areas you are actively tracking today
             </p>
           </section>
 
@@ -1429,16 +1462,16 @@ function TrackerOverviewPage({ app }) {
               }}
             >
               <span style={{ color: "#463600", fontSize: "10px", textTransform: "uppercase", letterSpacing: "0.2em", fontWeight: 700, marginBottom: "4px" }}>
-                Current Output
+                Day Snapshot
               </span>
               <span style={{ fontFamily: theme.trackerHeadingFamily, fontStyle: "italic", color: theme.text, fontSize: isMobile ? "2rem" : "3rem", fontWeight: 800, letterSpacing: "-0.03em" }}>
                 {outputValue}
-                <span style={{ fontSize: isMobile ? "1rem" : "1.4rem" }}>YW</span>
+                <span style={{ fontSize: isMobile ? "1rem" : "1.4rem" }}>%</span>
               </span>
             </div>
           </div>
 
-          <section style={{ ...glassPlateStyle, width: "100%", maxWidth: "820px", padding: isMobile ? "16px" : "18px 22px" }}>
+          <section style={{ ...glassPlateStyle, width: "100%", maxWidth: CANONICAL_OVERVIEW_LOWER_PANEL_MAX_WIDTH, padding: isMobile ? "16px" : "18px 22px" }}>
             <div
               style={{
                 display: "flex",
@@ -1469,7 +1502,7 @@ function TrackerOverviewPage({ app }) {
             <div
               style={{
                 display: "grid",
-                gridTemplateColumns: isMobile ? "repeat(2, minmax(0, 1fr))" : "repeat(6, minmax(0, 1fr))",
+                gridTemplateColumns: isMobile ? "repeat(2, minmax(0, 1fr))" : "repeat(3, minmax(0, 1fr))",
                 gap: "12px",
               }}
             >
@@ -1497,7 +1530,7 @@ function TrackerOverviewPage({ app }) {
         <aside style={{ display: "grid", gap: isMobile ? "18px" : "32px", order: isMobile ? 3 : 0 }}>
           <section style={{ ...glassPlateStyle, padding: isMobile ? "18px" : "24px" }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-              <span style={{ fontSize: "10px", textTransform: "uppercase", letterSpacing: "0.18em", fontWeight: 700, color: "#7b5a00" }}>Signal</span>
+              <span style={{ fontSize: "10px", textTransform: "uppercase", letterSpacing: "0.18em", fontWeight: 700, color: "#7b5a00" }}>Sleep</span>
               <span className="material-symbols-outlined" style={{ color: theme.secondary, fontSize: "16px" }}>
                 wifi_tethering
               </span>
@@ -1534,13 +1567,17 @@ function TrackerOverviewPage({ app }) {
 
           <section style={{ ...glassPlateStyle, padding: isMobile ? "18px" : "24px" }}>
             <span style={{ ...trackerSectionLabel("#7b5a00"), display: "block", marginBottom: "10px" }}>
-              Heat Map
+              Goals
             </span>
             <h3 style={{ margin: 0, fontFamily: theme.trackerHeadingFamily, fontStyle: "italic", fontSize: isMobile ? "1.5rem" : "2rem", color: theme.text }}>
-              Photosphere Stable
+              {activeGoalsCount > 0 ? `${activeGoalsCount} Active Goal${activeGoalsCount === 1 ? "" : "s"}` : "No Active Goals"}
             </h3>
             <p style={{ margin: "12px 0 0", fontSize: "12px", color: theme.subtleText, lineHeight: 1.7 }}>
-              Surface conditions remain warm and readable. Solar mode now follows the same tracker frame while keeping the brighter atmosphere.
+              {nextRewardGoal
+                ? `${nextRewardGoal.name} is ${nextRewardGoal.currentStreakProgress}/${nextRewardGoal.streakLength} complete.`
+                : completedGoalsCount > 0
+                ? `${completedGoalsCount} goal${completedGoalsCount === 1 ? "" : "s"} completed so far.`
+                : "Create a goal to start tracking streak progress here."}
             </p>
           </section>
         </aside>

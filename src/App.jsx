@@ -21,6 +21,28 @@ import OutsiderOverviewPage from "./pages/outsider/OverviewPage";
 import OutsiderTrackerDataPage from "./pages/outsider/TrackerDataPage";
 import OutsiderSupportPage from "./pages/outsider/SupportPage";
 import OutsiderGoalsPage from "./pages/outsider/GoalsPage";
+import {
+  DEFAULT_CONNECTION_PERMISSIONS,
+  TRACKING_AREA_OPTIONS,
+} from "./app/constants";
+import {
+  buildInviteLink,
+  buildRecentChartData,
+  calculateSimpleDailyStreak,
+  computeGoalProgress,
+  getFeedbackTone,
+  getInviteTokenFromUrl,
+  getLatestEntriesByDate,
+  getLocalDateKey,
+  getNativePushEnvironment,
+  getPublicAppUrl,
+  getThemeLanguage,
+  getThemeRewardCopy,
+  getTrackingAreaOption,
+  isTrackedAreasColumnError,
+  normalizeConnectionPermissions,
+  normalizeTrackedAreas,
+} from "./app/utils";
 
 /* eslint-disable react-hooks/exhaustive-deps */
 
@@ -30,65 +52,7 @@ const TRACKER_DARK_MODE_KEY = "trackerDarkMode";
 const OUTSIDER_DARK_MODE_KEY = "outsiderDarkMode";
 const TRACKER_TUTORIAL_SEEN_KEY = "trackerTutorialSeen";
 const OUTSIDER_TUTORIAL_SEEN_KEY = "outsiderTutorialSeen";
-const DEFAULT_PUBLIC_APP_URL = "https://guide-to-the-galaxies.app";
 const NATIVE_PUSH_TARGET_PAGE = "support";
-const DEFAULT_PUSH_ENVIRONMENT = "production";
-const DEFAULT_CONNECTION_PERMISSIONS = {
-  meds: true,
-  food: true,
-  hygiene: true,
-  sleep: true,
-  exercise: true,
-  mood: true,
-  streaks: true,
-  rewards: true,
-  activity: true,
-  alerts: true,
-};
-const TRACKING_AREA_OPTIONS = [
-  {
-    id: "meds",
-    label: "Meds",
-    description: "Medication, doses, and symptom notes.",
-    pageKey: "meds",
-  },
-  {
-    id: "food",
-    label: "Food",
-    description: "Meals, snacks, and quick fuel check-ins.",
-    pageKey: "food",
-  },
-  {
-    id: "hygiene",
-    label: "Hygiene",
-    description: "Shower, teeth, skincare, and care basics.",
-    pageKey: "hygiene",
-  },
-  {
-    id: "sleep",
-    label: "Sleep",
-    description: "Bedtime, wake time, and sleep quality.",
-    pageKey: "sleep",
-  },
-  {
-    id: "cleaning",
-    label: "Cleaning",
-    description: "Laundry, room resets, and cleaning effort.",
-    pageKey: "cleaning",
-  },
-  {
-    id: "exercise",
-    label: "Exercise",
-    description: "Exercise, walks, and energy after moving.",
-    pageKey: "exercise",
-  },
-  {
-    id: "mood",
-    label: "Mood",
-    description: "Mood tags, focus, and energy snapshots.",
-    pageKey: "mood",
-  },
-];
 
 function makeConnectionCode() {
   return `STAR-${crypto.randomUUID().replace(/-/g, "").slice(0, 6).toUpperCase()}`;
@@ -212,33 +176,6 @@ function createGoalId() {
   return crypto.randomUUID();
 }
 
-function getInviteTokenFromUrl(urlLike) {
-  if (!urlLike) return "";
-
-  const url = typeof urlLike === "string" ? new URL(urlLike) : urlLike;
-  const segments = url.pathname.split("/").filter(Boolean);
-  const connectIndex = segments.findIndex((segment) => segment === "connect");
-
-  if (connectIndex >= 0 && segments[connectIndex + 1]) {
-    return segments[connectIndex + 1];
-  }
-
-  const trailingSegment = segments[segments.length - 1];
-  return trailingSegment && !trailingSegment.includes(".") ? trailingSegment : "";
-}
-
-function normalizeTrackedAreas(areas) {
-  const validAreaIds = new Set(TRACKING_AREA_OPTIONS.map((area) => area.id));
-  const normalizedAreas = Array.isArray(areas) ? areas : [];
-
-  return [...new Set(normalizedAreas.map((area) => (area === "maintenance" ? "hygiene" : area)))]
-    .filter((area) => validAreaIds.has(area));
-}
-
-function getTrackingAreaOption(areaId) {
-  return TRACKING_AREA_OPTIONS.find((area) => area.id === areaId) || null;
-}
-
 function getNativePushOptOutKey(userId) {
   return `nativePushDisabled:${userId}`;
 }
@@ -253,17 +190,6 @@ function getTrackerTutorialSeenKey(userId) {
 
 function getOutsiderTutorialSeenKey(userId) {
   return `${OUTSIDER_TUTORIAL_SEEN_KEY}:${userId}`;
-}
-
-function getNativePushEnvironment() {
-  return import.meta.env.VITE_PUSH_ENVIRONMENT === "sandbox"
-    ? "sandbox"
-    : DEFAULT_PUSH_ENVIRONMENT;
-}
-
-function isTrackedAreasColumnError(error) {
-  const message = `${error?.message || ""} ${error?.details || ""} ${error?.hint || ""}`;
-  return /tracked_areas/i.test(message);
 }
 
 function App() {
@@ -488,7 +414,7 @@ function App() {
     const inviteToken = getInviteTokenFromUrl(parsedUrl);
 
     if (inviteToken) {
-      const normalizedInviteLink = `${DEFAULT_PUBLIC_APP_URL}/connect/${inviteToken}`;
+      const normalizedInviteLink = buildInviteLink(inviteToken);
       setSelectedExperience("outsider");
       setAppExperience("outsider");
       setOutsiderPage("outsiderOverview");
@@ -1091,7 +1017,7 @@ function App() {
       setInviteCode(inviteRow?.invite_code || "");
       setInviteLink(
         inviteRow?.invite_token
-          ? `${getPublicAppUrl()}/connect/${inviteRow.invite_token}`
+          ? buildInviteLink(inviteRow.invite_token)
           : ""
       );
     }
@@ -1522,7 +1448,7 @@ function App() {
     }
 
     setInviteCode(code);
-    setInviteLink(`${getPublicAppUrl()}/connect/${token}`);
+    setInviteLink(buildInviteLink(token));
     setConnectionsMessage("Invite code generated.");
   }
 
@@ -1546,7 +1472,7 @@ function App() {
     }
 
     setInviteCode(code);
-    setInviteLink(`${getPublicAppUrl()}/connect/${token}`);
+    setInviteLink(buildInviteLink(token));
     setConnectionsMessage("Invite link generated.");
   }
 
@@ -2247,247 +2173,6 @@ function App() {
     });
   }
 
-  function startOfWeek(date) {
-    const value = parseDateKey(date);
-    const day = value.getDay();
-    const diff = day === 0 ? -6 : 1 - day;
-    value.setDate(value.getDate() + diff);
-    return value;
-  }
-
-  function formatDateKey(date) {
-    return getLocalDateKey(date);
-  }
-
-  function getLocalDateKey(dateInput) {
-    const value = dateInput instanceof Date ? new Date(dateInput) : new Date(dateInput);
-
-    if (Number.isNaN(value.getTime())) {
-      return "";
-    }
-
-    const year = value.getFullYear();
-    const month = String(value.getMonth() + 1).padStart(2, "0");
-    const day = String(value.getDate()).padStart(2, "0");
-
-    return `${year}-${month}-${day}`;
-  }
-
-  function parseDateKey(dateKey) {
-    if (!dateKey) {
-      return new Date();
-    }
-
-    const [year, month, day] = String(dateKey).split("-").map(Number);
-    return new Date(year, (month || 1) - 1, day || 1);
-  }
-
-  function getLatestEntriesByDate(rows) {
-    const latestByDate = new Map();
-
-    rows.forEach((row) => {
-      if (!row?.entry_date) return;
-      const existing = latestByDate.get(row.entry_date);
-
-      if (!existing || compareEntryRecency(row, existing) > 0) {
-        latestByDate.set(row.entry_date, row);
-      }
-    });
-
-    return [...latestByDate.values()].sort(
-      (a, b) => new Date(a.entry_date) - new Date(b.entry_date)
-    );
-  }
-
-  function compareEntryRecency(left, right) {
-    const leftCreatedAt = left?.created_at ? new Date(left.created_at).getTime() : 0;
-    const rightCreatedAt = right?.created_at ? new Date(right.created_at).getTime() : 0;
-
-    if (leftCreatedAt !== rightCreatedAt) {
-      return leftCreatedAt - rightCreatedAt;
-    }
-
-    return Number(left?.id ?? 0) - Number(right?.id ?? 0);
-  }
-
-  function buildChartPoint(row, date) {
-    return {
-      date,
-      mood: Number(row?.mood ?? 0),
-      focus: Number(row?.focus ?? 0),
-      energy: Number(row?.energy ?? 0),
-      mealsCount: Array.isArray(row?.meals) ? row.meals.length : 0,
-      medsTaken: row?.meds_taken ? 1 : 0,
-      medsCount: Array.isArray(row?.meds) ? row.meds.length : 0,
-      exerciseCount: Array.isArray(row?.exercise_logs)
-        ? row.exercise_logs.length
-        : row?.exercise_done
-        ? 1
-        : 0,
-      cleaningMinutes: Number(row?.cleaning_minutes ?? 0),
-      sleepQuality: Number(row?.sleep_quality ?? 0),
-      hygieneCount:
-        (row?.showered ? 1 : 0) +
-        (row?.brushed_teeth ? 1 : 0) +
-        (row?.skincare ? 1 : 0),
-    };
-  }
-
-  function buildRecentChartData(rows, days) {
-    const latestEntries = getLatestEntriesByDate(rows);
-    const rowByDate = new Map(
-      latestEntries
-        .filter((row) => row?.entry_date && row.entry_date <= today)
-        .map((row) => [row.entry_date, row])
-    );
-    const safeDays = Math.max(1, Number(days) || 7);
-    const startDate = parseDateKey(today);
-    startDate.setDate(startDate.getDate() - (safeDays - 1));
-
-    return Array.from({ length: safeDays }, (_, index) => {
-      const current = new Date(startDate);
-      current.setDate(startDate.getDate() + index);
-      const dateKey = formatDateKey(current);
-      return buildChartPoint(rowByDate.get(dateKey), dateKey);
-    });
-  }
-
-  function getGoalUnitValue(entry, category) {
-    const mealsCount = Array.isArray(entry.meals) ? entry.meals.length : 0;
-    const medsCount = Array.isArray(entry.meds) ? entry.meds.length : 0;
-    const maintenanceValue =
-      (entry.showered ? 1 : 0) +
-      (entry.brushed_teeth ? 1 : 0) +
-      (entry.skincare ? 1 : 0);
-    const cleaningValue =
-      (entry.laundry_done ? 1 : 0) +
-      (entry.bedsheets_done ? 1 : 0) +
-      (entry.room_cleaned ? 1 : 0) +
-      ((entry.cleaning_minutes ?? 0) > 0 ? 1 : 0);
-    const exerciseCount = Array.isArray(entry.exercise_logs)
-      ? entry.exercise_logs.length
-      : 0;
-
-    switch (category) {
-      case "Meds":
-        return Math.max(medsCount, entry.meds_taken ? 1 : 0);
-      case "Food":
-        return mealsCount;
-      case "Hygiene":
-        return maintenanceValue;
-      case "Sleep":
-        return entry.bed_time && entry.wake_time ? 1 : 0;
-      case "Cleaning":
-        return cleaningValue;
-      case "Exercise":
-        return Math.max(exerciseCount, entry.exercise_done ? 1 : 0);
-      default:
-        return 0;
-    }
-  }
-
-  function buildDailyPeriods(goal, rows) {
-    const rowMap = new Map(rows.map((row) => [row.entry_date, row]));
-    const startDate = new Date(`${goal.createdAt || today}T00:00:00`);
-    const endDate = new Date(`${today}T00:00:00`);
-    const periods = [];
-
-    for (
-      let current = new Date(startDate);
-      current <= endDate;
-      current.setDate(current.getDate() + 1)
-    ) {
-      const key = formatDateKey(current);
-      const entry = rowMap.get(key);
-      periods.push({
-        key,
-        value: entry ? getGoalUnitValue(entry, goal.category) : 0,
-      });
-    }
-
-    return periods;
-  }
-
-  function buildWeeklyPeriods(goal, rows) {
-    const startWeek = startOfWeek(goal.createdAt || today);
-    const endWeek = startOfWeek(today);
-    const buckets = new Map();
-
-    rows.forEach((row) => {
-      const weekKey = formatDateKey(startOfWeek(row.entry_date));
-      const currentValue = buckets.get(weekKey) || 0;
-      buckets.set(weekKey, currentValue + getGoalUnitValue(row, goal.category));
-    });
-
-    const periods = [];
-
-    for (
-      let current = new Date(startWeek);
-      current <= endWeek;
-      current.setDate(current.getDate() + 7)
-    ) {
-      const key = formatDateKey(current);
-      periods.push({
-        key,
-        value: buckets.get(key) || 0,
-      });
-    }
-
-    return periods;
-  }
-
-  function computeGoalProgress(goal, rows) {
-    if (goal.completed) {
-      return {
-        ...goal,
-        currentStreakProgress: goal.streakLength,
-      };
-    }
-
-    const periods =
-      goal.checkType === "weekly"
-        ? buildWeeklyPeriods(goal, rows)
-        : buildDailyPeriods(goal, rows);
-
-    let currentStreak = 0;
-
-    for (let index = periods.length - 1; index >= 0; index -= 1) {
-      if (periods[index].value >= goal.targetAmount) {
-        currentStreak += 1;
-      } else {
-        break;
-      }
-    }
-
-    const completed = currentStreak >= goal.streakLength;
-
-    return {
-      ...goal,
-      currentStreakProgress: Math.min(currentStreak, goal.streakLength),
-      completed,
-    };
-  }
-
-  function calculateSimpleDailyStreak(rows, predicate) {
-    const rowMap = new Map(rows.map((row) => [row.entry_date, row]));
-    const cursor = new Date(`${today}T00:00:00`);
-    let streak = 0;
-
-    while (true) {
-      const key = formatDateKey(cursor);
-      const entry = rowMap.get(key);
-
-      if (!entry || !predicate(entry)) {
-        break;
-      }
-
-      streak += 1;
-      cursor.setDate(cursor.getDate() - 1);
-    }
-
-    return streak;
-  }
-
   const toggleMed = async () => {
     const value = !medTaken;
     const time = value ? nowTime() : "";
@@ -3088,7 +2773,7 @@ function App() {
   useEffect(() => {
     if (!entryId || historyData.length === 0 || goals.length === 0) return;
 
-    const computedGoals = goals.map((goal) => computeGoalProgress(goal, historyData));
+    const computedGoals = goals.map((goal) => computeGoalProgress(goal, historyData, today));
     const updatedRewards = [...rewards];
     let hasGoalChanges = false;
     let hasRewardChanges = false;
@@ -3151,7 +2836,7 @@ function App() {
 
   const chartRangeOptions = [7, 14];
   const recentChartData = useMemo(
-    () => buildRecentChartData(historyData, chartRange),
+    () => buildRecentChartData(historyData, chartRange, today),
     [historyData, chartRange, today]
   );
   const maxMeals = Math.max(...recentChartData.map((d) => d.mealsCount), 1);
@@ -3289,7 +2974,8 @@ function App() {
       name: "Nourishment Flow",
       progress: calculateSimpleDailyStreak(
         historyData,
-        (row) => (Array.isArray(row.meals) ? row.meals.length : 0) > 0
+        (row) => (Array.isArray(row.meals) ? row.meals.length : 0) > 0,
+        today
       ),
       unit: "days",
     },
@@ -3297,7 +2983,8 @@ function App() {
       name: "Medicine Moon",
       progress: calculateSimpleDailyStreak(
         historyData,
-        (row) => row.meds_taken || (Array.isArray(row.meds) ? row.meds.length : 0) > 0
+        (row) => row.meds_taken || (Array.isArray(row.meds) ? row.meds.length : 0) > 0,
+        today
       ),
       unit: "days",
     },
@@ -3306,7 +2993,8 @@ function App() {
       progress: calculateSimpleDailyStreak(
         historyData,
         (row) =>
-          row.exercise_done || (Array.isArray(row.exercise_logs) ? row.exercise_logs.length : 0) > 0
+          row.exercise_done || (Array.isArray(row.exercise_logs) ? row.exercise_logs.length : 0) > 0,
+        today
       ),
       unit: "days",
     },
@@ -3370,7 +3058,7 @@ function App() {
   const selectedOutsiderHistory = selectedOutsider?.history || [];
   const unreadSupportCount = supportInbox.filter((item) => !item.readAt).length;
   const selectedOutsiderChartData = useMemo(
-    () => buildRecentChartData(selectedOutsiderHistory, 7),
+    () => buildRecentChartData(selectedOutsiderHistory, 7, today),
     [selectedOutsiderHistory, today]
   );
   const outsiderMoodLabel =
@@ -3443,6 +3131,7 @@ function App() {
     goalFormGridStyle,
     goalSuggestionHeaderStyle,
     goalSuggestionButtonStyle,
+    trackerSectionSwitcherButtonStyle,
     goalCardItemStyle,
     goalProgressTrackStyle,
     goalProgressFillStyle,
@@ -3763,6 +3452,7 @@ function App() {
       min-width: 0;
       width: 100%;
       max-width: 100%;
+      position: relative;
     }
 
     .galaxy-panel:hover {
@@ -5989,12 +5679,87 @@ function isSpaceConsoleTheme(theme) {
   return Boolean(theme?.observerConsole && theme?.themeFamily === "galaxy");
 }
 
-function isAbyssOutsiderTheme(theme) {
-  return Boolean(theme?.observerAbyssBridge && theme?.themeFamily === "underwater");
-}
-
 function isObservatoryTrackerTheme(theme) {
   return Boolean(theme?.trackerObservatory && theme?.themeFamily === "galaxy");
+}
+
+function getThemeCardClipPath() {
+  return "none";
+}
+
+function getThemeCardOrnament(theme, variant = "feature") {
+  if (isSpaceConsoleTheme(theme)) {
+    return "linear-gradient(90deg, rgba(39,215,161,0.08) 0%, rgba(39,215,161,0) 26%), linear-gradient(180deg, rgba(255,255,255,0.03) 0, rgba(255,255,255,0.03) 1px, transparent 1px, transparent 6px)";
+  }
+
+  if (theme?.trackerReef) {
+    return [
+      "radial-gradient(circle at 14% 18%, rgba(255,255,255,0.18) 0 2px, transparent 2.8px)",
+      "radial-gradient(circle at 82% 18%, rgba(79,209,217,0.22) 0 2px, transparent 2.8px)",
+      "linear-gradient(120deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0) 28%)",
+      variant === "hero"
+        ? "radial-gradient(120% 80% at 50% 100%, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0) 45%)"
+        : "radial-gradient(90% 70% at 50% 100%, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0) 40%)",
+    ].join(", ");
+  }
+
+  if (theme?.trackerAbyss) {
+    return [
+      "linear-gradient(90deg, rgba(34,211,238,0.12) 0%, rgba(34,211,238,0) 28%)",
+      "radial-gradient(circle at 86% 18%, rgba(34,211,238,0.14) 0 1.4px, transparent 2px)",
+      "radial-gradient(circle at 12% 84%, rgba(217,70,239,0.14) 0 1.2px, transparent 1.8px)",
+      "linear-gradient(135deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0) 22%)",
+    ].join(", ");
+  }
+
+  if (theme?.trackerSolar) {
+    return [
+      "radial-gradient(circle at 84% 18%, rgba(255,255,255,0.34) 0%, rgba(255,255,255,0) 22%)",
+      "radial-gradient(circle at 16% 82%, rgba(255,193,7,0.16) 0%, rgba(255,193,7,0) 24%)",
+      "linear-gradient(135deg, rgba(255,255,255,0.16) 0%, rgba(255,255,255,0) 28%)",
+      variant === "hero"
+        ? "conic-gradient(from 210deg at 88% 16%, rgba(255,255,255,0.18), rgba(255,255,255,0) 18%, rgba(255,255,255,0.14) 26%, rgba(255,255,255,0) 42%)"
+        : "linear-gradient(90deg, rgba(230,126,34,0.12) 0%, rgba(230,126,34,0) 24%)",
+    ].join(", ");
+  }
+
+  if (theme?.themeFamily === "underwater") {
+    return [
+      "radial-gradient(circle at 84% 18%, rgba(214,246,251,0.16) 0%, rgba(214,246,251,0) 22%)",
+      "radial-gradient(circle at 16% 82%, rgba(112,168,232,0.12) 0%, rgba(112,168,232,0) 22%)",
+      "linear-gradient(120deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0) 26%)",
+    ].join(", ");
+  }
+
+  if (theme?.themeFamily === "forest") {
+    return [
+      "radial-gradient(circle at 18% 18%, rgba(220,233,190,0.16) 0%, rgba(220,233,190,0) 22%)",
+      "radial-gradient(circle at 84% 82%, rgba(179,154,106,0.1) 0%, rgba(179,154,106,0) 20%)",
+      "linear-gradient(145deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0) 28%)",
+    ].join(", ");
+  }
+
+  return [
+    "radial-gradient(circle at 16% 18%, rgba(166,150,255,0.16) 0%, rgba(166,150,255,0) 22%)",
+    "radial-gradient(circle at 84% 18%, rgba(116,208,255,0.12) 0%, rgba(116,208,255,0) 20%)",
+    "radial-gradient(circle at 80% 82%, rgba(255,214,102,0.08) 0%, rgba(255,214,102,0) 18%)",
+  ].join(", ");
+}
+
+function getThemeEdgeHighlight(theme) {
+  if (isSpaceConsoleTheme(theme)) {
+    return `inset 0 0 0 1px rgba(255,255,255,0.04), inset 0 2px 0 rgba(255,255,255,0.06)`;
+  }
+
+  if (theme?.trackerReef || theme?.trackerAbyss) {
+    return `inset 0 1px 0 rgba(255,255,255,0.08), inset 0 0 0 1px rgba(255,255,255,0.04)`;
+  }
+
+  if (theme?.trackerSolar) {
+    return `inset 0 1px 0 rgba(255,255,255,0.4), inset 0 0 0 1px rgba(255,255,255,0.16)`;
+  }
+
+  return `inset 0 1px 0 rgba(255,255,255,0.08), inset 0 0 0 1px rgba(255,255,255,0.04)`;
 }
 
 const pageStyle = (theme) => ({
@@ -6029,18 +5794,8 @@ const containerStyle = {
 };
 
 const heroCardStyle = (theme) => ({
-  background:
-    theme.themeFamily === "underwater"
-      ? `radial-gradient(circle at 82% 18%, rgba(219,247,251,0.16) 0%, rgba(219,247,251,0) 24%), radial-gradient(circle at 16% 84%, rgba(135,201,228,0.12) 0%, rgba(135,201,228,0) 22%), ${theme.heroBackground}`
-      : theme.themeFamily === "forest"
-      ? `radial-gradient(circle at 16% 18%, rgba(223,235,191,0.16) 0%, rgba(223,235,191,0) 24%), radial-gradient(circle at 82% 78%, rgba(171,146,111,0.1) 0%, rgba(171,146,111,0) 22%), ${theme.heroBackground}`
-      : `radial-gradient(circle at 84% 18%, rgba(166,150,255,0.18) 0%, rgba(166,150,255,0) 24%), radial-gradient(circle at 16% 82%, rgba(116,208,255,0.12) 0%, rgba(116,208,255,0) 22%), ${theme.heroBackground}`,
-  borderRadius:
-    theme.themeFamily === "underwater"
-      ? "34px 24px 42px 22px / 24px 34px 26px 38px"
-      : theme.themeFamily === "forest"
-      ? "28px 40px 26px 42px / 36px 24px 34px 22px"
-      : theme.heroRadius || "30px 42px 24px 40px / 24px 36px 22px 38px",
+  background: `${getThemeCardOrnament(theme, "hero")}, ${theme.heroBackground}`,
+  borderRadius: isSpaceConsoleTheme(theme) ? theme.heroRadius || "14px" : theme.heroRadius || "28px",
   padding: "clamp(16px, 4vw, 24px)",
   boxShadow: theme.heroShadow,
   marginBottom: "24px",
@@ -6055,26 +5810,20 @@ const heroCardStyle = (theme) => ({
   width: "100%",
   minWidth: 0,
   isolation: "isolate",
+  clipPath: getThemeCardClipPath(theme, "hero"),
 });
 
 const featureCardStyle = (theme) => ({
   background: isSpaceConsoleTheme(theme)
-    ? `${theme.observerPanelFrame}, ${theme.cardBackground}`
-    : theme.cardBackground,
-  borderRadius:
-    theme.themeFamily === "underwater"
-      ? "28px 18px 30px 22px / 20px 30px 22px 32px"
-      : theme.themeFamily === "forest"
-      ? "20px 32px 22px 34px / 30px 20px 32px 22px"
-      : isSpaceConsoleTheme(theme)
-      ? theme.featureRadius || "14px"
-      : theme.featureRadius || "22px 32px 20px 34px / 24px 20px 32px 22px",
+    ? `${getThemeCardOrnament(theme, "feature")}, ${theme.observerPanelFrame}, ${theme.cardBackground}`
+    : `${getThemeCardOrnament(theme, "feature")}, ${theme.cardBackground}`,
+  borderRadius: isSpaceConsoleTheme(theme) ? theme.featureRadius || "14px" : theme.featureRadius || "24px",
   padding: "clamp(18px, 4vw, 24px)",
   boxShadow: isSpaceConsoleTheme(theme)
-    ? `inset 0 2px 4px rgba(0,0,0,0.45), 0 18px 28px rgba(0,0,0,0.16)`
-    : theme.shadow,
+    ? `inset 0 2px 4px rgba(0,0,0,0.45), 0 18px 28px rgba(0,0,0,0.16), ${getThemeEdgeHighlight(theme)}`
+    : `${theme.shadow}, ${getThemeEdgeHighlight(theme)}`,
   border: isSpaceConsoleTheme(theme) ? theme.observerBorder || theme.border : theme.border,
-  clipPath: theme.featureClipPath || "none",
+  clipPath: theme.featureClipPath || getThemeCardClipPath(theme, "feature"),
   position: "relative",
   overflow: "hidden",
   width: "100%",
@@ -6206,6 +5955,70 @@ const sectionCardStyle = (theme, section) => {
 
   const accent = sectionThemes[section] || sectionThemes.dashboard;
   const frame = getSectionFrameStyle(theme, section, false);
+  if (theme.trackerReef) {
+    const reefPanelBySection = {
+      dashboard: theme.trackerReefPanelTeal,
+      meds: theme.trackerReefPanelPink,
+      food: theme.trackerReefPanelPeach,
+      sleep: theme.trackerReefPanelTeal,
+      mood: theme.trackerReefPanelPink,
+      goals: theme.trackerReefPanelPeach,
+      maintenance: theme.trackerReefPanelTeal,
+      cleaning: theme.trackerReefPanelPeach,
+      exercise: theme.trackerReefPanelPink,
+      charts: theme.trackerReefPanelTeal,
+      signals: theme.trackerReefPanelPink,
+      care: theme.trackerReefPanelPeach,
+      jump: theme.trackerReefPanelTeal,
+    };
+    const basePanel = reefPanelBySection[section] || theme.trackerReefPanelTeal || theme.cardBackground;
+
+    return {
+      ...featureCardStyle(theme),
+      background: `${getThemeCardOrnament(theme, "feature")}, ${basePanel}`,
+      boxShadow: `${theme.shadow}, ${frame.boxShadow}, 0 22px 40px rgba(5, 29, 38, 0.26), inset 0 1px 0 rgba(255,255,255,0.08)`,
+      border: theme.border,
+      borderRadius: theme.featureRadius || "24px",
+      backdropFilter: "blur(24px) saturate(180%)",
+      WebkitBackdropFilter: "blur(24px) saturate(180%)",
+    };
+  }
+
+  if (theme.trackerAbyss) {
+    return {
+      ...featureCardStyle(theme),
+      background: `${getThemeCardOrnament(theme, "feature")}, ${theme.trackerAbyssPanelStrong || theme.trackerAbyssPanel || theme.cardBackground}`,
+      boxShadow: `${theme.shadow}, ${frame.boxShadow}, 0 22px 42px rgba(0, 11, 17, 0.42), inset 0 1px 0 rgba(255,255,255,0.03)`,
+      border: theme.border,
+      borderRadius: theme.featureRadius || "24px",
+      backdropFilter: "blur(18px) saturate(150%)",
+      WebkitBackdropFilter: "blur(18px) saturate(150%)",
+    };
+  }
+
+  if (theme.trackerSolar) {
+    return {
+      ...featureCardStyle(theme),
+      background: `${getThemeCardOrnament(theme, "feature")}, radial-gradient(circle at center, rgba(255,255,255,0.22) 0%, rgba(255,255,255,0) 42%), ${theme.trackerSolarGlass || theme.cardBackground}`,
+      boxShadow: `0 20px 36px rgba(124,72,16,0.16), inset 0 1px 0 rgba(255,255,255,0.26), ${frame.boxShadow}`,
+      border: theme.border,
+      borderRadius: theme.featureRadius || "24px",
+      backdropFilter: "blur(24px) saturate(165%)",
+      WebkitBackdropFilter: "blur(24px) saturate(165%)",
+    };
+  }
+
+  if (theme.trackerObservatory) {
+    return {
+      ...featureCardStyle(theme),
+      background: `${getThemeCardOrnament(theme, "feature")}, ${theme.trackerGlassBackground || theme.cardBackground}`,
+      boxShadow: `${theme.shadow}, ${frame.boxShadow}, 0 22px 40px rgba(0, 0, 0, 0.28), inset 0 0 0 1px rgba(255,255,255,0.04)`,
+      border: theme.border,
+      borderRadius: theme.featureRadius || "24px",
+      backdropFilter: "blur(22px) saturate(150%)",
+      WebkitBackdropFilter: "blur(22px) saturate(150%)",
+    };
+  }
 
   return {
     ...featureCardStyle(theme),
@@ -6403,21 +6216,140 @@ const sleepGridStyle = {
   gap: "16px",
 };
 
+function getControlRadius(theme, variant = "button") {
+  if (isSpaceConsoleTheme(theme)) {
+    return variant === "field" ? "10px" : variant === "chip" ? "999px" : "10px";
+  }
+
+  if (theme.trackerReef) {
+    return variant === "field"
+      ? "22px 14px 24px 16px / 18px 24px 16px 22px"
+      : variant === "chip"
+      ? "999px 999px 18px 999px"
+      : "22px 14px 24px 16px / 18px 24px 16px 22px";
+  }
+
+  if (theme.trackerAbyss) {
+    return variant === "field"
+      ? "20px 14px 22px 14px / 18px 20px 16px 22px"
+      : variant === "chip"
+      ? "16px"
+      : "18px 14px 20px 14px / 16px 18px 14px 20px";
+  }
+
+  if (theme.trackerSolar) {
+    return variant === "field"
+      ? "18px 24px 18px 26px / 24px 18px 24px 20px"
+      : variant === "chip"
+      ? "999px"
+      : "999px";
+  }
+
+  if (theme.themeFamily === "underwater") {
+    return variant === "field"
+      ? "18px 14px 20px 14px / 14px 18px 16px 20px"
+      : variant === "chip"
+      ? "999px 999px 18px 999px"
+      : "18px 14px 18px 14px / 14px 18px 14px 18px";
+  }
+
+  if (theme.themeFamily === "forest") {
+    return variant === "field"
+      ? "16px 20px 16px 22px / 20px 16px 22px 18px"
+      : variant === "chip"
+      ? "18px 999px 18px 999px"
+      : "14px 18px 14px 18px / 18px 14px 18px 16px";
+  }
+
+  return variant === "field" ? "18px" : variant === "chip" ? "999px" : "999px";
+}
+
+function getControlFontFamily(theme) {
+  return theme.trackerUiFamily || (isSpaceConsoleTheme(theme) ? theme.observerFontFamily : undefined);
+}
+
+function getFieldBackground(theme) {
+  if (isSpaceConsoleTheme(theme)) {
+    return "linear-gradient(180deg, rgba(12,18,28,0.96) 0%, rgba(7,12,18,0.98) 100%)";
+  }
+
+  if (theme.trackerReef) {
+    return `radial-gradient(circle at 14% 18%, rgba(255,255,255,0.14) 0%, rgba(255,255,255,0) 24%), linear-gradient(180deg, rgba(2,24,30,0.9) 0%, rgba(1,16,20,0.95) 100%)`;
+  }
+
+  if (theme.trackerAbyss) {
+    return `radial-gradient(circle at 84% 18%, rgba(34,211,238,0.1) 0%, rgba(34,211,238,0) 22%), linear-gradient(180deg, rgba(1,16,20,0.96) 0%, rgba(2,11,14,0.98) 100%)`;
+  }
+
+  if (theme.trackerSolar) {
+    return `radial-gradient(circle at 16% 18%, rgba(255,255,255,0.44) 0%, rgba(255,255,255,0) 22%), linear-gradient(180deg, rgba(255,250,240,0.96) 0%, rgba(255,242,216,0.92) 100%)`;
+  }
+
+  if (theme.themeFamily === "underwater") {
+    return `radial-gradient(circle at 82% 18%, rgba(221,248,252,0.34) 0%, rgba(221,248,252,0) 22%), ${theme.inputBackground}`;
+  }
+
+  if (theme.themeFamily === "forest") {
+    return `radial-gradient(circle at 18% 18%, rgba(229,239,209,0.28) 0%, rgba(229,239,209,0) 22%), ${theme.inputBackground}`;
+  }
+
+  return `radial-gradient(circle at 14% 18%, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0) 22%), ${theme.inputBackground}`;
+}
+
+function getSoftControlBackground(theme) {
+  if (theme.trackerReef) {
+    return theme.trackerReefPanelPink || theme.softButtonBackground;
+  }
+
+  if (theme.trackerAbyss) {
+    return "linear-gradient(135deg, rgba(6,38,46,0.96) 0%, rgba(2,18,22,0.98) 100%)";
+  }
+
+  return theme.softButtonBackground;
+}
+
+function getSuccessControlBackground(theme) {
+  if (isSpaceConsoleTheme(theme)) {
+    return `linear-gradient(180deg, ${theme.observerAccent || "#27d7a1"} 0%, ${theme.observerAccentAlt || "#ffbf47"} 100%)`;
+  }
+
+  if (theme.trackerReef) {
+    return theme.trackerReefPanelTeal || theme.primary;
+  }
+
+  if (theme.trackerAbyss) {
+    return "linear-gradient(135deg, rgba(34,211,238,0.96) 0%, rgba(20,143,175,0.88) 100%)";
+  }
+
+  if (theme.trackerSolar) {
+    return "linear-gradient(135deg, rgba(255,208,117,0.98) 0%, rgba(232,144,104,0.96) 100%)";
+  }
+
+  return `linear-gradient(135deg, ${theme.success} 0%, ${theme.success} 100%)`;
+}
+
 const inputStyle = (theme) => ({
-  padding: "13px 14px",
-  borderRadius: isSpaceConsoleTheme(theme) ? "10px" : "12px",
+  padding: theme.trackerSolar ? "14px 16px" : "13px 14px",
+  borderRadius: getControlRadius(theme, "field"),
   border: `1px solid ${theme.inputBorder}`,
   color: theme.text,
-  background: theme.inputBackground,
+  background: getFieldBackground(theme),
   width: "100%",
   boxSizing: "border-box",
   fontSize: "1rem",
-  boxShadow: `inset 0 1px 0 ${theme.star}`,
+  boxShadow: isSpaceConsoleTheme(theme)
+    ? `inset 0 1px 0 rgba(255,255,255,0.08), 0 0 0 1px rgba(0,0,0,0.3)`
+    : theme.trackerReef || theme.trackerAbyss
+    ? `inset 0 1px 0 rgba(255,255,255,0.08), 0 12px 28px rgba(0,0,0,0.12)`
+    : `inset 0 1px 0 ${theme.star}, 0 8px 18px ${theme.glow}`,
   minWidth: 0,
   lineHeight: 1.4,
-  fontFamily: isSpaceConsoleTheme(theme) ? theme.observerFontFamily : undefined,
+  appearance: "none",
+  WebkitAppearance: "none",
+  fontFamily: getControlFontFamily(theme),
   textTransform: isSpaceConsoleTheme(theme) ? "uppercase" : "none",
-  letterSpacing: isSpaceConsoleTheme(theme) ? "0.04em" : "normal",
+  letterSpacing: isSpaceConsoleTheme(theme) ? "0.04em" : theme.trackerAbyss ? "0.02em" : "normal",
+  accentColor: theme.trackerAccent || theme.success,
 });
 
 const primaryButtonStyle = (theme) => ({
@@ -6426,19 +6358,14 @@ const primaryButtonStyle = (theme) => ({
   border: isSpaceConsoleTheme(theme)
     ? `1px solid ${theme.observerAccentAlt || theme.inputBorder}`
     : "none",
-  borderRadius:
-    theme.themeFamily === "underwater"
-      ? "18px 14px 18px 14px / 14px 18px 14px 18px"
-      : theme.themeFamily === "forest"
-      ? "14px 18px 14px 18px / 18px 14px 18px 16px"
-      : isSpaceConsoleTheme(theme)
-      ? "10px"
-      : "999px",
+  borderRadius: getControlRadius(theme, "button"),
   padding: "13px 16px",
   cursor: "pointer",
   fontWeight: "bold",
   boxShadow: isSpaceConsoleTheme(theme)
     ? `inset 0 1px 0 rgba(255,255,255,0.16), 0 6px 0 rgba(0,0,0,0.3), 0 12px 22px ${theme.glow}`
+    : theme.trackerReef || theme.trackerAbyss
+    ? `inset 0 1px 0 rgba(255,255,255,0.12), 0 14px 28px ${theme.glow}`
     : `0 10px 22px ${theme.glow}`,
   minHeight: "48px",
   maxWidth: "100%",
@@ -6446,25 +6373,20 @@ const primaryButtonStyle = (theme) => ({
   overflowWrap: "anywhere",
   lineHeight: 1.35,
   textAlign: "center",
-  fontFamily: isSpaceConsoleTheme(theme) ? theme.observerFontFamily : undefined,
+  fontFamily: getControlFontFamily(theme),
   textTransform: isSpaceConsoleTheme(theme) ? "uppercase" : "none",
-  letterSpacing: isSpaceConsoleTheme(theme) ? "0.06em" : "normal",
+  letterSpacing: isSpaceConsoleTheme(theme) ? "0.06em" : theme.trackerAbyss ? "0.03em" : "normal",
 });
 
 const softButtonStyle = (theme) => ({
-  background: theme.softButtonBackground,
+  background: getSoftControlBackground(theme),
   color: theme.softButtonText,
   border: isSpaceConsoleTheme(theme)
     ? `1px solid ${theme.inputBorder}`
+    : theme.trackerReef || theme.trackerAbyss
+    ? `1px solid ${theme.trackerReefPanelBorder || theme.trackerAbyssMutedBorder || theme.inputBorder}`
     : "none",
-  borderRadius:
-    theme.themeFamily === "underwater"
-      ? "18px 14px 18px 14px / 14px 18px 14px 18px"
-      : theme.themeFamily === "forest"
-      ? "14px 18px 14px 18px / 18px 14px 18px 16px"
-      : isSpaceConsoleTheme(theme)
-      ? "10px"
-      : "999px",
+  borderRadius: getControlRadius(theme, "button"),
   padding: "13px 16px",
   cursor: "pointer",
   fontWeight: "bold",
@@ -6476,17 +6398,27 @@ const softButtonStyle = (theme) => ({
   textAlign: "center",
   boxShadow: isSpaceConsoleTheme(theme)
     ? "inset 0 1px 0 rgba(255,255,255,0.08), 0 4px 0 rgba(0,0,0,0.24)"
-    : undefined,
-  fontFamily: isSpaceConsoleTheme(theme) ? theme.observerFontFamily : undefined,
+    : theme.trackerReef || theme.trackerAbyss
+    ? `inset 0 1px 0 rgba(255,255,255,0.06), 0 10px 24px rgba(0,0,0,0.14)`
+    : `0 8px 18px ${theme.glow}`,
+  fontFamily: getControlFontFamily(theme),
   textTransform: isSpaceConsoleTheme(theme) ? "uppercase" : "none",
-  letterSpacing: isSpaceConsoleTheme(theme) ? "0.05em" : "normal",
+  letterSpacing: isSpaceConsoleTheme(theme) ? "0.05em" : theme.trackerAbyss ? "0.03em" : "normal",
 });
 
-const successButtonStyle = {
-  backgroundColor: "#7ea06f",
-  color: "#fffaf2",
-  border: "none",
-  borderRadius: "12px",
+const successButtonStyle = (theme) => ({
+  background: getSuccessControlBackground(theme),
+  color: isSpaceConsoleTheme(theme)
+    ? theme.primaryText
+    : theme.trackerAbyss || theme.trackerSolar
+    ? theme.primaryText
+    : "#fffaf2",
+  border: isSpaceConsoleTheme(theme)
+    ? `1px solid ${theme.observerAccentAlt || theme.inputBorder}`
+    : theme.trackerReef || theme.trackerAbyss
+    ? `1px solid ${theme.trackerReefPanelBorder || theme.trackerAbyssMutedBorder || theme.inputBorder}`
+    : "none",
+  borderRadius: getControlRadius(theme, "button"),
   padding: "13px 16px",
   cursor: "pointer",
   fontWeight: "bold",
@@ -6496,19 +6428,35 @@ const successButtonStyle = {
   overflowWrap: "anywhere",
   lineHeight: 1.35,
   textAlign: "center",
-};
+  boxShadow: isSpaceConsoleTheme(theme)
+    ? `inset 0 1px 0 rgba(255,255,255,0.12), 0 6px 0 rgba(0,0,0,0.28), 0 12px 24px ${theme.glow}`
+    : `0 12px 24px ${theme.glow}`,
+  fontFamily: getControlFontFamily(theme),
+  textTransform: isSpaceConsoleTheme(theme) ? "uppercase" : "none",
+  letterSpacing: isSpaceConsoleTheme(theme) ? "0.06em" : theme.trackerAbyss ? "0.03em" : "normal",
+});
 
 const smallRemoveButtonStyle = (theme) => ({
-  backgroundColor: theme.softButtonBackground,
+  background: getSoftControlBackground(theme),
   color: theme.softButtonText,
-  border: "none",
-  borderRadius: theme.themeFamily === "galaxy" ? "999px" : "12px",
-  padding: "8px 10px",
+  border: isSpaceConsoleTheme(theme)
+    ? `1px solid ${theme.inputBorder}`
+    : theme.trackerReef || theme.trackerAbyss
+    ? `1px solid ${theme.trackerReefPanelBorder || theme.trackerAbyssMutedBorder || theme.inputBorder}`
+    : "none",
+  borderRadius: getControlRadius(theme, "chip"),
+  padding: "8px 12px",
   cursor: "pointer",
   fontWeight: "bold",
   maxWidth: "100%",
   whiteSpace: "normal",
   overflowWrap: "anywhere",
+  boxShadow: isSpaceConsoleTheme(theme)
+    ? "inset 0 1px 0 rgba(255,255,255,0.08), 0 4px 0 rgba(0,0,0,0.22)"
+    : `0 8px 18px ${theme.glow}`,
+  fontFamily: getControlFontFamily(theme),
+  textTransform: isSpaceConsoleTheme(theme) ? "uppercase" : "none",
+  letterSpacing: isSpaceConsoleTheme(theme) ? "0.05em" : "normal",
 });
 
 const navButtonStyle = (active, theme) => ({
@@ -6560,16 +6508,29 @@ const mealItemStyle = (theme) => ({
   alignItems: "flex-start",
   gap: "12px",
   flexWrap: "wrap",
-  backgroundColor: theme.itemBackground,
+  background: theme.trackerReef || theme.trackerAbyss
+    ? `radial-gradient(circle at 82% 18%, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0) 22%), ${theme.itemBackground}`
+    : theme.themeFamily === "forest"
+    ? `radial-gradient(circle at 16% 20%, rgba(228,238,205,0.16) 0%, rgba(228,238,205,0) 22%), ${theme.itemBackground}`
+    : theme.themeFamily === "underwater"
+    ? `radial-gradient(circle at 82% 20%, rgba(220,247,251,0.16) 0%, rgba(220,247,251,0) 22%), ${theme.itemBackground}`
+    : `linear-gradient(160deg, ${theme.itemBackground} 0%, rgba(255,255,255,0.03) 100%)`,
   padding: "14px",
-  borderRadius: "12px",
+  borderRadius: getControlRadius(theme, "field"),
   marginBottom: "10px",
   minWidth: 0,
+  border: theme.border,
+  boxShadow: `0 12px 24px ${theme.glow}`,
 });
 
-const rangeStyle = {
+const rangeStyle = (theme) => ({
   width: "100%",
-};
+  accentColor: theme.trackerAccent || theme.success,
+  cursor: "pointer",
+  minHeight: "22px",
+  borderRadius: getControlRadius(theme, "chip"),
+  background: theme.track,
+});
 
 const sliderValueStyle = (theme) => ({
   color: theme.subtleText,
@@ -6640,11 +6601,13 @@ const dashboardHeroStyle = (theme) => ({
   flexDirection: "column",
   gap: "22px",
   padding: "20px",
-  borderRadius: "22px",
-  background: `linear-gradient(145deg, ${theme.itemBackground} 0%, rgba(255,255,255,0.03) 100%)`,
+  borderRadius: isSpaceConsoleTheme(theme) ? "12px" : "22px",
+  background: `${getThemeCardOrnament(theme, "summary")}, linear-gradient(145deg, ${theme.itemBackground} 0%, rgba(255,255,255,0.03) 100%)`,
   marginBottom: "20px",
   flexWrap: "wrap",
-  boxShadow: `inset 0 1px 0 ${theme.star}, 0 14px 28px ${theme.glow}`,
+  boxShadow: `inset 0 1px 0 ${theme.star}, 0 14px 28px ${theme.glow}, ${getThemeEdgeHighlight(theme)}`,
+  border: theme.border,
+  clipPath: getThemeCardClipPath(theme, "summary"),
 });
 
 const observerHeroStyle = (theme) => ({
@@ -6715,24 +6678,19 @@ const dashboardStatsGridStyle = {
 
 const summaryCardStyle = (theme) => ({
   background: isSpaceConsoleTheme(theme)
-    ? `linear-gradient(180deg, rgba(8,12,20,0.9) 0%, rgba(14,18,29,0.95) 100%)`
+    ? `${getThemeCardOrnament(theme, "summary")}, linear-gradient(180deg, rgba(8,12,20,0.9) 0%, rgba(14,18,29,0.95) 100%)`
     : theme.themeFamily === "underwater"
-      ? `radial-gradient(circle at 18% 18%, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0) 22%), linear-gradient(155deg, ${theme.itemBackground} 0%, rgba(255,255,255,0.03) 100%)`
+      ? `${getThemeCardOrnament(theme, "summary")}, linear-gradient(155deg, ${theme.itemBackground} 0%, rgba(255,255,255,0.03) 100%)`
       : theme.themeFamily === "forest"
-      ? `radial-gradient(circle at 82% 18%, rgba(229,237,204,0.18) 0%, rgba(229,237,204,0) 22%), linear-gradient(155deg, ${theme.itemBackground} 0%, rgba(255,255,255,0.03) 100%)`
-      : `radial-gradient(circle at 18% 18%, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0) 20%), linear-gradient(155deg, ${theme.itemBackground} 0%, rgba(255,255,255,0.03) 100%)`,
-  borderRadius: isSpaceConsoleTheme(theme)
-    ? "12px"
-    : theme.themeFamily === "underwater"
-    ? "24px 18px 24px 18px / 18px 24px 18px 24px"
-    : theme.themeFamily === "forest"
-    ? "18px 24px 18px 28px / 24px 18px 24px 20px"
-    : "20px 28px 20px 26px / 24px 20px 24px 22px",
+      ? `${getThemeCardOrnament(theme, "summary")}, linear-gradient(155deg, ${theme.itemBackground} 0%, rgba(255,255,255,0.03) 100%)`
+      : `${getThemeCardOrnament(theme, "summary")}, linear-gradient(155deg, ${theme.itemBackground} 0%, rgba(255,255,255,0.03) 100%)`,
+  borderRadius: isSpaceConsoleTheme(theme) ? "12px" : "22px",
   padding: "18px",
   border: isSpaceConsoleTheme(theme) ? theme.observerBorder || theme.border : theme.border,
   boxShadow: isSpaceConsoleTheme(theme)
-    ? `inset 0 2px 4px rgba(0,0,0,0.5), 0 10px 20px rgba(0,0,0,0.18)`
-    : `0 16px 32px ${theme.glow}, inset 0 1px 0 rgba(255,255,255,0.06)`,
+    ? `inset 0 2px 4px rgba(0,0,0,0.5), 0 10px 20px rgba(0,0,0,0.18), ${getThemeEdgeHighlight(theme)}`
+    : `0 16px 32px ${theme.glow}, ${getThemeEdgeHighlight(theme)}`,
+  clipPath: getThemeCardClipPath(theme, "summary"),
 });
 
 const summaryLabelStyle = (theme) => ({
@@ -6791,10 +6749,15 @@ const permissionItemStyle = (theme) => ({
   alignItems: "center",
   gap: "8px",
   padding: "10px 12px",
-  borderRadius: "12px",
-  background: theme.itemBackground,
+  borderRadius: getControlRadius(theme, "field"),
+  background: theme.trackerReef || theme.trackerAbyss
+    ? `linear-gradient(160deg, ${theme.itemBackground} 0%, rgba(255,255,255,0.04) 100%)`
+    : theme.itemBackground,
   color: theme.text,
   fontSize: "0.92rem",
+  border: theme.border,
+  boxShadow: `0 8px 18px ${theme.glow}`,
+  fontFamily: getControlFontFamily(theme),
 });
 
 const moodTagGridStyle = {
@@ -6813,46 +6776,57 @@ const tagGroupLabelStyle = (theme) => ({
 });
 
 const moodTagButtonStyle = (selected, theme) => ({
-  background: selected ? theme.primary : theme.softButtonBackground,
+  background: selected ? theme.primary : getSoftControlBackground(theme),
   color: selected ? theme.primaryText : theme.softButtonText,
-  border: "none",
-  borderRadius: "999px",
+  border: selected
+    ? isSpaceConsoleTheme(theme)
+      ? `1px solid ${theme.observerAccentAlt || theme.inputBorder}`
+      : "none"
+    : isSpaceConsoleTheme(theme) || theme.trackerReef || theme.trackerAbyss
+    ? `1px solid ${theme.trackerReefPanelBorder || theme.trackerAbyssMutedBorder || theme.inputBorder || theme.observerAccentAlt}`
+    : "none",
+  borderRadius: getControlRadius(theme, "chip"),
   padding: "10px 14px",
   cursor: "pointer",
   fontWeight: "bold",
   boxShadow: selected ? `0 12px 26px ${theme.glow}` : `0 8px 18px ${theme.glow}`,
+  fontFamily: getControlFontFamily(theme),
+  textTransform: isSpaceConsoleTheme(theme) ? "uppercase" : "none",
+  letterSpacing: isSpaceConsoleTheme(theme) ? "0.05em" : theme.trackerAbyss ? "0.02em" : "normal",
 });
 
 const goalSuggestionButtonStyle = (theme) => ({
-  background: theme.softButtonBackground,
+  background: getSoftControlBackground(theme),
   color: theme.softButtonText,
-  border: "none",
-  borderRadius: "999px",
+  border: isSpaceConsoleTheme(theme) || theme.trackerReef || theme.trackerAbyss
+    ? `1px solid ${theme.trackerReefPanelBorder || theme.trackerAbyssMutedBorder || theme.inputBorder || theme.observerAccentAlt}`
+    : "none",
+  borderRadius: getControlRadius(theme, "chip"),
   padding: "10px 14px",
   cursor: "pointer",
   fontWeight: "bold",
   boxShadow: `0 8px 18px ${theme.glow}`,
+  fontFamily: getControlFontFamily(theme),
+  textTransform: isSpaceConsoleTheme(theme) ? "uppercase" : "none",
+  letterSpacing: isSpaceConsoleTheme(theme) ? "0.05em" : "normal",
 });
 
 const quickJumpButtonStyle = (theme) => ({
-  background: theme.softButtonBackground,
+  background: getSoftControlBackground(theme),
   color: theme.softButtonText,
   border: isSpaceConsoleTheme(theme)
     ? `1px solid ${theme.inputBorder}`
+    : theme.trackerReef || theme.trackerAbyss
+    ? `1px solid ${theme.trackerReefPanelBorder || theme.trackerAbyssMutedBorder || theme.inputBorder}`
     : "none",
-  borderRadius:
-    theme.themeFamily === "underwater"
-      ? "22px 16px 22px 16px / 16px 22px 16px 22px"
-      : theme.themeFamily === "forest"
-      ? "18px 24px 18px 22px / 22px 18px 22px 20px"
-      : isSpaceConsoleTheme(theme)
-      ? "10px"
-      : "22px",
+  borderRadius: getControlRadius(theme, "field"),
   padding: "10px 14px",
   cursor: "pointer",
   fontWeight: "bold",
   boxShadow: isSpaceConsoleTheme(theme)
     ? "inset 0 1px 0 rgba(255,255,255,0.08), 0 4px 0 rgba(0,0,0,0.22)"
+    : theme.trackerReef || theme.trackerAbyss
+    ? `inset 0 1px 0 rgba(255,255,255,0.06), 0 12px 24px rgba(0,0,0,0.14)`
     : `0 10px 20px ${theme.glow}`,
   minHeight: "42px",
   width: "auto",
@@ -6862,9 +6836,9 @@ const quickJumpButtonStyle = (theme) => ({
   textAlign: "center",
   justifySelf: "start",
   fontSize: "0.92rem",
-  fontFamily: isSpaceConsoleTheme(theme) ? theme.observerFontFamily : undefined,
+  fontFamily: getControlFontFamily(theme),
   textTransform: isSpaceConsoleTheme(theme) ? "uppercase" : "none",
-  letterSpacing: isSpaceConsoleTheme(theme) ? "0.05em" : "normal",
+  letterSpacing: isSpaceConsoleTheme(theme) ? "0.05em" : theme.trackerAbyss ? "0.03em" : "normal",
 });
 
 const chartToolbarStyle = {
@@ -6875,13 +6849,41 @@ const chartToolbarStyle = {
 };
 
 const rangeChipStyle = (active, theme) => ({
-  background: active ? theme.primary : theme.softButtonBackground,
+  background: active ? theme.primary : getSoftControlBackground(theme),
   color: active ? theme.primaryText : theme.softButtonText,
-  border: "none",
-  borderRadius: "999px",
+  border: active
+    ? "none"
+    : isSpaceConsoleTheme(theme) || theme.trackerReef || theme.trackerAbyss
+    ? `1px solid ${theme.trackerReefPanelBorder || theme.trackerAbyssMutedBorder || theme.inputBorder || theme.observerAccentAlt}`
+    : "none",
+  borderRadius: getControlRadius(theme, "chip"),
   padding: "9px 14px",
   cursor: "pointer",
   fontWeight: "bold",
+  boxShadow: active ? `0 10px 22px ${theme.glow}` : `0 8px 18px ${theme.glow}`,
+  fontFamily: getControlFontFamily(theme),
+  textTransform: isSpaceConsoleTheme(theme) ? "uppercase" : "none",
+  letterSpacing: isSpaceConsoleTheme(theme) ? "0.05em" : "normal",
+});
+
+const trackerSectionSwitcherButtonStyle = (active, theme) => ({
+  ...quickJumpButtonStyle(theme),
+  minWidth: "unset",
+  maxWidth: "100%",
+  background: active ? theme.primary : getSoftControlBackground(theme),
+  color: active ? theme.primaryText : theme.softButtonText,
+  border: active
+    ? isSpaceConsoleTheme(theme)
+      ? `1px solid ${theme.observerAccentAlt || theme.inputBorder}`
+      : theme.trackerReef || theme.trackerAbyss
+      ? `1px solid ${theme.trackerReefPanelBorder || theme.trackerAbyssMutedBorder || theme.inputBorder}`
+      : "none"
+    : quickJumpButtonStyle(theme).border,
+  boxShadow: active
+    ? isSpaceConsoleTheme(theme)
+      ? `inset 0 1px 0 rgba(255,255,255,0.16), 0 6px 0 rgba(0,0,0,0.28), 0 12px 24px ${theme.glow}`
+      : `0 12px 24px ${theme.glow}`
+    : quickJumpButtonStyle(theme).boxShadow,
 });
 
 const chartStackStyle = {
@@ -6892,17 +6894,18 @@ const chartStackStyle = {
 const chartCardStyle = (theme) => ({
   background: isSpaceConsoleTheme(theme)
     ? theme.modeName === "Solar"
-      ? "linear-gradient(180deg, rgba(245, 239, 227, 0.98) 0%, rgba(225, 217, 203, 0.995) 100%)"
-      : "linear-gradient(180deg, rgba(7,10,17,0.95) 0%, rgba(13,18,28,0.98) 100%)"
-    : `linear-gradient(160deg, ${theme.chartSurface} 0%, rgba(255,255,255,0.03) 100%)`,
+      ? `${getThemeCardOrnament(theme, "chart")}, linear-gradient(180deg, rgba(245, 239, 227, 0.98) 0%, rgba(225, 217, 203, 0.995) 100%)`
+      : `${getThemeCardOrnament(theme, "chart")}, linear-gradient(180deg, rgba(7,10,17,0.95) 0%, rgba(13,18,28,0.98) 100%)`
+    : `${getThemeCardOrnament(theme, "chart")}, linear-gradient(160deg, ${theme.chartSurface} 0%, rgba(255,255,255,0.03) 100%)`,
   borderRadius: isSpaceConsoleTheme(theme) ? "12px" : "22px",
   padding: "18px",
   border: isSpaceConsoleTheme(theme) ? theme.observerBorder || theme.border : theme.border,
   boxShadow: isSpaceConsoleTheme(theme)
     ? theme.modeName === "Solar"
-      ? "inset 0 1px 0 rgba(255,255,255,0.35), 0 12px 24px rgba(116,100,78,0.12)"
-      : "inset 0 2px 4px rgba(0,0,0,0.52), 0 12px 24px rgba(0,0,0,0.18)"
-    : `${theme.shadow}, 0 16px 30px ${theme.glow}`,
+      ? `inset 0 1px 0 rgba(255,255,255,0.35), 0 12px 24px rgba(116,100,78,0.12), ${getThemeEdgeHighlight(theme)}`
+      : `inset 0 2px 4px rgba(0,0,0,0.52), 0 12px 24px rgba(0,0,0,0.18), ${getThemeEdgeHighlight(theme)}`
+    : `${theme.shadow}, 0 16px 30px ${theme.glow}, ${getThemeEdgeHighlight(theme)}`,
+  clipPath: getThemeCardClipPath(theme, "feature"),
 });
 
 const goalCardItemStyle = (theme) => ({
@@ -6941,24 +6944,19 @@ const rewardGridStyle = {
 
 const rewardCardStyle = (theme) => ({
   background: isSpaceConsoleTheme(theme)
-    ? "linear-gradient(180deg, rgba(9,13,21,0.95) 0%, rgba(15,20,31,0.98) 100%)"
+    ? `${getThemeCardOrnament(theme, "reward")}, linear-gradient(180deg, rgba(9,13,21,0.95) 0%, rgba(15,20,31,0.98) 100%)`
     : theme.themeFamily === "underwater"
-      ? `radial-gradient(circle at 84% 20%, rgba(211,247,252,0.14) 0%, rgba(211,247,252,0) 22%), linear-gradient(160deg, ${theme.itemBackground} 0%, rgba(255,255,255,0.04) 100%)`
+      ? `${getThemeCardOrnament(theme, "reward")}, linear-gradient(160deg, ${theme.itemBackground} 0%, rgba(255,255,255,0.04) 100%)`
       : theme.themeFamily === "forest"
-      ? `radial-gradient(circle at 18% 20%, rgba(220,231,191,0.14) 0%, rgba(220,231,191,0) 22%), linear-gradient(160deg, ${theme.itemBackground} 0%, rgba(255,255,255,0.04) 100%)`
-      : `radial-gradient(circle at 18% 18%, rgba(145,130,255,0.08) 0%, rgba(145,130,255,0) 20%), linear-gradient(160deg, ${theme.itemBackground} 0%, rgba(255,255,255,0.04) 100%)`,
-  borderRadius: isSpaceConsoleTheme(theme)
-    ? "12px"
-    : theme.themeFamily === "underwater"
-    ? "22px 16px 22px 16px / 18px 24px 18px 24px"
-    : theme.themeFamily === "forest"
-    ? "18px 24px 18px 26px / 24px 18px 22px 20px"
-    : "18px 24px 18px 24px / 22px 18px 22px 20px",
+      ? `${getThemeCardOrnament(theme, "reward")}, linear-gradient(160deg, ${theme.itemBackground} 0%, rgba(255,255,255,0.04) 100%)`
+      : `${getThemeCardOrnament(theme, "reward")}, linear-gradient(160deg, ${theme.itemBackground} 0%, rgba(255,255,255,0.04) 100%)`,
+  borderRadius: isSpaceConsoleTheme(theme) ? "12px" : "20px",
   padding: "16px",
   border: isSpaceConsoleTheme(theme) ? theme.observerBorder || theme.border : theme.border,
   boxShadow: isSpaceConsoleTheme(theme)
-    ? "inset 0 2px 4px rgba(0,0,0,0.5), 0 10px 20px rgba(0,0,0,0.18)"
-    : `0 14px 28px ${theme.glow}, inset 0 1px 0 rgba(255,255,255,0.06)`,
+    ? `inset 0 2px 4px rgba(0,0,0,0.5), 0 10px 20px rgba(0,0,0,0.18), ${getThemeEdgeHighlight(theme)}`
+    : `0 14px 28px ${theme.glow}, ${getThemeEdgeHighlight(theme)}`,
+  clipPath: getThemeCardClipPath(theme, "reward"),
 });
 
 const rewardTitleStyle = (theme) => ({
@@ -6990,28 +6988,6 @@ const popupCardStyle = (theme) => ({
 
 function darkModeSafe(theme, galaxyValue, solarValue) {
   return theme.modeName === "Galaxy" ? galaxyValue : solarValue;
-}
-
-function getPublicAppUrl() {
-  if (typeof window === "undefined") {
-    return DEFAULT_PUBLIC_APP_URL;
-  }
-
-  const { origin, hostname } = window.location;
-
-  if (
-    hostname === "localhost" ||
-    hostname === "127.0.0.1" ||
-    hostname.endsWith(".local")
-  ) {
-    return DEFAULT_PUBLIC_APP_URL;
-  }
-
-  return origin;
-}
-
-function getFeedbackTone(message = "") {
-  return /error|failed|could not|incorrect|not found/i.test(message) ? "error" : "success";
 }
 
 function buildTrackerTutorialSteps(selectedTrackingAreaOptions) {
@@ -7532,148 +7508,6 @@ function renderFeedbackMessage(message, theme) {
   if (!message) return null;
 
   return <div style={feedbackMessageStyle(getFeedbackTone(message), theme)}>{message}</div>;
-}
-
-function normalizeConnectionPermissions(permissions) {
-  return {
-    ...DEFAULT_CONNECTION_PERMISSIONS,
-    ...(permissions && typeof permissions === "object" ? permissions : {}),
-  };
-}
-
-function getThemeLanguage(family = "galaxy") {
-  const tracker =
-    family === "underwater"
-      ? {
-          dashboard: "Current Overview",
-          actions: "Daily Currents",
-          progress: "Flow",
-          streaks: "Tides",
-          rewards: "Reefs",
-          activity: "Drift Log",
-          status: "Waters Today",
-          mood: "Depth",
-          support: "Pings",
-          greeting: "Welcome back",
-          dashboardSubtitle: "A calm reading of today's waters.",
-          dashboardKicker: "Today's current",
-          dashboardBody: "Follow the flow a little at a time and keep the day feeling manageable.",
-          emptyStreaks: "No active tides yet.",
-          emptyActivity: "No drift log entries yet.",
-          emptyRewards: "No reefs collected yet.",
-          nextReward: "finish an active tide to grow another reef.",
-          actionsSubtitle: "Open the spaces you may want to check first.",
-          progressSubtitle: "A clear readout of what has been logged so far.",
-          streaksSubtitle: "Current patterns stay visible here as a quiet source of momentum.",
-          rewardsSubtitle: "Your reward collection grows as goals complete.",
-          activitySubtitle: "A lightweight log to help you reorient.",
-          moodSubtitle: "A quick emotional snapshot without opening the full mood page.",
-        }
-      : family === "forest"
-      ? {
-          dashboard: "Grove Overview",
-          actions: "Daily Paths",
-          progress: "Growth",
-          streaks: "Trails",
-          rewards: "Blooms",
-          activity: "Path Log",
-          status: "Conditions Today",
-          mood: "Weather",
-          support: "Calls",
-          greeting: "Welcome back",
-          dashboardSubtitle: "A gentle clearing for today's progress.",
-          dashboardKicker: "Today's grove",
-          dashboardBody: "Take one steady step at a time and let the day settle into place.",
-          emptyStreaks: "No active trails yet.",
-          emptyActivity: "No path log entries yet.",
-          emptyRewards: "No blooms collected yet.",
-          nextReward: "finish an active trail to open another bloom.",
-          actionsSubtitle: "Open the tracker spaces you may want to visit first.",
-          progressSubtitle: "A grounded readout of what has been logged so far.",
-          streaksSubtitle: "Current patterns stay visible here as a quiet source of momentum.",
-          rewardsSubtitle: "Your reward collection grows as goals complete.",
-          activitySubtitle: "A lightweight log to help you reorient.",
-          moodSubtitle: "A quick emotional snapshot without opening the full mood page.",
-        }
-      : {
-          dashboard: "Cosmic Overview",
-          actions: "Daily Rituals",
-          progress: "Energy Flow",
-          streaks: "Alignments",
-          rewards: "Constellations",
-          activity: "Signal Log",
-          status: "Current State",
-          mood: "Emotional Orbit",
-          support: "Signals",
-          greeting: "Welcome back, stargazer",
-          dashboardSubtitle: "A gentle sky map for today.",
-          dashboardKicker: "Today's sky",
-          dashboardBody: "Take one soft step at a time and let the day unfold with a little more ease.",
-          emptyStreaks: "No active alignments yet.",
-          emptyActivity: "No signal log entries yet.",
-          emptyRewards: "No constellations collected yet.",
-          nextReward: "finish an active alignment to unlock another constellation.",
-          actionsSubtitle: "Open the tracker spaces you may want to visit first.",
-          progressSubtitle: "A gentle readout of what has been logged so far.",
-          streaksSubtitle: "Current goal patterns stay visible here as a quiet source of momentum.",
-          rewardsSubtitle: "Your reward collection grows as goals complete.",
-          activitySubtitle: "A lightweight activity note to help you reorient.",
-          moodSubtitle: "A quick emotional snapshot without opening the full mood page.",
-        };
-
-  const observer =
-    family === "underwater"
-      ? {
-          dashboard: "Submarine Panel",
-          status: "Systems Status",
-          activity: "Dive Log",
-          support: "Pings",
-          mood: "Depth",
-          streaks: "Tides",
-          rewards: "Reefs",
-          systems: "Systems Status",
-          empty: "Approved tracker connections will appear here once available.",
-          emptyBody: "No approved trackers are connected to this outsider account yet.",
-        }
-      : family === "forest"
-      ? {
-          dashboard: "Cabin Panel",
-          status: "Conditions",
-          activity: "Field Notes",
-          support: "Calls",
-          mood: "Weather",
-          streaks: "Trails",
-          rewards: "Blooms",
-          systems: "Conditions",
-          empty: "Approved tracker connections will appear here once available.",
-          emptyBody: "No approved trackers are connected to this outsider account yet.",
-        }
-      : {
-          dashboard: "Control Panel",
-          status: "Systems Status",
-          activity: "Activity Log",
-          support: "Signals",
-          mood: "Emotional Orbit",
-          streaks: "Alignments",
-          rewards: "Constellations",
-          systems: "Systems Status",
-          empty: "Approved tracker connections will appear here once available.",
-          emptyBody: "No approved trackers are connected to this outsider account yet.",
-        };
-
-  return { tracker, observer };
-}
-
-function getThemeRewardCopy(family = "galaxy") {
-  if (family === "underwater") {
-    return { singular: "Reef", plural: "Reefs" };
-  }
-
-  if (family === "forest") {
-    return { singular: "Bloom", plural: "Blooms" };
-  }
-
-  return { singular: "Constellation", plural: "Constellations" };
 }
 
 function getSectionAccentLabel(family = "galaxy", token = "Overview") {

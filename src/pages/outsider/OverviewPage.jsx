@@ -838,7 +838,7 @@ function OutsiderOverviewPage({ app }) {
             </div>
             <div style={{ ...screenWell, borderRadius: "12px", padding: isMobile ? "14px" : "16px", display: "grid", gap: "14px", minHeight: "184px" }}>
               {interceptMessages.length > 0 ? (
-                interceptMessages.map((item, index) => (
+                interceptMessages.map((item) => (
                   <div
                     key={item.label}
                     style={{

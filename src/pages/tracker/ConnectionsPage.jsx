@@ -127,7 +127,18 @@ function TrackerConnectionsPage({ app }) {
                     <div style={permissionsGridStyle}>
                       {Object.entries(normalizeConnectionPermissions(outsider.permissions)).map(([permissionKey, enabled]) => (
                         <label key={permissionKey} style={permissionItemStyle(theme)}>
-                          <input type="checkbox" checked={enabled} onChange={(e) => updateOutsiderPermission(outsider.id, permissionKey, e.target.checked)} />
+                          <input
+                            type="checkbox"
+                            checked={enabled}
+                            onChange={(e) => updateOutsiderPermission(outsider.id, permissionKey, e.target.checked)}
+                            style={{
+                              width: "18px",
+                              height: "18px",
+                              accentColor: theme.trackerAccent || theme.success,
+                              cursor: "pointer",
+                              flex: "0 0 auto",
+                            }}
+                          />
                           <span style={{ textTransform: "capitalize" }}>{permissionKey}</span>
                         </label>
                       ))}

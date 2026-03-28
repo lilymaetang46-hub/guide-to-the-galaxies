@@ -21,9 +21,26 @@ function TrackerChartsPage({ app }) {
     chartCardStyle,
   } = app;
 
+  const isGalaxyTrackerTheme =
+    theme.themeFamily === "galaxy" &&
+    !theme.observerConsole &&
+    !theme.trackerSolar &&
+    !theme.trackerReef &&
+    !theme.trackerAbyss;
+
+  const galaxySectionStyle = isGalaxyTrackerTheme
+    ? {
+        display: "grid",
+        gap: "16px",
+      }
+    : null;
+
   return (
     <div style={chartsPageStyle}>
-      <section className="galaxy-panel" style={sectionCardStyle(theme, "charts")}>
+      <section
+        className={isGalaxyTrackerTheme ? undefined : "galaxy-panel"}
+        style={isGalaxyTrackerTheme ? galaxySectionStyle : sectionCardStyle(theme, "charts")}
+      >
         {renderSectionHeader("Celestial Charts", "Look for patterns across the last few days without overload.", "Sun", "Star")}
         <div style={chartToolbarStyle}>
           {chartRangeOptions.map((days) => (
@@ -54,7 +71,10 @@ function TrackerChartsPage({ app }) {
         )}
       </section>
 
-      <section className="galaxy-panel" style={sectionCardStyle(theme, "care")}>
+      <section
+        className={isGalaxyTrackerTheme ? undefined : "galaxy-panel"}
+        style={isGalaxyTrackerTheme ? galaxySectionStyle : sectionCardStyle(theme, "care")}
+      >
         {renderSectionHeader("Care Habits", "Meals, meds, hygiene, and movement across recent days.", "Comet", "Spark")}
         {recentChartData.length === 0 ? (
           <p style={emptyTextStyle(theme)}>No chart data yet.</p>
