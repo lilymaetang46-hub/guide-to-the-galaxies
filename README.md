@@ -39,6 +39,7 @@ The repo is now set up to use Capacitor as the native shell so the existing Reac
 - Android is the practical first native target from this Windows workspace.
 - iOS can be added later from a macOS machine with `npx cap add ios` once we are ready for that platform.
 - When iOS is added, the existing Capacitor shell and shared deep-link handling can be reused rather than rebuilt separately.
+- Git/worktree cleanup habits for this repo are documented in [`docs/worktree-hygiene-plan.md`](C:\Users\Lily\tracker-app\docs\worktree-hygiene-plan.md).
 - Native push groundwork now lives in the shared React app plus the Capacitor Android shell:
   - [`src/pushNotifications.js`](C:\Users\Lily\tracker-app\src\pushNotifications.js) wraps Capacitor push registration so the web app codepath stays unchanged.
   - [`supabase/migrations/20260322143000_add_push_notification_devices.sql`](C:\Users\Lily\tracker-app\supabase\migrations\20260322143000_add_push_notification_devices.sql) stores per-device push tokens for authenticated users.
