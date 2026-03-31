@@ -278,6 +278,138 @@ This shared event layer can also power overview summaries and future widgets.
 - overdue tasks
 - next appointment
 
+## Future Expansion: External Calendar Sync
+
+### Main idea
+
+After the in-app calendar is stable, add optional sync with outside calendar systems so users can see tracker items in tools they already use.
+
+This should be treated as a later expansion, not part of the first internal calendar release.
+
+### Plain-English terms
+
+- `Sync` means keeping information matched between this app and another system.
+- `Two-way sync` means changes in either place can update the other place.
+- `One-way sync` means this app sends information out, but edits made elsewhere do not fully come back.
+- `OAuth` means the secure permission screen that lets a user approve calendar access without giving us their password.
+- `API` means the official connection method a service provides so apps can read and write data.
+
+### Recommendation
+
+Build this in stages:
+
+1. finish the in-app calendar first
+2. add Google Calendar sync before Apple-specific sync
+3. support Apple Calendar through export or subscription before attempting deeper iCloud-specific behavior
+
+### Why this order
+
+- Google Calendar has a clearer and more developer-friendly sync path
+- Apple Calendar support is easier through standard calendar formats than through deep direct iCloud integration
+- the internal calendar needs stable event shapes before outside sync becomes safe and predictable
+
+### Scope decision to make before implementation
+
+Before building, decide what sync should mean:
+
+- app to calendar only
+- calendar to app only
+- full two-way sync
+
+Recommended first version:
+
+- app to calendar for appointments and reminders
+- optional app to calendar for dated to-dos
+- no write-back from external calendars into the app yet
+
+That keeps the first release simpler, safer, and easier to debug.
+
+### Suggested execution plan
+
+#### Phase 1: Define the sync model
+
+- decide which app items can become external calendar events
+- define one shared calendar event shape for appointments, reminders, and dated to-dos
+- decide which fields map to title, date, time, notes, reminders, recurrence, and status
+- decide what should happen when a source item is edited, completed, or deleted
+
+#### Phase 2: Prepare the data model
+
+- add storage for connected calendar accounts
+- add storage for user sync preferences
+- add storage that links an internal item to an external calendar event ID
+- store sync timestamps and last-known sync state for retries and troubleshooting
+
+#### Phase 3: Build Google Calendar connection
+
+- add Google OAuth connect and disconnect flow
+- let the user choose which Google calendar to sync with
+- build event create, update, and delete behavior through the Google Calendar API
+- show clear connection status and error states in settings or connections
+
+#### Phase 4: Add app-to-Google sync rules
+
+- create external events when a linked app item is created
+- update external events when title, date, time, or notes change
+- remove or cancel external events when the source item is deleted, based on the product rule we choose
+- prevent duplicate event creation during retries
+
+#### Phase 5: Add Apple-friendly support
+
+- support `.ics` event export for single items or batches
+- optionally generate a calendar subscription feed for users who want ongoing Apple Calendar visibility
+- make it clear that this first Apple-compatible version is not full deep two-way iCloud sync
+
+#### Phase 6: Add controls and safeguards
+
+- let users turn sync on or off
+- let users choose which tracker categories sync out
+- add per-user timezone handling
+- handle revoked permissions, expired tokens, and failed sync retries gracefully
+- log sync errors clearly enough that they can be debugged later
+
+#### Phase 7: Test and release carefully
+
+- test with real Google accounts on web and mobile
+- test Apple Calendar import or subscription behavior on iPhone and Mac
+- verify duplicate prevention, timezone behavior, delete behavior, and edit propagation
+- release Google first, then Apple-compatible support
+
+### Version 1 should include
+
+- Google account connect flow
+- choose a destination Google calendar
+- app-to-Google sync for appointments and reminders
+- optional app-to-Google sync for dated to-dos
+- event update support
+- event delete or cancel behavior based on product rules
+- clear user controls and connection status
+
+### Version 1 should not include
+
+- full two-way sync from Google back into the app
+- deep direct iCloud calendar integration
+- complex recurring sync rules on day one
+- automatic sync for every tracker type
+- silent background behavior that users cannot understand or control
+
+### Technical direction
+
+This should be built on top of the shared normalized event layer used by the in-app calendar.
+
+The sync system should treat external calendars as destinations connected to that normalized event layer, rather than letting each tracker type talk to Google or Apple separately.
+
+That keeps the system easier to expand later and reduces duplicate logic.
+
+### Best starting point if this becomes an active build thread
+
+1. finalize the normalized internal calendar event shape
+2. decide the Version 1 sync scope and item types
+3. add database tables for sync connections and linked external event IDs
+4. build Google OAuth and calendar selection
+5. implement app-to-Google create, update, and delete flows
+6. test heavily before adding Apple-compatible export or subscription support
+
 ## Product Guardrails
 
 These should guide all future expansion work:
