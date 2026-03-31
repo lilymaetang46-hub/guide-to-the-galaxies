@@ -19,10 +19,19 @@ function TrackerSupportPage({ app }) {
     markSupportMessageRead,
     smallInfoStyle,
   } = app;
+  const disableGalaxyFrame =
+    theme.themeFamily === "galaxy" &&
+    !theme.observerConsole &&
+    !theme.trackerSolar &&
+    !theme.trackerReef &&
+    !theme.trackerAbyss;
+  const sectionStyle = (sectionKey) =>
+    sectionCardStyle(theme, sectionKey, { disableCelestialFrame: disableGalaxyFrame });
+  const rewardStyle = rewardCardStyle(theme, { disableCelestialFrame: disableGalaxyFrame });
 
   return (
     <div style={chartsPageStyle}>
-      <section className="galaxy-panel" style={sectionCardStyle(theme, "signals")}>
+      <section className="galaxy-panel" style={sectionStyle("signals")}>
         {renderSectionHeader("Support Inbox", "View nudges and encouragement sent by connected outsiders.", "Signal", "Signal")}
         {renderFeedbackMessage(supportInboxMessage, theme)}
         <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", marginTop: "12px" }}>
@@ -33,7 +42,7 @@ function TrackerSupportPage({ app }) {
         </div>
       </section>
 
-      <section className="galaxy-panel" style={sectionCardStyle(theme, "dashboard")}>
+      <section className="galaxy-panel" style={sectionStyle("dashboard")}>
         {renderSectionHeader("Recent Nudges", "Messages appear here when an outsider sends one.", "Support", "Support")}
         {supportInboxLoading ? (
           <p style={smallInfoStyle(theme)}>Loading support messages...</p>
@@ -42,7 +51,7 @@ function TrackerSupportPage({ app }) {
         ) : (
           <div style={{ display: "grid", gap: "12px" }}>
             {supportInbox.map((item) => (
-              <div key={item.id} style={rewardCardStyle(theme)}>
+              <div key={item.id} style={rewardStyle}>
                 <div style={rewardTitleStyle(theme)}>{item.message}</div>
                 <div style={goalMetaStyle(theme)}>
                   From {item.outsiderName} on {item.createdAtLabel}

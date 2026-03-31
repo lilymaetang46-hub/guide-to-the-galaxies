@@ -26,71 +26,164 @@ function buildSteppedLinePath(points) {
   return commands.join(" ");
 }
 
-function buildGalaxyFrameStars() {
-  return [
-    { top: "6px", left: "14px", size: "8px", opacity: 0.42, glyph: "·" },
-    { top: "2px", left: "28px", size: "13px", opacity: 0.84, glyph: "✦" },
-    { top: "14px", left: "46px", size: "7px", opacity: 0.36, glyph: "·" },
-    { top: "10px", left: "62px", size: "9px", opacity: 0.52, glyph: "✦" },
-    { top: "4px", left: "88px", size: "6px", opacity: 0.3, glyph: "•" },
-    { top: "6px", left: "112px", size: "14px", opacity: 0.8, glyph: "✦" },
-    { top: "16px", left: "136px", size: "8px", opacity: 0.44, glyph: "✦" },
-    { top: "5px", left: "168px", size: "6px", opacity: 0.32, glyph: "•" },
-    { top: "12px", left: "calc(50% - 36px)", size: "7px", opacity: 0.4, glyph: "✦" },
-    { top: "4px", left: "calc(50% - 10px)", size: "15px", opacity: 0.88, glyph: "✦" },
-    { top: "16px", left: "calc(50% + 18px)", size: "8px", opacity: 0.48, glyph: "✦" },
-    { top: "7px", right: "164px", size: "6px", opacity: 0.3, glyph: "•" },
-    { top: "14px", right: "138px", size: "9px", opacity: 0.52, glyph: "✦" },
-    { top: "2px", right: "112px", size: "14px", opacity: 0.82, glyph: "✦" },
-    { top: "14px", right: "88px", size: "7px", opacity: 0.38, glyph: "✦" },
-    { top: "6px", right: "62px", size: "10px", opacity: 0.6, glyph: "✦" },
-    { top: "16px", right: "42px", size: "7px", opacity: 0.34, glyph: "•" },
-    { top: "4px", right: "22px", size: "13px", opacity: 0.8, glyph: "✦" },
-    { bottom: "4px", left: "18px", size: "7px", opacity: 0.34, glyph: "•" },
-    { bottom: "12px", left: "34px", size: "12px", opacity: 0.78, glyph: "✦" },
-    { bottom: "2px", left: "58px", size: "7px", opacity: 0.36, glyph: "✦" },
-    { bottom: "14px", left: "82px", size: "10px", opacity: 0.58, glyph: "✦" },
-    { bottom: "4px", left: "108px", size: "6px", opacity: 0.28, glyph: "•" },
-    { bottom: "12px", left: "136px", size: "13px", opacity: 0.8, glyph: "✦" },
-    { bottom: "4px", left: "166px", size: "8px", opacity: 0.42, glyph: "✦" },
-    { bottom: "14px", left: "calc(50% - 28px)", size: "7px", opacity: 0.34, glyph: "✦" },
-    { bottom: "2px", left: "calc(50% - 4px)", size: "14px", opacity: 0.84, glyph: "✦" },
-    { bottom: "14px", left: "calc(50% + 22px)", size: "8px", opacity: 0.42, glyph: "✦" },
-    { bottom: "4px", right: "164px", size: "7px", opacity: 0.32, glyph: "•" },
-    { bottom: "14px", right: "136px", size: "10px", opacity: 0.56, glyph: "✦" },
-    { bottom: "2px", right: "108px", size: "13px", opacity: 0.82, glyph: "✦" },
-    { bottom: "12px", right: "82px", size: "9px", opacity: 0.5, glyph: "✦" },
-    { bottom: "4px", right: "58px", size: "6px", opacity: 0.28, glyph: "•" },
-    { bottom: "14px", right: "34px", size: "12px", opacity: 0.76, glyph: "✦" },
-    { bottom: "4px", right: "16px", size: "7px", opacity: 0.34, glyph: "•" },
-    { top: "34px", left: "6px", size: "6px", opacity: 0.32, glyph: "•" },
-    { top: "50px", left: "10px", size: "11px", opacity: 0.68, glyph: "✦" },
-    { top: "72px", left: "4px", size: "8px", opacity: 0.42, glyph: "✦" },
-    { top: "96px", left: "14px", size: "14px", opacity: 0.82, glyph: "✦" },
-    { top: "126px", left: "6px", size: "7px", opacity: 0.36, glyph: "✦" },
-    { top: "154px", left: "12px", size: "10px", opacity: 0.56, glyph: "✦" },
-    { top: "184px", left: "6px", size: "6px", opacity: 0.28, glyph: "•" },
-    { bottom: "156px", left: "8px", size: "9px", opacity: 0.48, glyph: "✦" },
-    { bottom: "124px", left: "12px", size: "12px", opacity: 0.74, glyph: "✦" },
-    { bottom: "92px", left: "6px", size: "7px", opacity: 0.34, glyph: "✦" },
-    { bottom: "56px", left: "12px", size: "10px", opacity: 0.56, glyph: "✦" },
-    { bottom: "34px", left: "6px", size: "6px", opacity: 0.28, glyph: "•" },
-    { top: "34px", right: "6px", size: "6px", opacity: 0.32, glyph: "•" },
-    { top: "50px", right: "10px", size: "11px", opacity: 0.68, glyph: "✦" },
-    { top: "72px", right: "4px", size: "8px", opacity: 0.42, glyph: "✦" },
-    { top: "96px", right: "14px", size: "14px", opacity: 0.82, glyph: "✦" },
-    { top: "126px", right: "6px", size: "7px", opacity: 0.36, glyph: "✦" },
-    { top: "154px", right: "12px", size: "10px", opacity: 0.56, glyph: "✦" },
-    { top: "184px", right: "6px", size: "6px", opacity: 0.28, glyph: "•" },
-    { bottom: "156px", right: "8px", size: "9px", opacity: 0.48, glyph: "✦" },
-    { bottom: "124px", right: "12px", size: "12px", opacity: 0.74, glyph: "✦" },
-    { bottom: "92px", right: "6px", size: "7px", opacity: 0.34, glyph: "✦" },
-    { bottom: "56px", right: "12px", size: "10px", opacity: 0.56, glyph: "✦" },
-    { bottom: "34px", right: "6px", size: "6px", opacity: 0.28, glyph: "•" },
-  ];
+function getGalaxyTrackerChartFrame(panelTone = "charts") {
+  const frames = {
+    charts: {
+      shellGlow:
+        "0 0 0 1px rgba(255,245,214,0.08), 0 26px 46px rgba(4,8,24,0.34), 0 0 26px rgba(244,214,122,0.08)",
+      legendBorder: "rgba(244,214,122,0.2)",
+      plotBorder: "rgba(244,214,122,0.22)",
+      plotGlow: "0 18px 30px rgba(0,0,0,0.18), 0 0 20px rgba(244,214,122,0.04)",
+      aura:
+        "radial-gradient(circle at 16% 18%, rgba(114,208,255,0.16) 0%, rgba(114,208,255,0) 26%), radial-gradient(circle at 84% 18%, rgba(255,240,195,0.1) 0%, rgba(255,240,195,0) 22%), radial-gradient(circle at 50% 100%, rgba(160,148,255,0.08) 0%, rgba(160,148,255,0) 36%)",
+    },
+    care: {
+      shellGlow:
+        "0 0 0 1px rgba(255,245,214,0.08), 0 26px 46px rgba(4,8,24,0.34), 0 0 26px rgba(244,214,122,0.08)",
+      legendBorder: "rgba(244,214,122,0.2)",
+      plotBorder: "rgba(244,214,122,0.22)",
+      plotGlow: "0 18px 30px rgba(0,0,0,0.18), 0 0 20px rgba(244,214,122,0.04)",
+      aura:
+        "radial-gradient(circle at 16% 18%, rgba(245,163,255,0.16) 0%, rgba(245,163,255,0) 26%), radial-gradient(circle at 84% 18%, rgba(166,150,255,0.12) 0%, rgba(166,150,255,0) 22%), radial-gradient(circle at 50% 100%, rgba(255,209,102,0.08) 0%, rgba(255,209,102,0) 36%)",
+    },
+  };
+
+  return frames[panelTone] || frames.charts;
 }
 
-function LineTrendChart({ title, subtitle, data, yMax, series, theme, chartCardStyle }) {
+function CelestialFrameOverlay({ title, subtitle }) {
+  const starbursts = [
+    { x: 44, y: 34, r: 10 },
+    { x: 1156, y: 34, r: 10 },
+    { x: 44, y: 556, r: 11 },
+    { x: 72, y: 544, r: 7 },
+    { x: 1156, y: 556, r: 12 },
+    { x: 1128, y: 540, r: 6 },
+  ];
+
+  const accentStars = [
+    [172, 18], [214, 24], [252, 20], [286, 16], [914, 16], [948, 20], [986, 24], [1028, 18],
+    [70, 96], [96, 110], [1130, 96], [1104, 110], [104, 548], [1090, 548], [138, 566], [1044, 568],
+    [34, 244], [28, 334], [30, 470], [1168, 228], [1172, 320], [1166, 418], [602, 86], [580, 90], [624, 90],
+    [152, 60], [1048, 60], [176, 552], [1022, 554],
+  ];
+
+  return (
+    <svg
+      viewBox="0 0 1200 600"
+      preserveAspectRatio="none"
+      aria-hidden="true"
+      style={{ position: "absolute", inset: 0, width: "100%", height: "100%", pointerEvents: "none", zIndex: 0 }}
+    >
+      <defs>
+        <linearGradient id="celestialGold" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#fff2c6" />
+          <stop offset="45%" stopColor="#f4d67a" />
+          <stop offset="100%" stopColor="#c89639" />
+        </linearGradient>
+        <linearGradient id="celestialGoldSoft" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stopColor="rgba(255,242,198,0)" />
+          <stop offset="18%" stopColor="rgba(244,214,122,0.85)" />
+          <stop offset="50%" stopColor="rgba(255,242,198,0.96)" />
+          <stop offset="82%" stopColor="rgba(244,214,122,0.85)" />
+          <stop offset="100%" stopColor="rgba(255,242,198,0)" />
+        </linearGradient>
+        <filter id="goldGlow" x="-20%" y="-20%" width="140%" height="140%">
+          <feGaussianBlur stdDeviation="1.6" result="blur" />
+          <feMerge>
+            <feMergeNode in="blur" />
+            <feMergeNode in="SourceGraphic" />
+          </feMerge>
+        </filter>
+      </defs>
+
+      <rect x="10" y="10" width="1180" height="580" rx="28" fill="none" stroke="url(#celestialGold)" strokeWidth="1.9" />
+      <rect x="18" y="18" width="1164" height="564" rx="26" fill="none" stroke="rgba(244,214,122,0.72)" strokeWidth="1.3" />
+      <rect x="30" y="30" width="1140" height="540" rx="22" fill="none" stroke="rgba(244,214,122,0.18)" strokeWidth="0.95" />
+
+      <path d="M28 64 Q28 26 68 26 H230" fill="none" stroke="url(#celestialGold)" strokeWidth="1.75" />
+      <path d="M42 74 Q42 42 78 42 H198" fill="none" stroke="rgba(244,214,122,0.52)" strokeWidth="1.15" />
+      <path d="M1172 64 Q1172 26 1132 26 H970" fill="none" stroke="url(#celestialGold)" strokeWidth="1.75" />
+      <path d="M1158 74 Q1158 42 1122 42 H1002" fill="none" stroke="rgba(244,214,122,0.52)" strokeWidth="1.15" />
+
+      <path d="M22 504 Q22 576 96 576 L230 576" fill="none" stroke="url(#celestialGold)" strokeWidth="1.65" />
+      <path d="M34 492 Q34 558 100 558 L198 558" fill="none" stroke="rgba(244,214,122,0.5)" strokeWidth="1.1" />
+      <path d="M46 480 Q46 542 108 542 L176 542" fill="none" stroke="rgba(244,214,122,0.24)" strokeWidth="0.9" />
+      <path d="M1178 504 Q1178 576 1104 576 L970 576" fill="none" stroke="url(#celestialGold)" strokeWidth="1.65" />
+      <path d="M1166 492 Q1166 558 1100 558 L1002 558" fill="none" stroke="rgba(244,214,122,0.5)" strokeWidth="1.1" />
+      <path d="M1154 480 Q1154 542 1092 542 L1024 542" fill="none" stroke="rgba(244,214,122,0.24)" strokeWidth="0.9" />
+
+      <path d="M58 96 C34 128, 34 176, 58 208 C82 238, 82 286, 58 316" fill="none" stroke="url(#celestialGoldSoft)" strokeWidth="2.8" />
+      <path d="M70 110 C52 136, 52 174, 70 198 C88 222, 88 260, 70 284" fill="none" stroke="rgba(244,214,122,0.48)" strokeWidth="1.35" />
+      <path d="M1142 96 C1166 128, 1166 176, 1142 208 C1118 238, 1118 286, 1142 316" fill="none" stroke="url(#celestialGoldSoft)" strokeWidth="2.8" />
+      <path d="M1130 110 C1148 136, 1148 174, 1130 198 C1112 222, 1112 260, 1130 284" fill="none" stroke="rgba(244,214,122,0.48)" strokeWidth="1.35" />
+      <path d="M58 356 C34 388, 34 436, 58 468 C82 498, 82 536, 58 558" fill="none" stroke="url(#celestialGoldSoft)" strokeWidth="2.8" />
+      <path d="M70 372 C52 398, 52 436, 70 460 C88 484, 88 516, 70 536" fill="none" stroke="rgba(244,214,122,0.48)" strokeWidth="1.35" />
+      <path d="M1142 356 C1166 388, 1166 436, 1142 468 C1118 498, 1118 536, 1142 558" fill="none" stroke="url(#celestialGoldSoft)" strokeWidth="2.8" />
+      <path d="M1130 372 C1148 398, 1148 436, 1130 460 C1112 484, 1112 516, 1130 536" fill="none" stroke="rgba(244,214,122,0.48)" strokeWidth="1.35" />
+
+      <path d="M126 18 H430" fill="none" stroke="rgba(244,214,122,0.46)" strokeWidth="1.2" />
+      <path d="M770 18 H1074" fill="none" stroke="rgba(244,214,122,0.46)" strokeWidth="1.2" />
+      <path d="M154 32 H364" fill="none" stroke="rgba(244,214,122,0.18)" strokeWidth="0.95" />
+      <path d="M836 32 H1046" fill="none" stroke="rgba(244,214,122,0.18)" strokeWidth="0.95" />
+      <path d="M58 582 H1142" fill="none" stroke="rgba(244,214,122,0.3)" strokeWidth="1" />
+      <path d="M84 548 H182" fill="none" stroke="rgba(244,214,122,0.18)" strokeWidth="1" />
+      <path d="M1018 548 H1116" fill="none" stroke="rgba(244,214,122,0.18)" strokeWidth="1" />
+
+      <path d="M452 10 H748 L782 60 L748 122 H452 L418 60 Z" fill="rgba(10,14,28,0.95)" stroke="url(#celestialGold)" strokeWidth="2.2" />
+      <path d="M474 22 H726 L752 60 L726 108 H474 L448 60 Z" fill="none" stroke="rgba(244,214,122,0.44)" strokeWidth="1.25" />
+      <path d="M492 30 H708 L728 60 L708 100 H492 L472 60 Z" fill="none" stroke="rgba(244,214,122,0.16)" strokeWidth="0.95" />
+      <path d="M432 46 H416" fill="none" stroke="url(#celestialGold)" strokeWidth="1.55" />
+      <path d="M768 46 H784" fill="none" stroke="url(#celestialGold)" strokeWidth="1.55" />
+      <circle cx="414" cy="46" r="2.2" fill="#f4d67a" />
+      <circle cx="786" cy="46" r="2.2" fill="#f4d67a" />
+      <path d="M446 10 C434 28, 428 44, 426 60 C428 76, 434 94, 446 122" fill="none" stroke="rgba(244,214,122,0.56)" strokeWidth="1.3" />
+      <path d="M754 10 C766 28, 772 44, 774 60 C772 76, 766 94, 754 122" fill="none" stroke="rgba(244,214,122,0.56)" strokeWidth="1.3" />
+      <path d="M464 8 C452 22, 444 42, 442 60 C444 78, 452 100, 464 124" fill="none" stroke="rgba(244,214,122,0.24)" strokeWidth="1" />
+      <path d="M736 8 C748 22, 756 42, 758 60 C756 78, 748 100, 736 124" fill="none" stroke="rgba(244,214,122,0.24)" strokeWidth="1" />
+
+      <text x="600" y="30" textAnchor="middle" fill="#fff1d5" fontSize="14" letterSpacing="1.25" fontWeight="700">
+        {String(title || "").toUpperCase()}
+      </text>
+      <text x="600" y="53" textAnchor="middle" fill="rgba(232,221,194,0.8)" fontSize="7.6" letterSpacing="0.45">
+        {subtitle}
+      </text>
+      <text x="600" y="72" textAnchor="middle" fill="rgba(232,221,194,0.8)" fontSize="7.6" letterSpacing="0.45">
+        {"guided across time"}
+      </text>
+
+      {starbursts.map((star, index) => (
+        <g key={`burst-${index}`} transform={`translate(${star.x} ${star.y})`} filter="url(#goldGlow)" opacity="0.92">
+          <line x1={-star.r} y1="0" x2={star.r} y2="0" stroke="#fff0c3" strokeWidth="1.4" />
+          <line x1="0" y1={-star.r} x2="0" y2={star.r} stroke="#fff0c3" strokeWidth="1.4" />
+          <line x1={-star.r * 0.72} y1={-star.r * 0.72} x2={star.r * 0.72} y2={star.r * 0.72} stroke="rgba(244,214,122,0.72)" strokeWidth="1" />
+          <line x1={-star.r * 0.72} y1={star.r * 0.72} x2={star.r * 0.72} y2={-star.r * 0.72} stroke="rgba(244,214,122,0.72)" strokeWidth="1" />
+        </g>
+      ))}
+
+      <g transform="translate(44 34)" filter="url(#goldGlow)">
+        <polygon points="0,-18 7,-7 18,0 7,7 0,18 -7,7 -18,0 -7,-7" fill="rgba(255,240,195,0.2)" stroke="#fff0c3" strokeWidth="1.6" />
+        <polygon points="0,-11 4,-4 11,0 4,4 0,11 -4,4 -11,0 -4,-4" fill="rgba(244,214,122,0.24)" stroke="rgba(244,214,122,0.92)" strokeWidth="1.1" />
+      </g>
+      <g transform="translate(1156 34)" filter="url(#goldGlow)">
+        <polygon points="0,-18 7,-7 18,0 7,7 0,18 -7,7 -18,0 -7,-7" fill="rgba(255,240,195,0.2)" stroke="#fff0c3" strokeWidth="1.6" />
+        <polygon points="0,-11 4,-4 11,0 4,4 0,11 -4,4 -11,0 -4,-4" fill="rgba(244,214,122,0.24)" stroke="rgba(244,214,122,0.92)" strokeWidth="1.1" />
+      </g>
+      <g transform="translate(44 556)" filter="url(#goldGlow)">
+        <polygon points="0,-15 6,-6 15,0 6,6 0,15 -6,6 -15,0 -6,-6" fill="rgba(255,240,195,0.16)" stroke="rgba(244,214,122,0.86)" strokeWidth="1.4" />
+      </g>
+      <g transform="translate(1156 556)" filter="url(#goldGlow)">
+        <polygon points="0,-15 6,-6 15,0 6,6 0,15 -6,6 -15,0 -6,-6" fill="rgba(255,240,195,0.16)" stroke="rgba(244,214,122,0.86)" strokeWidth="1.4" />
+      </g>
+
+      {accentStars.map(([x, y], index) => (
+        <circle key={`small-${index}`} cx={x} cy={y} r="1.6" fill="rgba(255,240,195,0.9)" />
+      ))}
+    </svg>
+  );
+}
+
+function LineTrendChart({ title, subtitle, data, yMax, series, theme, chartCardStyle, panelTone }) {
   const isConsoleChart = theme.observerChartMode === "stepped";
   const isSolarConsole = isConsoleChart && theme.modeName === "Solar";
   const isGalaxyTrackerCard =
@@ -99,9 +192,10 @@ function LineTrendChart({ title, subtitle, data, yMax, series, theme, chartCardS
     !theme.trackerSolar &&
     !theme.trackerReef &&
     !theme.trackerAbyss;
-  const width = 640;
-  const height = 260;
-  const padding = { top: 24, right: 18, bottom: 40, left: 40 };
+
+  const width = 500;
+  const height = 198;
+  const padding = { top: 16, right: 28, bottom: 54, left: 52 };
   const chartWidth = width - padding.left - padding.right;
   const chartHeight = height - padding.top - padding.bottom;
   const safeMax = Math.max(yMax, 1);
@@ -121,7 +215,8 @@ function LineTrendChart({ title, subtitle, data, yMax, series, theme, chartCardS
     const y = getY(value);
     return { value, y };
   });
-  const galaxyFrameStars = buildGalaxyFrameStars();
+
+  const galaxyTrackerFrame = getGalaxyTrackerChartFrame(panelTone);
 
   const legend = (
     <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", marginBottom: isGalaxyTrackerCard ? "0" : "12px" }}>
@@ -132,7 +227,7 @@ function LineTrendChart({ title, subtitle, data, yMax, series, theme, chartCardS
             display: "flex",
             alignItems: "center",
             gap: "8px",
-            padding: isGalaxyTrackerCard ? "8px 12px" : "7px 10px",
+            padding: isGalaxyTrackerCard ? "7px 10px" : "7px 10px",
             borderRadius: isGalaxyTrackerCard ? "999px" : isConsoleChart ? "10px" : "999px",
             background: isGalaxyTrackerCard
               ? "linear-gradient(180deg, rgba(15,18,34,0.82) 0%, rgba(22,26,48,0.7) 100%)"
@@ -140,19 +235,19 @@ function LineTrendChart({ title, subtitle, data, yMax, series, theme, chartCardS
               ? "rgba(255,255,255,0.45)"
               : theme.itemBackground,
             color: isSolarConsole ? theme.text : theme.subtleText,
-            fontSize: "0.88rem",
+            fontSize: isGalaxyTrackerCard ? "0.8rem" : "0.88rem",
             fontWeight: "bold",
             fontFamily: theme.observerFontFamily,
             letterSpacing: isConsoleChart ? "0.05em" : "normal",
             textTransform: isConsoleChart ? "uppercase" : "none",
-            border: isGalaxyTrackerCard ? "1px solid rgba(255,255,255,0.08)" : "none",
+            border: isGalaxyTrackerCard ? `1px solid ${galaxyTrackerFrame.legendBorder}` : "none",
             boxShadow: isGalaxyTrackerCard ? "0 10px 20px rgba(0,0,0,0.16)" : "none",
           }}
         >
           <span
             style={{
-              width: "10px",
-              height: "10px",
+              width: isGalaxyTrackerCard ? "8px" : "10px",
+              height: isGalaxyTrackerCard ? "8px" : "10px",
               borderRadius: "50%",
               backgroundColor: item.color,
               boxShadow: isSolarConsole ? "none" : `0 0 10px ${item.color}`,
@@ -180,22 +275,8 @@ function LineTrendChart({ title, subtitle, data, yMax, series, theme, chartCardS
       ) : null}
       {gridLines.map((line) => (
         <g key={line.value}>
-          <line
-            x1={padding.left}
-            y1={line.y}
-            x2={width - padding.right}
-            y2={line.y}
-            stroke={theme.chartGrid}
-            strokeWidth="1"
-          />
-          <text
-            x={padding.left - 10}
-            y={line.y + 4}
-            textAnchor="end"
-            fill={theme.chartLabel}
-            fontSize="11"
-            fontFamily={theme.observerFontFamily}
-          >
+          <line x1={padding.left} y1={line.y} x2={width - padding.right} y2={line.y} stroke={theme.chartGrid} strokeWidth="1" />
+          <text x={padding.left - 12} y={line.y + 4} textAnchor="end" fill={theme.chartLabel} fontSize="10" fontFamily={theme.observerFontFamily}>
             {Math.round(line.value)}
           </text>
         </g>
@@ -205,10 +286,10 @@ function LineTrendChart({ title, subtitle, data, yMax, series, theme, chartCardS
         <text
           key={`${item.date}-${index}`}
           x={getX(index)}
-          y={height - 12}
+          y={height - 16}
           textAnchor="middle"
           fill={theme.chartLabel}
-          fontSize="11"
+          fontSize="10"
           fontFamily={theme.observerFontFamily}
         >
           {formatShortDate(item.date)}
@@ -246,14 +327,7 @@ function LineTrendChart({ title, subtitle, data, yMax, series, theme, chartCardS
               <g key={`${item.key}-${index}`}>
                 {isConsoleChart ? (
                   <>
-                    <rect
-                      x={point.x - 3.5}
-                      y={point.y - 3.5}
-                      width="7"
-                      height="7"
-                      fill={item.color}
-                      opacity="0.18"
-                    />
+                    <rect x={point.x - 3.5} y={point.y - 3.5} width="7" height="7" fill={item.color} opacity="0.18" />
                     <rect
                       x={point.x - 2}
                       y={point.y - 2}
@@ -267,14 +341,7 @@ function LineTrendChart({ title, subtitle, data, yMax, series, theme, chartCardS
                 ) : (
                   <>
                     <circle cx={point.x} cy={point.y} r="5" fill={item.color} opacity="0.22" />
-                    <circle
-                      cx={point.x}
-                      cy={point.y}
-                      r="2.8"
-                      fill={item.color}
-                      stroke={theme.chartSurface}
-                      strokeWidth="1.5"
-                    />
+                    <circle cx={point.x} cy={point.y} r="2.8" fill={item.color} stroke={theme.chartSurface} strokeWidth="1.5" />
                   </>
                 )}
               </g>
@@ -290,10 +357,9 @@ function LineTrendChart({ title, subtitle, data, yMax, series, theme, chartCardS
       <div
         style={{
           ...chartCardStyle(theme),
-          background:
-            "linear-gradient(180deg, rgba(14,18,34,0.42) 0%, rgba(10,14,28,0.3) 100%)",
-          border: "1px solid rgba(255,255,255,0.04)",
-          boxShadow: "0 24px 44px rgba(4,8,24,0.28)",
+          background: "linear-gradient(180deg, rgba(12,16,30,0.94) 0%, rgba(16,21,40,0.9) 100%)",
+          border: "1px solid rgba(244,214,122,0.12)",
+          boxShadow: galaxyTrackerFrame.shellGlow,
           clipPath: "none",
           position: "relative",
           overflow: "visible",
@@ -305,62 +371,28 @@ function LineTrendChart({ title, subtitle, data, yMax, series, theme, chartCardS
           aria-hidden="true"
           style={{
             position: "absolute",
-            inset: "0",
-            background:
-              "radial-gradient(circle at 18% 18%, rgba(142,126,255,0.18) 0%, rgba(142,126,255,0) 22%), radial-gradient(circle at 84% 18%, rgba(114,208,255,0.14) 0%, rgba(114,208,255,0) 20%), radial-gradient(circle at 80% 82%, rgba(255,214,102,0.08) 0%, rgba(255,214,102,0) 18%), linear-gradient(180deg, rgba(12,16,30,0.94) 0%, rgba(16,21,40,0.9) 100%)",
+            inset: 0,
+            background: galaxyTrackerFrame.aura,
             borderRadius: "34px",
-            boxShadow:
-              "inset 0 1px 0 rgba(255,255,255,0.08), inset 0 0 0 1px rgba(166,150,255,0.08)",
             zIndex: 0,
             pointerEvents: "none",
           }}
         />
 
-        <div
-          aria-hidden="true"
-          style={{
-            position: "absolute",
-            inset: "0",
-            zIndex: 0,
-            pointerEvents: "none",
-          }}
-        >
-          {galaxyFrameStars.map((star, index) => (
-            <span
-              key={`${star.top || star.bottom}-${index}`}
-              style={{
-                position: "absolute",
-                color: "rgba(255,240,195,0.88)",
-                textShadow: "0 0 10px rgba(255,240,195,0.28)",
-                fontSize: star.size,
-                lineHeight: 1,
-                opacity: star.opacity,
-                ...star,
-              }}
-            >
-              {star.glyph || "✦"}
-            </span>
-          ))}
-        </div>
+        <CelestialFrameOverlay title={title} subtitle={subtitle} />
 
-        <div style={{ position: "relative", zIndex: 1, display: "grid", gap: "16px" }}>
-          <div style={{ display: "grid", gap: "8px", padding: "12px 14px 0", textAlign: "left" }}>
-            <h3 style={{ margin: 0, color: theme.text }}>{title}</h3>
-            <p style={{ margin: 0, color: theme.subtleText, fontSize: "0.92rem" }}>{subtitle}</p>
-          </div>
-
-          <div style={{ paddingInline: "14px" }}>{legend}</div>
+        <div style={{ position: "relative", zIndex: 1, display: "grid", gap: "12px", paddingTop: "80px" }}>
+          <div style={{ paddingInline: "28px" }}>{legend}</div>
 
           <div
             style={{
               position: "relative",
               borderRadius: "26px",
-              padding: "18px 14px 10px",
-              background:
-                "radial-gradient(circle at 50% 0%, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0) 32%), linear-gradient(180deg, rgba(12,17,36,0.9) 0%, rgba(17,22,42,0.78) 100%)",
-              border: "1px solid rgba(255,255,255,0.08)",
-              boxShadow:
-                "inset 0 1px 0 rgba(255,255,255,0.06), 0 18px 30px rgba(0,0,0,0.18)",
+              padding: "0 20px 24px",
+              marginTop: "-16px",
+              background: "transparent",
+              border: "none",
+              boxShadow: "none",
             }}
           >
             {chartSvg}

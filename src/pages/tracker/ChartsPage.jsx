@@ -36,7 +36,7 @@ function TrackerChartsPage({ app }) {
     : null;
 
   return (
-    <div style={chartsPageStyle}>
+    <div style={chartsPageStyle} data-testid="tracker-charts-page">
       <section
         className={isGalaxyTrackerTheme ? undefined : "galaxy-panel"}
         style={isGalaxyTrackerTheme ? galaxySectionStyle : sectionCardStyle(theme, "charts")}
@@ -61,6 +61,7 @@ function TrackerChartsPage({ app }) {
               yMax={5}
               theme={theme}
               chartCardStyle={chartCardStyle}
+              panelTone="charts"
               series={[
                 { key: "mood", label: "Mood", color: theme.chartPalette.mood },
                 { key: "focus", label: "Focus", color: theme.chartPalette.focus },
@@ -87,6 +88,7 @@ function TrackerChartsPage({ app }) {
               yMax={Math.max(maxMeals, maxMeds, maxHygiene, maxExercise, 3)}
               theme={theme}
               chartCardStyle={chartCardStyle}
+              panelTone="care"
               series={[
                 { key: "mealsCount", label: "Meals", color: theme.chartPalette.meals },
                 { key: "medsCount", label: "Meds", color: theme.chartPalette.meds },

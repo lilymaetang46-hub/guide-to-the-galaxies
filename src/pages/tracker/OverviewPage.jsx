@@ -1,4 +1,79 @@
 function glassPanelStyle(theme, accent = "default") {
+  if (theme?.trackerObservatory) {
+    const topLeft = `url("data:image/svg+xml,${encodeURIComponent(`
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 118 84" preserveAspectRatio="xMinYMin meet">
+        <defs><linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#fff2c6"/><stop offset="45%" stop-color="#f4d67a"/><stop offset="100%" stop-color="#c89639"/></linearGradient></defs>
+        <path d="M10 46 Q10 12 46 12 H116" fill="none" stroke="url(#g)" stroke-width="1.8"/>
+        <path d="M22 56 Q22 26 54 26 H98" fill="none" stroke="rgba(244,214,122,0.52)" stroke-width="1.1"/>
+        <g transform="translate(12 12)"><polygon points="0,-10 4,-4 10,0 4,4 0,10 -4,4 -10,0 -4,-4" fill="rgba(255,240,195,0.18)" stroke="#fff0c3" stroke-width="1.2"/><polygon points="0,-6 2.5,-2.5 6,0 2.5,2.5 0,6 -2.5,2.5 -6,0 -2.5,-2.5" fill="rgba(244,214,122,0.22)" stroke="rgba(244,214,122,0.9)" stroke-width="0.8"/></g>
+      </svg>
+    `)}")`;
+    const topRight = `url("data:image/svg+xml,${encodeURIComponent(`
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 118 84" preserveAspectRatio="xMaxYMin meet">
+        <defs><linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#fff2c6"/><stop offset="45%" stop-color="#f4d67a"/><stop offset="100%" stop-color="#c89639"/></linearGradient></defs>
+        <path d="M108 46 Q108 12 72 12 H2" fill="none" stroke="url(#g)" stroke-width="1.8"/>
+        <path d="M96 56 Q96 26 64 26 H20" fill="none" stroke="rgba(244,214,122,0.52)" stroke-width="1.1"/>
+        <g transform="translate(106 12)"><polygon points="0,-10 4,-4 10,0 4,4 0,10 -4,4 -10,0 -4,-4" fill="rgba(255,240,195,0.18)" stroke="#fff0c3" stroke-width="1.2"/><polygon points="0,-6 2.5,-2.5 6,0 2.5,2.5 0,6 -2.5,2.5 -6,0 -2.5,-2.5" fill="rgba(244,214,122,0.22)" stroke="rgba(244,214,122,0.9)" stroke-width="0.8"/></g>
+      </svg>
+    `)}")`;
+    const bottomLeft = `url("data:image/svg+xml,${encodeURIComponent(`
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 122 96" preserveAspectRatio="xMinYMax meet">
+        <defs><linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#fff2c6"/><stop offset="45%" stop-color="#f4d67a"/><stop offset="100%" stop-color="#c89639"/></linearGradient></defs>
+        <path d="M10 48 Q10 84 48 84 H120" fill="none" stroke="url(#g)" stroke-width="1.7"/>
+        <path d="M22 38 Q22 70 54 70 H98" fill="none" stroke="rgba(244,214,122,0.5)" stroke-width="1.05"/>
+        <path d="M34 30 Q34 58 60 58 H82" fill="none" stroke="rgba(244,214,122,0.22)" stroke-width="0.9"/>
+        <g transform="translate(12 84)"><polygon points="0,-8 3.5,-3.5 8,0 3.5,3.5 0,8 -3.5,3.5 -8,0 -3.5,-3.5" fill="rgba(255,240,195,0.16)" stroke="rgba(244,214,122,0.86)" stroke-width="1"/></g>
+      </svg>
+    `)}")`;
+    const bottomRight = `url("data:image/svg+xml,${encodeURIComponent(`
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 122 96" preserveAspectRatio="xMaxYMax meet">
+        <defs><linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#fff2c6"/><stop offset="45%" stop-color="#f4d67a"/><stop offset="100%" stop-color="#c89639"/></linearGradient></defs>
+        <path d="M112 48 Q112 84 74 84 H2" fill="none" stroke="url(#g)" stroke-width="1.7"/>
+        <path d="M100 38 Q100 70 68 70 H24" fill="none" stroke="rgba(244,214,122,0.5)" stroke-width="1.05"/>
+        <path d="M88 30 Q88 58 62 58 H40" fill="none" stroke="rgba(244,214,122,0.22)" stroke-width="0.9"/>
+        <g transform="translate(110 84)"><polygon points="0,-8 3.5,-3.5 8,0 3.5,3.5 0,8 -3.5,3.5 -8,0 -3.5,-3.5" fill="rgba(255,240,195,0.16)" stroke="rgba(244,214,122,0.86)" stroke-width="1"/></g>
+      </svg>
+    `)}")`;
+    const leftSpine = `url("data:image/svg+xml,${encodeURIComponent(`
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 34 222" preserveAspectRatio="xMinYMid meet">
+        <path d="M24 8 C8 28, 8 56, 24 78 C40 100, 40 126, 24 148" fill="none" stroke="rgba(244,214,122,0.62)" stroke-width="1.7"/>
+        <path d="M18 24 C6 42, 6 62, 18 78 C30 94, 30 114, 18 128" fill="none" stroke="rgba(244,214,122,0.3)" stroke-width="1"/>
+      </svg>
+    `)}")`;
+    const rightSpine = `url("data:image/svg+xml,${encodeURIComponent(`
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 34 222" preserveAspectRatio="xMaxYMid meet">
+        <path d="M10 8 C26 28, 26 56, 10 78 C-6 100, -6 126, 10 148" fill="none" stroke="rgba(244,214,122,0.62)" stroke-width="1.7"/>
+        <path d="M16 24 C28 42, 28 62, 16 78 C4 94, 4 114, 16 128" fill="none" stroke="rgba(244,214,122,0.3)" stroke-width="1"/>
+      </svg>
+    `)}")`;
+    const topRail = `url("data:image/svg+xml,${encodeURIComponent(`
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 154 18" preserveAspectRatio="none">
+        <path d="M0 8 H154" fill="none" stroke="rgba(244,214,122,0.42)" stroke-width="1"/>
+        <path d="M18 2 H136" fill="none" stroke="rgba(244,214,122,0.18)" stroke-width="0.85"/>
+      </svg>
+    `)}")`;
+    const bottomRail = `url("data:image/svg+xml,${encodeURIComponent(`
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 154 18" preserveAspectRatio="none">
+        <path d="M0 10 H154" fill="none" stroke="rgba(244,214,122,0.28)" stroke-width="1"/>
+        <path d="M18 16 H136" fill="none" stroke="rgba(244,214,122,0.14)" stroke-width="0.85"/>
+      </svg>
+    `)}")`;
+
+    return {
+      backgroundColor: "rgba(4, 4, 10, 0.82)",
+      backgroundImage: `${topLeft}, ${topRight}, ${bottomLeft}, ${bottomRight}, ${leftSpine}, ${rightSpine}, ${topRail}, ${topRail}, ${bottomRail}, ${bottomRail}, radial-gradient(circle at 14% 18%, rgba(216,185,255,0.14) 0%, rgba(216,185,255,0) 26%), radial-gradient(circle at 84% 18%, rgba(255,240,195,0.1) 0%, rgba(255,240,195,0) 20%), linear-gradient(180deg, rgba(5,7,16,0.94) 0%, rgba(9,11,24,0.9) 100%)`,
+      backgroundSize: "118px 84px, 118px 84px, 122px 96px, 122px 96px, 34px 222px, 34px 222px, 154px 18px, 154px 18px, 154px 18px, 154px 18px, auto, auto, auto",
+      backgroundRepeat: "no-repeat",
+      backgroundPosition: "18px 18px, calc(100% - 18px) 18px, 18px calc(100% - 18px), calc(100% - 18px) calc(100% - 18px), 18px 68px, calc(100% - 18px) 68px, 34px 18px, calc(100% - 188px) 18px, 34px calc(100% - 18px), calc(100% - 188px) calc(100% - 18px), center, center, center",
+      backdropFilter: "blur(32px) saturate(160%)",
+      WebkitBackdropFilter: "blur(32px) saturate(160%)",
+      border: accent === "support" ? "1px solid rgba(255, 240, 195, 0.22)" : "1px solid rgba(244,214,122,0.14)",
+      boxShadow: "0 0 0 1px rgba(255,245,214,0.08), 0 26px 46px rgba(4,8,24,0.34), 0 0 26px rgba(244,214,122,0.08), inset 0 0 0 1px rgba(255,245,214,0.06), inset 0 1px 0 rgba(255,255,255,0.05)",
+      borderRadius: "30px",
+      padding: "30px 28px 26px",
+    };
+  }
+
   return {
     background: theme.trackerGlassBackground || "rgba(4, 4, 10, 0.54)",
     backdropFilter: "blur(32px) saturate(160%)",
@@ -936,6 +1011,8 @@ function TrackerOverviewPage({ app }) {
     ].filter((node) => trackedAreas.includes(node.key));
 
     const supportQuote = latestSupportPreview;
+    const observatoryCardTitleSize = isMobile ? "1.28rem" : "1.7rem";
+    const observatoryMiniTitleSize = isMobile ? "1.12rem" : "1.42rem";
 
     return (
       <div
@@ -949,7 +1026,7 @@ function TrackerOverviewPage({ app }) {
         <aside style={{ display: "grid", gap: isMobile ? "18px" : "32px", order: isMobile ? 2 : 0 }}>
           <section style={glassPanelStyle(theme)}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
-              <h3 style={{ margin: 0, fontFamily: theme.trackerHeadingFamily, fontStyle: "italic", fontSize: isMobile ? "1.45rem" : "2rem", color: theme.trackerAccent }}>
+              <h3 style={{ margin: 0, fontFamily: theme.trackerHeadingFamily, fontStyle: "italic", fontSize: observatoryCardTitleSize, lineHeight: 1.02, color: theme.trackerAccent }}>
                 Telemetry Logs
               </h3>
               <span style={{ fontSize: "10px", color: "rgba(216,185,255,0.4)" }}>LIVE</span>
@@ -995,7 +1072,7 @@ function TrackerOverviewPage({ app }) {
           </section>
 
           <section style={{ ...glassPanelStyle(theme, "support"), borderLeft: "2px solid rgba(255,240,195,0.3)" }}>
-            <h3 style={{ margin: 0, fontFamily: theme.trackerHeadingFamily, fontStyle: "italic", fontSize: isMobile ? "1.45rem" : "2rem", color: theme.trackerAccent }}>
+            <h3 style={{ margin: 0, fontFamily: theme.trackerHeadingFamily, fontStyle: "italic", fontSize: observatoryCardTitleSize, lineHeight: 1.02, color: theme.trackerAccent }}>
               Support Uplink
             </h3>
             <p style={{ margin: "8px 0 0", fontSize: "12px", color: theme.subtleText, lineHeight: 1.7 }}>
@@ -1055,15 +1132,17 @@ function TrackerOverviewPage({ app }) {
                 margin: 0,
                 fontFamily: theme.trackerHeadingFamily,
                 fontStyle: "italic",
-                fontSize: isMobile ? "clamp(2.7rem, 16vw, 4.2rem)" : "clamp(4rem, 9vw, 6.8rem)",
+                fontSize: isMobile ? "clamp(2.55rem, 14vw, 3.9rem)" : "clamp(3.35rem, 6.8vw, 5.2rem)",
                 color: theme.trackerAccent,
                 textShadow: "0 0 20px rgba(255,240,195,0.3)",
-                lineHeight: 0.95,
+                lineHeight: 0.9,
+                maxWidth: isMobile ? "100%" : "560px",
+                marginInline: "auto",
               }}
             >
               Tracker Overview
             </h1>
-            <p style={{ margin: "18px 0 0", color: "rgba(216,185,255,0.6)", letterSpacing: isMobile ? "0.16em" : "0.35em", textTransform: "uppercase", fontSize: "10px", lineHeight: 1.7 }}>
+            <p style={{ margin: isMobile ? "12px 0 0" : "14px 0 0", color: "rgba(216,185,255,0.6)", letterSpacing: isMobile ? "0.14em" : "0.26em", textTransform: "uppercase", fontSize: "10px", lineHeight: 1.7, maxWidth: "560px", marginInline: "auto" }}>
               Your current tracker areas orbit around today's mood, routines, and progress
             </p>
           </section>
@@ -1163,7 +1242,7 @@ function TrackerOverviewPage({ app }) {
 
         <aside style={{ display: "grid", gap: isMobile ? "18px" : "32px", order: isMobile ? 3 : 0 }}>
           <section style={glassPanelStyle(theme)}>
-            <h3 style={{ margin: 0, fontFamily: theme.trackerHeadingFamily, fontStyle: "italic", fontSize: isMobile ? "1.45rem" : "2rem", color: theme.trackerAccent }}>
+            <h3 style={{ margin: 0, fontFamily: theme.trackerHeadingFamily, fontStyle: "italic", fontSize: observatoryCardTitleSize, lineHeight: 1.02, color: theme.trackerAccent }}>
               Daily Summary
             </h3>
             <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: "16px", marginTop: "24px", marginBottom: "28px" }}>
@@ -1206,23 +1285,23 @@ function TrackerOverviewPage({ app }) {
           </section>
 
           <section style={{ display: "grid", gap: isMobile ? "18px" : "24px" }}>
-            <div style={{ ...glassPanelStyle(theme), background: "rgba(0,0,0,0.46)" }}>
+            <div style={{ ...glassPanelStyle(theme), backgroundColor: "rgba(0,0,0,0.46)", minHeight: isMobile ? "auto" : "180px", display: "grid", alignContent: "start" }}>
               <span style={trackerSectionLabel("rgba(169,199,255,0.6)")}>Stellar Phase</span>
-              <h4 style={{ margin: "10px 0 0", fontFamily: theme.trackerHeadingFamily, fontStyle: "italic", fontSize: isMobile ? "1.45rem" : "2rem", color: theme.text }}>
+              <h4 style={{ margin: "12px 0 0", fontFamily: theme.trackerHeadingFamily, fontStyle: "italic", fontSize: observatoryMiniTitleSize, lineHeight: 1.04, color: theme.text, maxWidth: "220px" }}>
                 Support Snapshot
               </h4>
-              <p style={{ margin: "12px 0 0", fontSize: "12px", color: theme.subtleText, lineHeight: 1.7 }}>
+              <p style={{ margin: "10px 0 0", fontSize: "12px", color: theme.subtleText, lineHeight: 1.7 }}>
                 {latestSupportPreview}
               </p>
             </div>
-            <div style={{ ...glassPanelStyle(theme), background: "rgba(0,0,0,0.46)" }}>
-              <div style={{ aspectRatio: "16 / 9", overflow: "hidden", borderRadius: "16px", background: "rgba(0,0,0,0.4)", marginBottom: "16px", border: "1px solid rgba(255,255,255,0.05)" }}>
+            <div style={{ ...glassPanelStyle(theme), backgroundColor: "rgba(0,0,0,0.46)", minHeight: isMobile ? "auto" : "252px", display: "grid", alignContent: "start" }}>
+              <div style={{ aspectRatio: "16 / 8.6", overflow: "hidden", borderRadius: "16px", background: "rgba(0,0,0,0.4)", marginBottom: "18px", border: "1px solid rgba(255,255,255,0.05)" }}>
                 <div style={{ width: "100%", height: "100%", background: "radial-gradient(circle at 45% 40%, rgba(253,111,133,0.35) 0%, rgba(216,185,255,0.16) 20%, rgba(0,0,0,0) 55%), radial-gradient(circle at 55% 45%, rgba(255,240,195,0.22) 0%, rgba(0,0,0,0) 20%), linear-gradient(135deg, #05070f 0%, #120815 42%, #090f1f 100%)" }} />
               </div>
-              <h4 style={{ margin: 0, fontFamily: theme.trackerHeadingFamily, fontStyle: "italic", fontSize: isMobile ? "1.45rem" : "2rem", color: theme.text }}>
+              <h4 style={{ margin: 0, fontFamily: theme.trackerHeadingFamily, fontStyle: "italic", fontSize: observatoryMiniTitleSize, lineHeight: 1.04, color: theme.text }}>
                 Sleep and Recovery
               </h4>
-              <p style={{ margin: "12px 0 0", fontSize: "12px", color: theme.subtleText, lineHeight: 1.7 }}>
+              <p style={{ margin: "10px 0 0", fontSize: "12px", color: theme.subtleText, lineHeight: 1.7 }}>
                 {dashboardStats.find((item) => item.key === "sleep")?.note || "Sleep hygiene has drifted. Recalibrate core rest protocols."}
               </p>
             </div>
@@ -1250,12 +1329,12 @@ function TrackerOverviewPage({ app }) {
       "Sleep details have not been logged yet.";
     const solarTrackingPage =
       selectedTrackingAreaOptions.find((item) =>
-        ["meds", "food", "sleep", "hygiene", "cleaning", "exercise", "mood"].includes(
+        ["meds", "food", "sleep", "hygiene", "cleaning", "exercise", "todo", "period", "mood"].includes(
           item.pageKey || item.id
         )
       )?.pageKey ||
       trackedAreas.find((item) =>
-        ["meds", "food", "sleep", "hygiene", "cleaning", "exercise", "mood"].includes(item)
+        ["meds", "food", "sleep", "hygiene", "cleaning", "exercise", "todo", "period", "mood"].includes(item)
       ) ||
       "mood";
     const solarQuickLinks =

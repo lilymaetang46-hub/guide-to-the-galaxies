@@ -17,6 +17,7 @@ import TrackerChartsPage from "./pages/tracker/ChartsPage";
 import TrackerConnectionsPage from "./pages/tracker/ConnectionsPage";
 import TrackerSettingsPage from "./pages/tracker/SettingsPage";
 import TrackerSupportPage from "./pages/tracker/SupportPage";
+import TrackerCalendarPage from "./pages/tracker/CalendarPage";
 import OutsiderOverviewPage from "./pages/outsider/OverviewPage";
 import OutsiderTrackerDataPage from "./pages/outsider/TrackerDataPage";
 import OutsiderSupportPage from "./pages/outsider/SupportPage";
@@ -27,6 +28,7 @@ import {
 } from "./app/constants";
 import {
   buildInviteLink,
+  buildCalendarEvents,
   buildRecentChartData,
   calculateSimpleDailyStreak,
   computeGoalProgress,
@@ -60,6 +62,38 @@ function makeConnectionCode() {
 
 function makeConnectionToken() {
   return crypto.randomUUID().replace(/-/g, "") + crypto.randomUUID().replace(/-/g, "");
+}
+
+function buildChartsPreviewData(range = 7, todayKey) {
+  const previewValues = [
+    { mood: 2, focus: 3, energy: 2, mealsCount: 2, medsCount: 1, hygieneCount: 2, exerciseCount: 0 },
+    { mood: 3, focus: 3, energy: 3, mealsCount: 3, medsCount: 1, hygieneCount: 2, exerciseCount: 1 },
+    { mood: 4, focus: 2, energy: 4, mealsCount: 2, medsCount: 1, hygieneCount: 1, exerciseCount: 1 },
+    { mood: 2, focus: 2, energy: 2, mealsCount: 1, medsCount: 1, hygieneCount: 2, exerciseCount: 0 },
+    { mood: 1, focus: 1, energy: 1, mealsCount: 2, medsCount: 0, hygieneCount: 1, exerciseCount: 0 },
+    { mood: 2, focus: 2, energy: 2, mealsCount: 2, medsCount: 1, hygieneCount: 2, exerciseCount: 1 },
+    { mood: 3, focus: 4, energy: 3, mealsCount: 3, medsCount: 1, hygieneCount: 3, exerciseCount: 1 },
+    { mood: 4, focus: 3, energy: 4, mealsCount: 2, medsCount: 1, hygieneCount: 2, exerciseCount: 0 },
+    { mood: 5, focus: 4, energy: 4, mealsCount: 3, medsCount: 1, hygieneCount: 3, exerciseCount: 1 },
+    { mood: 3, focus: 2, energy: 3, mealsCount: 2, medsCount: 1, hygieneCount: 2, exerciseCount: 1 },
+    { mood: 2, focus: 3, energy: 2, mealsCount: 1, medsCount: 1, hygieneCount: 1, exerciseCount: 0 },
+    { mood: 4, focus: 4, energy: 4, mealsCount: 3, medsCount: 1, hygieneCount: 3, exerciseCount: 1 },
+    { mood: 5, focus: 3, energy: 4, mealsCount: 2, medsCount: 1, hygieneCount: 2, exerciseCount: 1 },
+    { mood: 4, focus: 4, energy: 3, mealsCount: 3, medsCount: 1, hygieneCount: 3, exerciseCount: 0 },
+  ];
+
+  const anchorDate = todayKey ? new Date(`${todayKey}T12:00:00`) : new Date();
+  const days = previewValues.slice(-Math.max(1, Math.min(range, previewValues.length)));
+
+  return days.map((day, index) => {
+    const date = new Date(anchorDate);
+    date.setDate(anchorDate.getDate() - (days.length - index - 1));
+
+    return {
+      date: date.toISOString().slice(0, 10),
+      ...day,
+    };
+  });
 }
 
 function makeGoalSuggestions(mode, isDarkVariant = false) {
@@ -192,8 +226,66 @@ function getOutsiderTutorialSeenKey(userId) {
   return `${OUTSIDER_TUTORIAL_SEEN_KEY}:${userId}`;
 }
 
+function normalizePeriodCycles(rawCycles) {
+  return (Array.isArray(rawCycles) ? rawCycles : [])
+    .map((cycle) => ({
+      id: cycle?.id,
+      startDate: cycle?.start_date || "",
+      endDate: cycle?.end_date || "",
+      flowLevel: cycle?.flow_level || "medium",
+      symptomTags: Array.isArray(cycle?.symptom_tags) ? cycle.symptom_tags : [],
+      privateNotes: cycle?.private_notes || "",
+      createdAt: cycle?.created_at || "",
+      updatedAt: cycle?.updated_at || "",
+    }))
+    .sort((left, right) => {
+      if (!left.endDate && right.endDate) return -1;
+      if (left.endDate && !right.endDate) return 1;
+      return new Date(right.startDate || 0) - new Date(left.startDate || 0);
+    });
+}
+
+function normalizeAppointments(rawAppointments) {
+  return (Array.isArray(rawAppointments) ? rawAppointments : [])
+    .map((item) => ({
+      id: item?.id,
+      itemType: item?.item_type || "appointment",
+      title: item?.title || "",
+      eventDate: item?.event_date || "",
+      eventTime: item?.event_time ? String(item.event_time).slice(0, 5) : "",
+      location: item?.location || "",
+      note: item?.note || "",
+      createdAt: item?.created_at || "",
+      updatedAt: item?.updated_at || "",
+    }))
+    .sort((left, right) => {
+      const leftStamp = `${left.eventDate || ""} ${left.eventTime || ""}`;
+      const rightStamp = `${right.eventDate || ""} ${right.eventTime || ""}`;
+      return leftStamp.localeCompare(rightStamp);
+    });
+}
+
+function formatDisplayDate(value) {
+  if (!value) return "";
+  const date = new Date(`${value}T12:00:00`);
+  return Number.isNaN(date.getTime())
+    ? value
+    : date.toLocaleDateString([], {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+      });
+}
+
 function App() {
   const today = getLocalDateKey(new Date());
+  const currentPath = typeof window !== "undefined" ? window.location.pathname : "";
+  const isChartsPreviewMode =
+    currentPath === "/dev/charts-preview" || currentPath === "/dev/galaxy-charts-preview";
+  const isOverviewPreviewMode =
+    currentPath === "/dev/overview-preview" || currentPath === "/dev/galaxy-overview-preview";
+  const isCardsPreviewMode =
+    currentPath === "/dev/cards-preview" || currentPath === "/dev/galaxy-cards-preview";
 
   const [entryId, setEntryId] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -297,11 +389,34 @@ function App() {
   const [meds, setMeds] = useState([]);
   const [medName, setMedName] = useState("");
   const [medDose, setMedDose] = useState("");
+  const [medEntryTime, setMedEntryTime] = useState("");
   const [medSymptoms, setMedSymptoms] = useState("");
   const [medNotes, setMedNotes] = useState("");
 
   const [meals, setMeals] = useState([]);
   const [mealText, setMealText] = useState("");
+  const [mealTime, setMealTime] = useState("");
+
+  const [todoItems, setTodoItems] = useState([]);
+  const [todoText, setTodoText] = useState("");
+  const [todoDueDate, setTodoDueDate] = useState("");
+  const [todoNote, setTodoNote] = useState("");
+  const [periodCycles, setPeriodCycles] = useState([]);
+  const [periodStartDate, setPeriodStartDate] = useState(today);
+  const [periodEndDate, setPeriodEndDate] = useState(today);
+  const [periodFlowLevel, setPeriodFlowLevel] = useState("medium");
+  const [periodSymptomTags, setPeriodSymptomTags] = useState([]);
+  const [periodPrivateNotes, setPeriodPrivateNotes] = useState("");
+  const [periodStatusMessage, setPeriodStatusMessage] = useState("");
+  const [appointments, setAppointments] = useState([]);
+  const [editingAppointmentId, setEditingAppointmentId] = useState(null);
+  const [appointmentType, setAppointmentType] = useState("appointment");
+  const [appointmentTitle, setAppointmentTitle] = useState("");
+  const [appointmentDate, setAppointmentDate] = useState(today);
+  const [appointmentTime, setAppointmentTime] = useState("");
+  const [appointmentLocation, setAppointmentLocation] = useState("");
+  const [appointmentNote, setAppointmentNote] = useState("");
+  const [appointmentStatusMessage, setAppointmentStatusMessage] = useState("");
 
   const [showered, setShowered] = useState(false);
   const [showeredTime, setShoweredTime] = useState("");
@@ -392,6 +507,7 @@ function App() {
     "Sleep",
     "Cleaning",
     "Exercise",
+    "To-Do",
   ];
 
   function applyIncomingUrl(incomingUrl) {
@@ -1134,6 +1250,7 @@ function App() {
             meds_taken,
             meds,
             meals,
+            todo_items,
             showered,
             brushed_teeth,
             skincare,
@@ -1941,6 +2058,7 @@ function App() {
     setMedsTime(row.meds_time ?? "");
     setMeds(Array.isArray(row.meds) ? row.meds : []);
     setMeals(Array.isArray(row.meals) ? normalizeMeals(row.meals) : []);
+    setTodoItems(normalizeTodoItems(row.todo_items));
     setShowered(row.showered ?? false);
     setShoweredTime(row.showered_time ?? "");
     setBrushedTeeth(row.brushed_teeth ?? false);
@@ -1972,6 +2090,10 @@ function App() {
     setMoodTags(Array.isArray(row.mood_tags) ? row.mood_tags : []);
     setFocus(row.focus ?? 3);
     setEnergy(row.energy ?? 3);
+    setTodoText("");
+    setTodoDueDate("");
+    setTodoNote("");
+    setAppointmentStatusMessage("");
   }
 
   async function loadEntry() {
@@ -2091,14 +2213,54 @@ function App() {
     setHistoryData(getLatestEntriesByDate(data || []));
   }
 
+  async function loadPeriodCycles() {
+    if (!user) return;
+
+    const { data, error } = await supabase
+      .from("period_cycles")
+      .select("*")
+      .eq("user_id", user.id)
+      .order("start_date", { ascending: false })
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      console.error("Period cycle load error:", error);
+      setPeriodStatusMessage("Could not load period history.");
+      return;
+    }
+
+    setPeriodCycles(normalizePeriodCycles(data || []));
+  }
+
+  async function loadAppointments() {
+    if (!user) return;
+
+    const { data, error } = await supabase
+      .from("appointments")
+      .select("*")
+      .eq("user_id", user.id)
+      .order("event_date", { ascending: true })
+      .order("event_time", { ascending: true })
+      .order("created_at", { ascending: true });
+
+    if (error) {
+      console.error("Appointment load error:", error);
+      setAppointmentStatusMessage("Could not load appointments.");
+      return;
+    }
+
+    setAppointments(normalizeAppointments(data || []));
+  }
+
   async function saveEntry(updated = {}) {
     if (!entryId || !user) return;
 
-    const payload = {
+    const nextEntry = {
       meds_taken: medTaken,
       meds_time: medsTime,
       meds,
       meals,
+      todo_items: todoItems,
       showered,
       showered_time: showeredTime,
       brushed_teeth: brushedTeeth,
@@ -2111,14 +2273,12 @@ function App() {
       bedsheets_time: bedsheetsTime,
       room_cleaned: roomCleaned,
       room_cleaned_time: roomCleanedTime,
-      cleaning_minutes:
-        cleaningMinutes === "" ? null : Number(cleaningMinutes),
-      cleaning_worth_it: Number(cleaningWorthIt),
+      cleaning_minutes: cleaningMinutes,
+      cleaning_worth_it: cleaningWorthIt,
       exercise_done: exerciseDone,
       exercise_time: exerciseTime,
       exercise_type: exerciseType,
-      exercise_minutes:
-        exerciseMinutes === "" ? null : Number(exerciseMinutes),
+      exercise_minutes: exerciseMinutes,
       exercise_feeling: exerciseFeeling,
       extra_walk: extraWalk,
       after_exercise_state: afterExerciseState,
@@ -2127,15 +2287,58 @@ function App() {
       wake_time: wakeTime,
       sleep_routine: sleepRoutine,
       used_screens_before_bed: usedScreensBeforeBed,
-      sleep_quality: Number(sleepQuality),
-      mood: Number(mood),
+      sleep_quality: sleepQuality,
+      mood,
       mood_tags: moodTags,
-      focus: Number(focus),
-      energy: Number(energy),
+      focus,
+      energy,
       goals,
       rewards,
-      user_id: user.id,
       ...updated,
+    };
+
+    const payload = {
+      meds_taken: nextEntry.meds_taken,
+      meds_time: nextEntry.meds_time,
+      meds: nextEntry.meds,
+      meals: nextEntry.meals,
+      todo_items: nextEntry.todo_items,
+      showered: nextEntry.showered,
+      showered_time: nextEntry.showered_time,
+      brushed_teeth: nextEntry.brushed_teeth,
+      brushed_teeth_time: nextEntry.brushed_teeth_time,
+      skincare: nextEntry.skincare,
+      skincare_time: nextEntry.skincare_time,
+      laundry_done: nextEntry.laundry_done,
+      laundry_time: nextEntry.laundry_time,
+      bedsheets_done: nextEntry.bedsheets_done,
+      bedsheets_time: nextEntry.bedsheets_time,
+      room_cleaned: nextEntry.room_cleaned,
+      room_cleaned_time: nextEntry.room_cleaned_time,
+      cleaning_minutes:
+        nextEntry.cleaning_minutes === "" ? null : Number(nextEntry.cleaning_minutes),
+      cleaning_worth_it: Number(nextEntry.cleaning_worth_it),
+      exercise_done: nextEntry.exercise_done,
+      exercise_time: nextEntry.exercise_time,
+      exercise_type: nextEntry.exercise_type,
+      exercise_minutes:
+        nextEntry.exercise_minutes === "" ? null : Number(nextEntry.exercise_minutes),
+      exercise_feeling: nextEntry.exercise_feeling,
+      extra_walk: nextEntry.extra_walk,
+      after_exercise_state: nextEntry.after_exercise_state,
+      exercise_logs: nextEntry.exercise_logs,
+      bed_time: nextEntry.bed_time,
+      wake_time: nextEntry.wake_time,
+      sleep_routine: nextEntry.sleep_routine,
+      used_screens_before_bed: nextEntry.used_screens_before_bed,
+      sleep_quality: Number(nextEntry.sleep_quality),
+      mood: Number(nextEntry.mood),
+      mood_tags: nextEntry.mood_tags,
+      focus: Number(nextEntry.focus),
+      energy: Number(nextEntry.energy),
+      goals: nextEntry.goals,
+      rewards: nextEntry.rewards,
+      user_id: user.id,
     };
 
     const { error } = await supabase
@@ -2154,11 +2357,11 @@ function App() {
     setTimeout(() => setStatus(""), 1200);
   }
 
-  function nowTime() {
-    return new Date().toLocaleTimeString([], {
-      hour: "numeric",
-      minute: "2-digit",
-    });
+  function nowTimeInputValue() {
+    const now = new Date();
+    return `${String(now.getHours()).padStart(2, "0")}:${String(
+      now.getMinutes()
+    ).padStart(2, "0")}`;
   }
 
   function normalizeMeals(rawMeals) {
@@ -2173,19 +2376,37 @@ function App() {
     });
   }
 
+  function normalizeTodoItems(rawTodoItems) {
+    return (Array.isArray(rawTodoItems) ? rawTodoItems : []).map((item, index) => ({
+      id: item?.id || `todo-${index}`,
+      text: item?.text ?? item?.title ?? "Untitled task",
+      dueDate: item?.dueDate ?? item?.due_date ?? "",
+      note: item?.note ?? "",
+      time: item?.time ?? "",
+      completed: Boolean(item?.completed),
+      completedAt: item?.completedAt ?? "",
+    }));
+  }
+
   const toggleMed = async () => {
     const value = !medTaken;
-    const time = value ? nowTime() : "";
+    const time = value ? medsTime || nowTimeInputValue() : "";
     setMedTaken(value);
     setMedsTime(time);
     setLastAction(value ? `Updated meds at ${time}` : "Marked meds as not taken");
     await saveEntry({ meds_taken: value, meds_time: time });
   };
 
+  const handleMedsTimeChange = async (value) => {
+    setMedsTime(value);
+    setLastAction(`Updated meds time to ${value || "blank"}`);
+    await saveEntry({ meds_time: value });
+  };
+
   const addMedication = async () => {
     if (!medName.trim()) return;
 
-    const time = nowTime();
+    const time = medEntryTime || nowTimeInputValue();
 
     const newMed = {
       name: medName.trim(),
@@ -2200,6 +2421,7 @@ function App() {
     setMeds(newMeds);
     setMedName("");
     setMedDose("");
+    setMedEntryTime("");
     setMedSymptoms("");
     setMedNotes("");
     setLastAction(`Added med at ${time}`);
@@ -2216,61 +2438,97 @@ function App() {
 
   const toggleShowered = async () => {
     const value = !showered;
-    const time = value ? nowTime() : "";
+    const time = value ? showeredTime || nowTimeInputValue() : "";
     setShowered(value);
     setShoweredTime(time);
     setLastAction(value ? `Showered at ${time}` : "Unmarked shower");
     await saveEntry({ showered: value, showered_time: time });
   };
 
+  const handleShoweredTimeChange = async (value) => {
+    setShoweredTime(value);
+    setLastAction(`Updated shower time to ${value || "blank"}`);
+    await saveEntry({ showered_time: value });
+  };
+
   const toggleBrushedTeeth = async () => {
     const value = !brushedTeeth;
-    const time = value ? nowTime() : "";
+    const time = value ? brushedTeethTime || nowTimeInputValue() : "";
     setBrushedTeeth(value);
     setBrushedTeethTime(time);
     setLastAction(value ? `Brushed teeth at ${time}` : "Unmarked brushed teeth");
     await saveEntry({ brushed_teeth: value, brushed_teeth_time: time });
   };
 
+  const handleBrushedTeethTimeChange = async (value) => {
+    setBrushedTeethTime(value);
+    setLastAction(`Updated brush teeth time to ${value || "blank"}`);
+    await saveEntry({ brushed_teeth_time: value });
+  };
+
   const toggleSkincare = async () => {
     const value = !skincare;
-    const time = value ? nowTime() : "";
+    const time = value ? skincareTime || nowTimeInputValue() : "";
     setSkincare(value);
     setSkincareTime(time);
     setLastAction(value ? `Did skincare at ${time}` : "Unmarked skincare");
     await saveEntry({ skincare: value, skincare_time: time });
   };
 
+  const handleSkincareTimeChange = async (value) => {
+    setSkincareTime(value);
+    setLastAction(`Updated skincare time to ${value || "blank"}`);
+    await saveEntry({ skincare_time: value });
+  };
+
   const toggleLaundry = async () => {
     const value = !laundryDone;
-    const time = value ? nowTime() : "";
+    const time = value ? laundryTime || nowTimeInputValue() : "";
     setLaundryDone(value);
     setLaundryTime(time);
     setLastAction(value ? `Finished laundry at ${time}` : "Unmarked laundry");
     await saveEntry({ laundry_done: value, laundry_time: time });
   };
 
+  const handleLaundryTimeChange = async (value) => {
+    setLaundryTime(value);
+    setLastAction(`Updated laundry time to ${value || "blank"}`);
+    await saveEntry({ laundry_time: value });
+  };
+
   const toggleBedsheets = async () => {
     const value = !bedsheetsDone;
-    const time = value ? nowTime() : "";
+    const time = value ? bedsheetsTime || nowTimeInputValue() : "";
     setBedsheetsDone(value);
     setBedsheetsTime(time);
     setLastAction(value ? `Changed bedsheets at ${time}` : "Unmarked bedsheets");
     await saveEntry({ bedsheets_done: value, bedsheets_time: time });
   };
 
+  const handleBedsheetsTimeChange = async (value) => {
+    setBedsheetsTime(value);
+    setLastAction(`Updated bedsheets time to ${value || "blank"}`);
+    await saveEntry({ bedsheets_time: value });
+  };
+
   const toggleRoomCleaned = async () => {
     const value = !roomCleaned;
-    const time = value ? nowTime() : "";
+    const time = value ? roomCleanedTime || nowTimeInputValue() : "";
     setRoomCleaned(value);
     setRoomCleanedTime(time);
     setLastAction(value ? `Cleaned room at ${time}` : "Unmarked room cleaned");
     await saveEntry({ room_cleaned: value, room_cleaned_time: time });
   };
 
+  const handleRoomCleanedTimeChange = async (value) => {
+    setRoomCleanedTime(value);
+    setLastAction(`Updated room cleaned time to ${value || "blank"}`);
+    await saveEntry({ room_cleaned_time: value });
+  };
+
   const toggleExerciseDone = async () => {
     const value = !exerciseDone;
-    const time = value ? nowTime() : "";
+    const time = value ? exerciseTime || nowTimeInputValue() : "";
     setExerciseDone(value);
     setExerciseTime(time);
     setLastAction(value ? `Marked exercise done at ${time}` : "Unmarked exercise");
@@ -2296,7 +2554,7 @@ function App() {
       return;
     }
 
-    const logTime = exerciseTime || nowTime();
+    const logTime = exerciseTime || nowTimeInputValue();
     const newLog = {
       type: exerciseType.trim() || "Unnamed exercise",
       time: logTime,
@@ -2338,7 +2596,7 @@ function App() {
   const addMeal = async () => {
     if (!mealText.trim()) return;
 
-    const time = nowTime();
+    const time = mealTime || nowTimeInputValue();
 
     const newMeal = {
       text: mealText.trim(),
@@ -2348,9 +2606,14 @@ function App() {
     const newMeals = [...meals, newMeal];
     setMeals(newMeals);
     setMealText("");
+    setMealTime("");
     setLastAction(`Added meal at ${time}`);
 
     await saveEntry({ meals: newMeals });
+  };
+
+  const handleMealTimeChange = (value) => {
+    setMealTime(value);
   };
 
   const removeMeal = async (indexToRemove) => {
@@ -2358,6 +2621,287 @@ function App() {
     setMeals(newMeals);
     setLastAction("Removed a meal");
     await saveEntry({ meals: newMeals });
+  };
+
+  const addTodoItem = async () => {
+    if (!todoText.trim()) return;
+
+    const trimmedText = todoText.trim();
+    const trimmedNote = todoNote.trim();
+
+    const nextTodoItems = [
+      ...todoItems,
+      {
+        id: crypto.randomUUID(),
+        text: trimmedText,
+        dueDate: todoDueDate,
+        note: trimmedNote,
+        time: "",
+        completed: false,
+        completedAt: "",
+      },
+    ];
+
+    setTodoItems(nextTodoItems);
+    setTodoText("");
+    setTodoDueDate("");
+    setTodoNote("");
+    setLastAction(`Added task: ${trimmedText}`);
+    await saveEntry({ todo_items: nextTodoItems });
+  };
+
+  const toggleTodoItem = async (todoId) => {
+    const nextTodoItems = todoItems.map((item) =>
+      item.id === todoId
+        ? {
+            ...item,
+            completed: !item.completed,
+            completedAt: !item.completed ? nowTimeInputValue() : "",
+          }
+        : item
+    );
+    const updatedItem = nextTodoItems.find((item) => item.id === todoId);
+
+    setTodoItems(nextTodoItems);
+    setLastAction(
+      updatedItem?.completed
+        ? `Completed task: ${updatedItem.text}`
+        : `Reopened task: ${updatedItem?.text || "task"}`
+    );
+    await saveEntry({ todo_items: nextTodoItems });
+  };
+
+  const removeTodoItem = async (todoId) => {
+    const removedItem = todoItems.find((item) => item.id === todoId);
+    const nextTodoItems = todoItems.filter((item) => item.id !== todoId);
+
+    setTodoItems(nextTodoItems);
+    setLastAction(`Removed task: ${removedItem?.text || "task"}`);
+    await saveEntry({ todo_items: nextTodoItems });
+  };
+
+  const togglePeriodSymptomTag = (tag) => {
+    setPeriodSymptomTags((current) =>
+      current.includes(tag)
+        ? current.filter((item) => item !== tag)
+        : [...current, tag]
+    );
+  };
+
+  const activePeriodCycle = periodCycles.find((cycle) => !cycle.endDate) || null;
+
+  const startPeriodCycle = async () => {
+    if (!user) return;
+
+    if (activePeriodCycle) {
+      setPeriodStatusMessage("Finish the current cycle before starting a new one.");
+      return;
+    }
+
+    const startDate = periodStartDate || today;
+
+    const { error } = await supabase.from("period_cycles").insert({
+      user_id: user.id,
+      start_date: startDate,
+      flow_level: periodFlowLevel || "medium",
+      symptom_tags: periodSymptomTags,
+      private_notes: periodPrivateNotes.trim() || null,
+      updated_at: new Date().toISOString(),
+    });
+
+    if (error) {
+      console.error("Period start error:", error);
+      setPeriodStatusMessage("Could not start the period entry.");
+      return;
+    }
+
+    setLastAction(`Marked period started on ${startDate}`);
+    setPeriodStatusMessage("Period start saved.");
+    await loadPeriodCycles();
+  };
+
+  const saveActivePeriodCycle = async (updates = {}, successMessage = "Period details saved.") => {
+    if (!user || !activePeriodCycle) return;
+
+    const nextEndDate = Object.prototype.hasOwnProperty.call(updates, "end_date")
+      ? updates.end_date
+      : periodEndDate;
+
+    if (nextEndDate && nextEndDate < activePeriodCycle.startDate) {
+      setPeriodStatusMessage("End date cannot be earlier than the start date.");
+      return;
+    }
+
+    const payload = {
+      flow_level: periodFlowLevel || "medium",
+      symptom_tags: periodSymptomTags,
+      private_notes: periodPrivateNotes.trim() || null,
+      updated_at: new Date().toISOString(),
+      ...updates,
+    };
+
+    const { error } = await supabase
+      .from("period_cycles")
+      .update(payload)
+      .eq("id", activePeriodCycle.id)
+      .eq("user_id", user.id);
+
+    if (error) {
+      console.error("Period update error:", error);
+      setPeriodStatusMessage("Could not save period details.");
+      return;
+    }
+
+    setPeriodStatusMessage(successMessage);
+    await loadPeriodCycles();
+  };
+
+  const endPeriodCycle = async () => {
+    const endDate = periodEndDate || today;
+    await saveActivePeriodCycle(
+      { end_date: endDate },
+      `Marked period ended on ${endDate}.`
+    );
+    setLastAction(`Marked period ended on ${endDate}`);
+  };
+
+  const savePeriodNotesAndSymptoms = async () => {
+    await saveActivePeriodCycle();
+    if (activePeriodCycle) {
+      setLastAction("Updated period details");
+    }
+  };
+
+  const addAppointment = async () => {
+    if (!user) return;
+
+    if (!appointmentTitle.trim()) {
+      setAppointmentStatusMessage("Add a title to save this.");
+      return;
+    }
+
+    if (!appointmentDate || !appointmentTime) {
+      setAppointmentStatusMessage("Date and time are both required.");
+      return;
+    }
+
+    const title = appointmentTitle.trim();
+    const { error } = await supabase.from("appointments").insert({
+      user_id: user.id,
+      item_type: appointmentType,
+      title,
+      event_date: appointmentDate,
+      event_time: appointmentTime,
+      location: appointmentLocation.trim() || null,
+      note: appointmentNote.trim() || null,
+      updated_at: new Date().toISOString(),
+    });
+
+    if (error) {
+      console.error("Appointment add error:", error);
+      setAppointmentStatusMessage("Could not save this item.");
+      return;
+    }
+
+    setAppointmentType("appointment");
+    setAppointmentTitle("");
+    setAppointmentDate(today);
+    setAppointmentTime("");
+    setAppointmentLocation("");
+    setAppointmentNote("");
+    setAppointmentStatusMessage("Saved.");
+    setLastAction(`Added ${appointmentType}: ${title}`);
+    await loadAppointments();
+  };
+
+  const startEditingAppointment = (appointmentId) => {
+    const target = appointments.find((item) => item.id === appointmentId);
+    if (!target) return;
+
+    setEditingAppointmentId(target.id);
+    setAppointmentType(target.itemType || "appointment");
+    setAppointmentTitle(target.title || "");
+    setAppointmentDate(target.eventDate || today);
+    setAppointmentTime(target.eventTime || "");
+    setAppointmentLocation(target.location || "");
+    setAppointmentNote(target.note || "");
+    setAppointmentStatusMessage("Editing saved item.");
+  };
+
+  const cancelAppointmentEdit = () => {
+    setEditingAppointmentId(null);
+    setAppointmentType("appointment");
+    setAppointmentTitle("");
+    setAppointmentDate(today);
+    setAppointmentTime("");
+    setAppointmentLocation("");
+    setAppointmentNote("");
+    setAppointmentStatusMessage("");
+  };
+
+  const updateAppointment = async () => {
+    if (!user || !editingAppointmentId) return;
+
+    if (!appointmentTitle.trim()) {
+      setAppointmentStatusMessage("Add a title to save this.");
+      return;
+    }
+
+    if (!appointmentDate || !appointmentTime) {
+      setAppointmentStatusMessage("Date and time are both required.");
+      return;
+    }
+
+    const title = appointmentTitle.trim();
+    const { error } = await supabase
+      .from("appointments")
+      .update({
+        item_type: appointmentType,
+        title,
+        event_date: appointmentDate,
+        event_time: appointmentTime,
+        location: appointmentLocation.trim() || null,
+        note: appointmentNote.trim() || null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", editingAppointmentId)
+      .eq("user_id", user.id);
+
+    if (error) {
+      console.error("Appointment update error:", error);
+      setAppointmentStatusMessage("Could not update this item.");
+      return;
+    }
+
+    setLastAction(`Updated ${appointmentType}: ${title}`);
+    cancelAppointmentEdit();
+    setAppointmentStatusMessage("Updated.");
+    await loadAppointments();
+  };
+
+  const removeAppointment = async (appointmentId) => {
+    if (!user) return;
+
+    const removedItem = appointments.find((item) => item.id === appointmentId);
+    const { error } = await supabase
+      .from("appointments")
+      .delete()
+      .eq("id", appointmentId)
+      .eq("user_id", user.id);
+
+    if (error) {
+      console.error("Appointment remove error:", error);
+      setAppointmentStatusMessage("Could not remove this item.");
+      return;
+    }
+
+    if (editingAppointmentId === appointmentId) {
+      cancelAppointmentEdit();
+    }
+
+    setAppointmentStatusMessage("Removed.");
+    setLastAction(`Removed ${removedItem?.itemType || "appointment"}: ${removedItem?.title || "item"}`);
+    await loadAppointments();
   };
 
   const handleBedTimeChange = async (value) => {
@@ -2561,6 +3105,22 @@ function App() {
       setTrackingAreasMessage("");
       setShowAddTrackingAreaPicker(false);
       setTrackingAreaToAdd("");
+      setPeriodCycles([]);
+      setPeriodStartDate(today);
+      setPeriodEndDate(today);
+      setPeriodFlowLevel("medium");
+      setPeriodSymptomTags([]);
+      setPeriodPrivateNotes("");
+      setPeriodStatusMessage("");
+      setAppointments([]);
+      setEditingAppointmentId(null);
+      setAppointmentType("appointment");
+      setAppointmentTitle("");
+      setAppointmentDate(today);
+      setAppointmentTime("");
+      setAppointmentLocation("");
+      setAppointmentNote("");
+      setAppointmentStatusMessage("");
       setShowTrackerTutorial(false);
       setTrackerTutorialStepIndex(0);
       setShowOutsiderTutorial(false);
@@ -2584,6 +3144,8 @@ function App() {
       await loadProfile(user.id);
       await loadEntry();
       await loadHistory();
+      await loadPeriodCycles();
+      await loadAppointments();
       setProfileSyncLoading(false);
     })();
   }, [user]);
@@ -2608,6 +3170,7 @@ function App() {
     const allowedPages = new Set([
       "mission",
       "dashboard",
+      "calendar",
       "goals",
       "charts",
       "support",
@@ -2620,6 +3183,23 @@ function App() {
       setActivePage("mission");
     }
   }, [activePage, trackedAreas]);
+
+  useEffect(() => {
+    if (activePeriodCycle) {
+      setPeriodStartDate(activePeriodCycle.startDate || today);
+      setPeriodEndDate(activePeriodCycle.endDate || today);
+      setPeriodFlowLevel(activePeriodCycle.flowLevel || "medium");
+      setPeriodSymptomTags(activePeriodCycle.symptomTags || []);
+      setPeriodPrivateNotes(activePeriodCycle.privateNotes || "");
+      return;
+    }
+
+    setPeriodStartDate(today);
+    setPeriodEndDate(today);
+    setPeriodFlowLevel("medium");
+    setPeriodSymptomTags([]);
+    setPeriodPrivateNotes("");
+  }, [activePeriodCycle?.id, today]);
 
   useEffect(() => {
     if (!user || typeof window === "undefined") {
@@ -2845,6 +3425,55 @@ function App() {
   const maxExercise = Math.max(...recentChartData.map((d) => d.exerciseCount), 1);
   const hygieneCount =
     (showered ? 1 : 0) + (brushedTeeth ? 1 : 0) + (skincare ? 1 : 0);
+  const completedTodoCount = todoItems.filter((item) => item.completed).length;
+  const openTodoCount = todoItems.length - completedTodoCount;
+  const upcomingAppointments = appointments.filter((item) => item.eventDate >= today);
+  const todayAppointments = upcomingAppointments.filter((item) => item.eventDate === today);
+  const nextAppointment = upcomingAppointments[0] || null;
+  const completedPeriodCycles = periodCycles.filter((cycle) => cycle.endDate);
+  const latestCompletedPeriodCycle = completedPeriodCycles[0] || null;
+  const cycleLengthSamples = periodCycles
+    .slice(0, -1)
+    .map((cycle, index) => {
+      const nextCycle = periodCycles[index + 1];
+      if (!cycle.startDate || !nextCycle?.startDate) return null;
+      const currentDate = new Date(`${cycle.startDate}T12:00:00`);
+      const nextDate = new Date(`${nextCycle.startDate}T12:00:00`);
+      return Math.round((currentDate - nextDate) / 86400000);
+    })
+    .filter((value) => Number.isFinite(value) && value > 0);
+  const averageCycleLengthDays =
+    cycleLengthSamples.length > 0
+      ? Math.round(
+          cycleLengthSamples.reduce((sum, value) => sum + value, 0) / cycleLengthSamples.length
+        )
+      : 28;
+  const nextCycleEstimateDate = periodCycles[0]?.startDate
+    ? (() => {
+        const nextDate = new Date(`${periodCycles[0].startDate}T12:00:00`);
+        nextDate.setDate(nextDate.getDate() + averageCycleLengthDays);
+        return getLocalDateKey(nextDate);
+      })()
+    : "";
+  const calendarEvents = useMemo(
+    () =>
+      buildCalendarEvents({
+        todoItems,
+        appointments,
+        periodCycles,
+        nextCycleEstimateDate,
+      }),
+    [todoItems, appointments, periodCycles, nextCycleEstimateDate]
+  );
+  const activePeriodDayCount = activePeriodCycle?.startDate
+    ? Math.max(
+        1,
+        Math.floor(
+          (new Date(`${today}T12:00:00`) - new Date(`${activePeriodCycle.startDate}T12:00:00`)) /
+            86400000
+        ) + 1
+      )
+    : 0;
   const selectedTrackingAreaOptions = normalizeTrackedAreas(trackedAreas)
     .map((areaId) => getTrackingAreaOption(areaId))
     .filter(Boolean);
@@ -2857,6 +3486,7 @@ function App() {
       key: area.pageKey,
       label: area.label,
     })),
+    { key: "calendar", label: "Calendar" },
     { key: "goals", label: "Goals" },
     { key: "charts", label: "Charts" },
     { key: "support", label: "Support" },
@@ -2882,6 +3512,33 @@ function App() {
       label: "Meals logged",
       value: meals.length,
       note: meals.length > 0 ? "Fuel recorded for today" : "No meals yet",
+    },
+    {
+      key: "todo",
+      label: "Tasks done",
+      value: `${completedTodoCount}/${todoItems.length}`,
+      note:
+        todoItems.length > 0
+          ? `${openTodoCount} open${todoItems.some((item) => item.dueDate === today && !item.completed) ? " · due today" : ""}`
+          : "No tasks added yet",
+    },
+    {
+      key: "appointments",
+      label: "Appointments",
+      value: todayAppointments.length > 0 ? `${todayAppointments.length} today` : upcomingAppointments.length,
+      note: nextAppointment
+        ? `${nextAppointment.title} · ${formatDisplayDate(nextAppointment.eventDate)} at ${nextAppointment.eventTime}`
+        : "No upcoming plans yet",
+    },
+    {
+      key: "period",
+      label: "Cycle",
+      value: activePeriodCycle ? `Day ${activePeriodDayCount}` : "Private",
+      note: activePeriodCycle
+        ? `${activePeriodCycle.flowLevel} flow`
+        : nextCycleEstimateDate
+        ? `Next estimate around ${formatDisplayDate(nextCycleEstimateDate)}`
+        : "No cycle history yet",
     },
     {
       key: "hygiene",
@@ -2942,6 +3599,33 @@ function App() {
           : "Nothing checked yet",
     },
     {
+      key: "todo",
+      label: "To-Do",
+      value: completedTodoCount > 0 ? `${completedTodoCount} done` : "Open",
+      note:
+        todoItems.length > 0
+          ? `${openTodoCount} task${openTodoCount === 1 ? "" : "s"} left${todoItems.some((item) => item.dueDate === today && !item.completed) ? " · due today" : ""}`
+          : "No tasks added yet",
+    },
+    {
+      key: "appointments",
+      label: "Appointments",
+      value: todayAppointments.length > 0 ? "Today" : upcomingAppointments.length > 0 ? "Planned" : "Open",
+      note: nextAppointment
+        ? `${nextAppointment.itemType === "reminder" ? "Reminder" : "Next up"} · ${nextAppointment.title}`
+        : "No upcoming plans yet",
+    },
+    {
+      key: "period",
+      label: "Period",
+      value: activePeriodCycle ? "Active" : "Idle",
+      note: activePeriodCycle
+        ? `Day ${activePeriodDayCount} · ${activePeriodCycle.flowLevel} flow`
+        : nextCycleEstimateDate
+        ? `Next estimate ${formatDisplayDate(nextCycleEstimateDate)}`
+        : "No cycle recorded yet",
+    },
+    {
       key: "sleep",
       label: "Sleep",
       value: bedTime && wakeTime ? "Logged" : "Open",
@@ -2998,6 +3682,21 @@ function App() {
       ),
       unit: "days",
     },
+    {
+      name: "Task Orbit",
+      progress: calculateSimpleDailyStreak(
+        historyData,
+        (row) =>
+          (Array.isArray(row.todo_items) ? row.todo_items : []).some((item) => item?.completed),
+        today
+      ),
+      unit: "days",
+    },
+    {
+      name: "Plan Orbit",
+      progress: todayAppointments.length,
+      unit: "plans",
+    },
   ].filter((item) => item.progress > 0);
   const nextRewardGoal =
     goals
@@ -3015,6 +3714,28 @@ function App() {
     meals.length > 0 && {
       label: "Meal added",
       detail: `${meals[meals.length - 1].text} · ${meals[meals.length - 1].time}`,
+    },
+    todoItems.length > 0 && {
+      label: "Task updated",
+      detail: `${todoItems[todoItems.length - 1].text} · ${
+        todoItems[todoItems.length - 1].completed
+          ? "Completed"
+          : todoItems[todoItems.length - 1].dueDate
+          ? `Due ${formatDisplayDate(todoItems[todoItems.length - 1].dueDate)}`
+          : "Open"
+      }`,
+    },
+    nextAppointment && {
+      label: nextAppointment.itemType === "reminder" ? "Reminder planned" : "Appointment planned",
+      detail: `${nextAppointment.title} · ${formatDisplayDate(nextAppointment.eventDate)} at ${nextAppointment.eventTime}`,
+    },
+    periodCycles.length > 0 && {
+      label: activePeriodCycle ? "Period active" : "Cycle saved",
+      detail: activePeriodCycle
+        ? `${formatDisplayDate(activePeriodCycle.startDate)} · ${activePeriodCycle.flowLevel} flow`
+        : `${formatDisplayDate(latestCompletedPeriodCycle?.startDate) || "Recent"} to ${
+            formatDisplayDate(latestCompletedPeriodCycle?.endDate) || "Open"
+          }`,
     },
     meds.length > 0 && {
       label: "Medication logged",
@@ -3069,22 +3790,65 @@ function App() {
       : "low";
   const trackerLabels = getThemeLanguage(themeFamily).tracker;
   const observerLabels = getThemeLanguage(selectedOutsider?.themeFamily || themeFamily).observer;
-  const renderSectionHeader = (title, subtitle, solarAccent, galaxyAccent) => (
-    <>
-      <div style={cardHeaderRowStyle}>
-        <div>
-          <div style={{ ...emojiStyle, ...getAccentBadgeStyle(theme) }}>
-            {getSectionAccentLabel(
-              theme.themeFamily,
-              darkMode ? galaxyAccent || solarAccent : solarAccent || galaxyAccent
-            )}
-          </div>
-          <h2 style={sectionTitleStyle(theme)}>{title}</h2>
+  const renderSectionHeader = (title, subtitle, solarAccent, galaxyAccent) => {
+    if (isCelestialGalaxyTrackerTheme(theme)) {
+      return (
+        <div
+          style={{
+            paddingTop: "16px",
+            paddingLeft: "28px",
+            paddingRight: "18px",
+            marginBottom: "24px",
+          }}
+        >
+          <h2
+            style={{
+              margin: 0,
+              color: theme.trackerAccent,
+              fontFamily: theme.trackerHeadingFamily,
+              fontStyle: "italic",
+              fontSize: "clamp(1.28rem, 2.9vw, 1.82rem)",
+              lineHeight: 1.02,
+              textShadow: "0 0 18px rgba(255,240,195,0.16)",
+              maxWidth: "min(100%, 360px)",
+            }}
+          >
+            {title}
+          </h2>
+          {subtitle ? (
+            <p
+              style={{
+                margin: "10px 0 0",
+                color: "rgba(216,185,255,0.62)",
+                fontSize: "0.92rem",
+                lineHeight: 1.55,
+                maxWidth: "56ch",
+              }}
+            >
+              {subtitle}
+            </p>
+          ) : null}
         </div>
+      );
+    }
+
+    return (
+      <div>
+        <div style={cardHeaderRowStyle}>
+          <div>
+            <div style={{ ...emojiStyle, ...getAccentBadgeStyle(theme) }}>
+              {getSectionAccentLabel(
+                theme.themeFamily,
+                darkMode ? galaxyAccent || solarAccent : solarAccent || galaxyAccent
+              )}
+            </div>
+            <h2 style={sectionTitleStyle(theme)}>{title}</h2>
+          </div>
+        </div>
+        {subtitle ? <p style={helperTextStyle(theme)}>{subtitle}</p> : null}
       </div>
-      {subtitle ? <p style={helperTextStyle(theme)}>{subtitle}</p> : null}
-    </>
-  );
+    );
+  };
 
   const sharedPageProps = {
     theme,
@@ -3204,18 +3968,72 @@ function App() {
     setMedName,
     medDose,
     setMedDose,
+    medEntryTime,
+    setMedEntryTime,
     medSymptoms,
     setMedSymptoms,
     medNotes,
     setMedNotes,
     toggleMed,
+    handleMedsTimeChange,
     addMedication,
     removeMedication,
     mealText,
     setMealText,
+    mealTime,
+    handleMealTimeChange,
     addMeal,
     meals,
     removeMeal,
+    todoItems,
+    todoText,
+    setTodoText,
+    todoDueDate,
+    setTodoDueDate,
+    todoNote,
+    setTodoNote,
+    addTodoItem,
+    toggleTodoItem,
+    removeTodoItem,
+    periodCycles,
+    activePeriodCycle,
+    periodStartDate,
+    setPeriodStartDate,
+    periodEndDate,
+    setPeriodEndDate,
+    periodFlowLevel,
+    setPeriodFlowLevel,
+    periodSymptomTags,
+    periodPrivateNotes,
+    setPeriodPrivateNotes,
+    periodStatusMessage,
+    startPeriodCycle,
+    endPeriodCycle,
+    savePeriodNotesAndSymptoms,
+    togglePeriodSymptomTag,
+    nextCycleEstimateDate,
+    calendarEvents,
+    averageCycleLengthDays,
+    appointments,
+    editingAppointmentId,
+    appointmentType,
+    setAppointmentType,
+    appointmentTitle,
+    setAppointmentTitle,
+    appointmentDate,
+    setAppointmentDate,
+    appointmentTime,
+    setAppointmentTime,
+    appointmentLocation,
+    setAppointmentLocation,
+    appointmentNote,
+    setAppointmentNote,
+    appointmentStatusMessage,
+    addAppointment,
+    startEditingAppointment,
+    cancelAppointmentEdit,
+    updateAppointment,
+    removeAppointment,
     bedTime,
     wakeTime,
     sleepRoutine,
@@ -3233,8 +4051,11 @@ function App() {
     skincare,
     skincareTime,
     toggleShowered,
+    handleShoweredTimeChange,
     toggleBrushedTeeth,
+    handleBrushedTeethTimeChange,
     toggleSkincare,
+    handleSkincareTimeChange,
     laundryDone,
     laundryTime,
     bedsheetsDone,
@@ -3244,8 +4065,11 @@ function App() {
     cleaningMinutes,
     cleaningWorthIt,
     toggleLaundry,
+    handleLaundryTimeChange,
     toggleBedsheets,
+    handleBedsheetsTimeChange,
     toggleRoomCleaned,
+    handleRoomCleanedTimeChange,
     handleCleaningMinutesChange,
     handleCleaningWorthItChange,
     exerciseDone,
@@ -3412,7 +4236,12 @@ function App() {
       case "hygiene":
       case "cleaning":
       case "exercise":
+      case "todo":
+      case "period":
+      case "appointments":
         return <TrackerTrackingPage app={trackerPageProps} pageKey={activePage} />;
+      case "calendar":
+        return <TrackerCalendarPage app={trackerPageProps} />;
       case "charts":
         return <TrackerChartsPage app={trackerPageProps} />;
       case "settings":
@@ -3696,6 +4525,610 @@ function App() {
       }
     }
   `;
+
+  if (isChartsPreviewMode) {
+    const previewTheme = getTrackerExperienceTheme(getAppTheme(true, "galaxy"), true);
+    const previewChartData = buildChartsPreviewData(chartRange, today);
+    const previewMaxMeals = Math.max(...previewChartData.map((entry) => entry.mealsCount), 1);
+    const previewMaxMeds = Math.max(...previewChartData.map((entry) => entry.medsCount), 1);
+    const previewMaxHygiene = Math.max(...previewChartData.map((entry) => entry.hygieneCount), 1);
+    const previewMaxExercise = Math.max(...previewChartData.map((entry) => entry.exerciseCount), 1);
+    const renderPreviewSectionHeader = (title, subtitle, solarAccent, galaxyAccent) => (
+      <>
+        <div style={cardHeaderRowStyle}>
+          <div>
+            <div style={{ ...emojiStyle, ...getAccentBadgeStyle(previewTheme) }}>
+              {getSectionAccentLabel(previewTheme.themeFamily, galaxyAccent || solarAccent)}
+            </div>
+            <h2 style={sectionTitleStyle(previewTheme)}>{title}</h2>
+          </div>
+        </div>
+        {subtitle ? <p style={helperTextStyle(previewTheme)}>{subtitle}</p> : null}
+      </>
+    );
+
+    const previewTrackerPageProps = {
+      theme: previewTheme,
+      chartsPageStyle,
+      sectionCardStyle,
+      renderSectionHeader: renderPreviewSectionHeader,
+      chartToolbarStyle,
+      chartRangeOptions,
+      rangeChipStyle,
+      chartRange,
+      setChartRange,
+      recentChartData: previewChartData,
+      emptyTextStyle,
+      chartStackStyle,
+      maxMeals: previewMaxMeals,
+      maxMeds: previewMaxMeds,
+      maxHygiene: previewMaxHygiene,
+      maxExercise: previewMaxExercise,
+      chartCardStyle,
+    };
+
+    return (
+      <div className="app-shell" style={pageStyle(previewTheme)} data-testid="charts-preview-page">
+        <style>{appShellStyles}</style>
+        <div style={containerStyle}>
+          <div style={heroCardStyle(previewTheme)}>
+            <div style={{ display: "grid", gap: "10px" }}>
+              <p style={tinyLabelStyle(previewTheme)}>Visual Preview</p>
+              <h1 style={titleStyle(previewTheme)}>Galaxy Charts Sandbox</h1>
+              <p style={subtitleStyle(previewTheme)}>
+                Direct chart preview route for frame and spacing polish, without auth or saved data.
+              </p>
+              <p style={smallInfoStyle(previewTheme)}>
+                Open <code>/dev/charts-preview</code> any time to jump straight into this screen.
+              </p>
+            </div>
+          </div>
+
+          <TrackerChartsPage app={previewTrackerPageProps} />
+        </div>
+      </div>
+    );
+  }
+
+  if (isOverviewPreviewMode) {
+    const previewTheme = getTrackerExperienceTheme(getAppTheme(true, "galaxy"), true);
+    const previewTrackerLabels = getThemeLanguage("galaxy").tracker;
+    const renderPreviewSectionHeader = (title, subtitle, solarAccent, galaxyAccent) => (
+      <>
+        <div style={cardHeaderRowStyle}>
+          <div>
+            <div style={{ ...emojiStyle, ...getAccentBadgeStyle(previewTheme) }}>
+              {getSectionAccentLabel(previewTheme.themeFamily, galaxyAccent || solarAccent)}
+            </div>
+            <h2 style={sectionTitleStyle(previewTheme)}>{title}</h2>
+          </div>
+        </div>
+        {subtitle ? <p style={helperTextStyle(previewTheme)}>{subtitle}</p> : null}
+      </>
+    );
+
+    const previewGoals = [
+      {
+        id: "goal-1",
+        name: "Celestial Ritual",
+        currentStreakProgress: 4,
+        streakLength: 7,
+        checkType: "daily",
+        completed: false,
+      },
+      {
+        id: "goal-2",
+        name: "Moonlight Meals",
+        currentStreakProgress: 2,
+        streakLength: 5,
+        checkType: "daily",
+        completed: false,
+      },
+    ];
+    const previewRewards = [{ id: "reward-1", name: "Nova Reward" }];
+    const previewDashboardStats = [
+      { key: "meds", label: "Meds", value: "Taken", note: "Logged at 8:10 AM" },
+      { key: "food", label: "Food", value: "2 meals", note: "Breakfast and lunch logged" },
+      { key: "sleep", label: "Sleep", value: "7.5 hrs", note: "Better than yesterday" },
+      { key: "mood", label: "Mood", value: "4/5", note: "Calm, focused, and steady" },
+    ];
+    const previewOverviewProps = {
+      theme: previewTheme,
+      chartsPageStyle,
+      sectionCardStyle,
+      renderSectionHeader: renderPreviewSectionHeader,
+      dashboardHeroStyle,
+      dashboardKickerStyle,
+      dashboardHeadingStyle,
+      subtitleStyle,
+      dashboardPulseStyle,
+      dashboardPulseRingStyle,
+      dashboardPulseCoreStyle,
+      mood: 4,
+      dashboardStatsGridStyle,
+      dashboardStats: previewDashboardStats,
+      summaryCardStyle,
+      summaryLabelStyle,
+      summaryValueStyle,
+      summaryNoteStyle,
+      gridStyle,
+      trackerLabels: previewTrackerLabels,
+      recentMoodSummary: {
+        mood: 4,
+        focus: 4,
+        energy: 3,
+        mood_tags: ["steady", "hopeful"],
+        entry_date: today,
+      },
+      smallInfoStyle,
+      focus: 4,
+      energy: 3,
+      moodTags: ["steady", "hopeful"],
+      today,
+      setActivePage: () => {},
+      goals: previewGoals,
+      simpleAlignmentStreaks: [],
+      emptyTextStyle,
+      rewardCardStyle,
+      rewardTitleStyle,
+      goalMetaStyle,
+      goalProgressTrackStyle,
+      goalProgressFillStyle,
+      rewards: previewRewards,
+      nextRewardGoal: previewGoals[0],
+      recentActivityItems: [
+        { label: "Meals", detail: "Lunch logged at 12:20 PM" },
+        { label: "Mood", detail: "Mood updated to 4/5" },
+      ],
+      supportInbox: [
+        { id: "support-1", outsiderName: "Aria", message: "Proud of you for checking in today." },
+      ],
+      unreadSupportCount: 1,
+      connectedOutsiders: [
+        { id: "outsider-1", name: "Aria", notificationCap: 3, cooldownLength: 30 },
+      ],
+      trackedAreas: ["meds", "food", "sleep", "mood"],
+      selectedTrackingAreaOptions: TRACKING_AREA_OPTIONS.filter((option) =>
+        ["meds", "food", "sleep", "mood"].includes(option.id)
+      ),
+    };
+
+    return (
+      <div className="app-shell" style={pageStyle(previewTheme)} data-testid="overview-preview-page">
+        <style>{appShellStyles}</style>
+        <div style={containerStyle}>
+          <div style={heroCardStyle(previewTheme)}>
+            <div style={{ display: "grid", gap: "10px" }}>
+              <p style={tinyLabelStyle(previewTheme)}>Visual Preview</p>
+              <h1 style={titleStyle(previewTheme)}>Galaxy Overview Sandbox</h1>
+              <p style={subtitleStyle(previewTheme)}>
+                Direct dashboard preview route for the Galaxy tracker card system.
+              </p>
+              <p style={smallInfoStyle(previewTheme)}>
+                Open <code>/dev/overview-preview</code> any time to inspect dashboard cards without auth.
+              </p>
+            </div>
+          </div>
+
+          <TrackerOverviewPage app={previewOverviewProps} />
+        </div>
+      </div>
+    );
+  }
+
+  if (isCardsPreviewMode) {
+    const previewTheme = getTrackerExperienceTheme(getAppTheme(true, "galaxy"), true);
+    const previewTrackerLabels = getThemeLanguage("galaxy").tracker;
+    const renderPreviewSectionHeader = (title, subtitle, solarAccent, galaxyAccent) => {
+      if (isCelestialGalaxyTrackerTheme(previewTheme)) {
+        return (
+          <div
+            style={{
+              paddingTop: "16px",
+              paddingLeft: "28px",
+              paddingRight: "18px",
+              marginBottom: "24px",
+            }}
+          >
+            <h2
+              style={{
+                margin: 0,
+                color: previewTheme.trackerAccent,
+                fontFamily: previewTheme.trackerHeadingFamily,
+                fontStyle: "italic",
+                fontSize: "clamp(1.28rem, 2.9vw, 1.82rem)",
+                lineHeight: 1.02,
+                textShadow: "0 0 18px rgba(255,240,195,0.16)",
+                maxWidth: "min(100%, 360px)",
+              }}
+            >
+              {title}
+            </h2>
+            {subtitle ? (
+              <p
+                style={{
+                  margin: "10px 0 0",
+                  color: "rgba(216,185,255,0.62)",
+                  fontSize: "0.92rem",
+                  lineHeight: 1.55,
+                  maxWidth: "56ch",
+                }}
+              >
+                {subtitle}
+              </p>
+            ) : null}
+          </div>
+        );
+      }
+
+      return (
+        <div>
+          <div style={cardHeaderRowStyle}>
+            <div>
+              <div style={{ ...emojiStyle, ...getAccentBadgeStyle(previewTheme) }}>
+                {getSectionAccentLabel(
+                  previewTheme.themeFamily,
+                  galaxyAccent || solarAccent
+                )}
+              </div>
+              <h2 style={sectionTitleStyle(previewTheme)}>{title}</h2>
+            </div>
+          </div>
+          {subtitle ? <p style={helperTextStyle(previewTheme)}>{subtitle}</p> : null}
+        </div>
+      );
+    };
+
+    const previewSharedApp = {
+      theme: previewTheme,
+      chartsPageStyle,
+      sectionCardStyle,
+      renderSectionHeader: renderPreviewSectionHeader,
+      gridStyle,
+      summaryCardStyle,
+      summaryLabelStyle,
+      summaryNoteStyle,
+      summaryValueStyle,
+      rewardCardStyle,
+      rewardTitleStyle,
+      goalMetaStyle,
+      goalProgressTrackStyle,
+      goalProgressFillStyle,
+      goalCardItemStyle,
+      mealItemStyle,
+      mealListStyle,
+      labelStyle,
+      inputStyle,
+      smallRemoveButtonStyle,
+      primaryButtonStyle,
+      softButtonStyle,
+      successButtonStyle,
+      emptyTextStyle,
+      smallInfoStyle,
+      trackerSectionSwitcherButtonStyle,
+      rowStyle,
+      sleepGridStyle,
+      sliderValueStyle,
+      rangeStyle,
+      buttonWrapStyle,
+      countTextStyle,
+      dashboardStatsGridStyle,
+      feedbackMessageStyle,
+      renderFeedbackMessage: (message) => (message ? <div style={feedbackMessageStyle("info", previewTheme)}>{message}</div> : null),
+      trackerLabels: previewTrackerLabels,
+      goalFormGridStyle,
+      goalSuggestionHeaderStyle,
+      tagGroupLabelStyle,
+      moodTagGridStyle,
+      goalSuggestionButtonStyle,
+      rewardGridStyle,
+      permissionsGridStyle,
+      permissionItemStyle,
+    };
+
+    const previewConnectionsApp = {
+      ...previewSharedApp,
+      connectionsLoading: false,
+      connectionsMessage: "",
+      generateInviteCode: () => {},
+      generateInviteLink: () => {},
+      loadConnectionsData: () => {},
+      inviteCode: "STAR-ABC123",
+      inviteLink: "https://example.com/invite/STAR-ABC123",
+      pendingRequests: [{ id: "request-1", name: "Aria", note: "Would like access to your tracker." }],
+      requestApproval: () => {},
+      rejectRequest: () => {},
+      connectedOutsiders: [
+        {
+          id: "outsider-1",
+          name: "Aria",
+          nameVisibility: "display",
+          notificationCap: 3,
+          cooldownLength: 30,
+          permissions: { tracker_data: true, support: true },
+        },
+      ],
+      normalizeConnectionPermissions,
+      updateOutsiderSetting: () => {},
+      updateOutsiderPermission: () => {},
+      revokeOutsider: () => {},
+      joinCodeInput: "STAR-ABC123",
+      setJoinCodeInput: () => {},
+      joinByCode: () => {},
+      joinLinkInput: "https://example.com/invite/STAR-ABC123",
+      setJoinLinkInput: () => {},
+      joinByLink: () => {},
+    };
+
+    const previewGoalsApp = {
+      ...previewSharedApp,
+      goalName: "Celestial Ritual",
+      setGoalName: () => {},
+      goalCategory: "Meds",
+      setGoalCategory: () => {},
+      goalCategories,
+      goalCheckType: "daily",
+      setGoalCheckType: () => {},
+      goalTargetAmount: "1",
+      setGoalTargetAmount: () => {},
+      goalStreakLength: "7",
+      setGoalStreakLength: () => {},
+      refreshGoalSuggestions: () => {},
+      goalSuggestions: ["Celestial Ritual", "Moonlight Meals", "Orbit Reset"],
+      applyGoalSuggestion: () => {},
+      createGoal: () => {},
+      goals: [
+        {
+          id: "goal-1",
+          name: "Celestial Ritual",
+          category: "Meds",
+          checkType: "daily",
+          targetAmount: 1,
+          currentStreakProgress: 4,
+          streakLength: 7,
+          completed: false,
+        },
+        {
+          id: "goal-2",
+          name: "Moonlight Meals",
+          category: "Food",
+          checkType: "daily",
+          targetAmount: 2,
+          currentStreakProgress: 7,
+          streakLength: 7,
+          completed: true,
+          rewardEarned: "Nova Reward",
+        },
+      ],
+      rewards: [{ id: "reward-1", title: "Nova Reward", goalName: "Moonlight Meals", earnedAt: today }],
+      removeGoal: () => {},
+    };
+
+    const previewTrackingApp = {
+      ...previewSharedApp,
+      trackerNavItems: [
+        { key: "meds", label: "Meds" },
+        { key: "food", label: "Food" },
+        { key: "appointments", label: "Appointments" },
+        { key: "period", label: "Period" },
+        { key: "sleep", label: "Sleep" },
+      ],
+      setActivePage: () => {},
+      medTaken: true,
+      medsTime: "8:10 AM",
+      toggleMed: () => {},
+      meds: [{ name: "Vitamin D", dose: "1000 IU", time: "8:10 AM", symptoms: "", notes: "With breakfast" }],
+      removeMedication: () => {},
+      medName: "",
+      setMedName: () => {},
+      medDose: "",
+      setMedDose: () => {},
+      medEntryTime: "",
+      setMedEntryTime: () => {},
+      medSymptoms: "",
+      setMedSymptoms: () => {},
+      medNotes: "",
+      setMedNotes: () => {},
+      handleMedsTimeChange: () => {},
+      addMedication: () => {},
+      mealText: "",
+      setMealText: () => {},
+      mealTime: "",
+      handleMealTimeChange: () => {},
+      addMeal: () => {},
+      meals: [{ text: "Bagel and fruit", time: "8:30 AM" }],
+      removeMeal: () => {},
+      periodCycles: [
+        {
+          id: "period-cycle-1",
+          startDate: "2026-03-25",
+          endDate: "",
+          flowLevel: "medium",
+          symptomTags: ["Cramps", "Fatigue"],
+          privateNotes: "Heating pad helped in the evening.",
+        },
+        {
+          id: "period-cycle-2",
+          startDate: "2026-02-26",
+          endDate: "2026-03-01",
+          flowLevel: "light",
+          symptomTags: ["Headache"],
+          privateNotes: "",
+        },
+      ],
+      activePeriodCycle: {
+        id: "period-cycle-1",
+        startDate: "2026-03-25",
+        endDate: "",
+        flowLevel: "medium",
+        symptomTags: ["Cramps", "Fatigue"],
+        privateNotes: "Heating pad helped in the evening.",
+      },
+      periodStartDate: "2026-03-25",
+      setPeriodStartDate: () => {},
+      periodEndDate: "2026-03-30",
+      setPeriodEndDate: () => {},
+      periodFlowLevel: "medium",
+      setPeriodFlowLevel: () => {},
+      periodSymptomTags: ["Cramps", "Fatigue"],
+      periodPrivateNotes: "Heating pad helped in the evening.",
+      setPeriodPrivateNotes: () => {},
+      periodStatusMessage: "Period details saved.",
+      startPeriodCycle: () => {},
+      endPeriodCycle: () => {},
+      savePeriodNotesAndSymptoms: () => {},
+      togglePeriodSymptomTag: () => {},
+      nextCycleEstimateDate: "2026-04-23",
+      averageCycleLengthDays: 29,
+      appointments: [
+        {
+          id: "appointment-1",
+          itemType: "appointment",
+          title: "Therapy session",
+          eventDate: "2026-03-31",
+          eventTime: "14:00",
+          location: "Main Street Office",
+          note: "Bring the week summary.",
+        },
+        {
+          id: "appointment-2",
+          itemType: "reminder",
+          title: "Call pharmacy",
+          eventDate: "2026-04-01",
+          eventTime: "09:15",
+          location: "",
+          note: "",
+        },
+      ],
+      editingAppointmentId: null,
+      appointmentType: "appointment",
+      setAppointmentType: () => {},
+      appointmentTitle: "",
+      setAppointmentTitle: () => {},
+      appointmentDate: "2026-03-31",
+      setAppointmentDate: () => {},
+      appointmentTime: "14:00",
+      setAppointmentTime: () => {},
+      appointmentLocation: "",
+      setAppointmentLocation: () => {},
+      appointmentNote: "",
+      setAppointmentNote: () => {},
+      appointmentStatusMessage: "Saved.",
+      addAppointment: () => {},
+      startEditingAppointment: () => {},
+      cancelAppointmentEdit: () => {},
+      updateAppointment: () => {},
+      removeAppointment: () => {},
+      bedTime: "23:00",
+      handleBedTimeChange: () => {},
+      wakeTime: "07:00",
+      handleWakeTimeChange: () => {},
+      sleepRoutine: "Tea and low lights",
+      handleSleepRoutineChange: () => {},
+      usedScreensBeforeBed: false,
+      toggleUsedScreensBeforeBed: () => {},
+      sleepQuality: 4,
+      handleSleepQualityChange: () => {},
+      showered: true,
+      toggleShowered: () => {},
+      handleShoweredTimeChange: () => {},
+      brushedTeeth: true,
+      toggleBrushedTeeth: () => {},
+      handleBrushedTeethTimeChange: () => {},
+      skincare: false,
+      toggleSkincare: () => {},
+      handleSkincareTimeChange: () => {},
+      showeredTime: "7:40 AM",
+      brushedTeethTime: "7:50 AM",
+      skincareTime: "",
+      laundryDone: false,
+      toggleLaundry: () => {},
+      handleLaundryTimeChange: () => {},
+      bedsheetsDone: false,
+      toggleBedsheets: () => {},
+      handleBedsheetsTimeChange: () => {},
+      roomCleaned: true,
+      toggleRoomCleaned: () => {},
+      handleRoomCleanedTimeChange: () => {},
+      laundryTime: "",
+      bedsheetsTime: "",
+      roomCleanedTime: "11:20 AM",
+      cleaningMinutes: "15",
+      handleCleaningMinutesChange: () => {},
+      cleaningWorthIt: 4,
+      handleCleaningWorthItChange: () => {},
+      exerciseDone: true,
+      toggleExerciseDone: () => {},
+      extraWalk: true,
+      toggleExtraWalk: () => {},
+      exerciseTime: "6:30 PM",
+      handleExerciseTimeChange: () => {},
+      exerciseType: "Walk",
+      handleExerciseTypeChange: () => {},
+      exerciseMinutes: "25",
+      handleExerciseMinutesChange: () => {},
+      exerciseFeeling: "Looser",
+      handleExerciseFeelingChange: () => {},
+      afterExerciseState: "Calm",
+      handleAfterExerciseStateChange: () => {},
+      addExerciseLog: () => {},
+      exerciseLogs: [{ type: "Walk", time: "6:30 PM", minutes: 25, feeling: "Looser", extraWalk: true, afterState: "Calm" }],
+      removeExerciseLog: () => {},
+    };
+
+    const previewSupportApp = {
+      ...previewSharedApp,
+      supportInboxMessage: "",
+      supportInboxLoading: false,
+      loadSupportInbox: () => {},
+      unreadSupportCount: 2,
+      supportInbox: [
+        {
+          id: "support-msg-1",
+          message: "Small steps still count",
+          outsiderName: "Lily Mae",
+          createdAtLabel: "Mar 22, 1:33 PM",
+          readAt: "Mar 22, 1:40 PM",
+        },
+        {
+          id: "support-msg-2",
+          message: "Remind: Meds",
+          outsiderName: "Lily Mae",
+          createdAtLabel: "Mar 22, 1:32 PM",
+          readAt: "Mar 22, 1:39 PM",
+        },
+      ],
+      markSupportMessageRead: () => {},
+    };
+
+    return (
+      <div className="app-shell" style={pageStyle(previewTheme)} data-testid="cards-preview-page">
+        <style>{appShellStyles}</style>
+        <div style={containerStyle}>
+          <div style={heroCardStyle(previewTheme)}>
+            <div style={{ display: "grid", gap: "10px" }}>
+              <p style={tinyLabelStyle(previewTheme)}>Visual Preview</p>
+              <h1 style={titleStyle(previewTheme)}>Galaxy Cards Sandbox</h1>
+              <p style={subtitleStyle(previewTheme)}>
+                Cross-page Galaxy tracker card preview for connections, goals, and tracking surfaces.
+              </p>
+              <p style={smallInfoStyle(previewTheme)}>
+                Open <code>/dev/cards-preview</code> any time to inspect cards beyond the dashboard.
+              </p>
+            </div>
+          </div>
+
+          <TrackerConnectionsPage app={previewConnectionsApp} />
+          <TrackerSupportPage app={previewSupportApp} />
+          <TrackerGoalsPage app={previewGoalsApp} />
+          <TrackerTrackingPage app={previewTrackingApp} pageKey="meds" />
+          <TrackerTrackingPage app={previewTrackingApp} pageKey="food" />
+          <TrackerTrackingPage app={previewTrackingApp} pageKey="period" />
+          <TrackerTrackingPage app={previewTrackingApp} pageKey="exercise" />
+        </div>
+      </div>
+    );
+  }
 
   if (authLoading) {
     return (
@@ -5683,6 +7116,211 @@ function isObservatoryTrackerTheme(theme) {
   return Boolean(theme?.trackerObservatory && theme?.themeFamily === "galaxy");
 }
 
+function isCelestialGalaxyTrackerTheme(theme) {
+  return Boolean(
+    theme?.themeFamily === "galaxy" &&
+      !theme?.observerConsole &&
+      !theme?.trackerSolar &&
+      !theme?.trackerReef &&
+      !theme?.trackerAbyss
+  );
+}
+
+function toCelestialAsset(svg) {
+  return `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
+}
+
+function getCelestialGalaxyOrnamentStyle(variant = "section") {
+  const isLarge = variant === "chart" || variant === "section";
+  const isStandardSection = variant === "section";
+  const topCornerWidth = isLarge ? 118 : isStandardSection ? 92 : 74;
+  const topCornerHeight = isLarge ? 84 : isStandardSection ? 64 : 52;
+  const bottomCornerWidth = isLarge ? 122 : isStandardSection ? 98 : 78;
+  const bottomCornerHeight = isLarge ? 96 : isStandardSection ? 72 : 58;
+  const spineWidth = isLarge ? 34 : isStandardSection ? 26 : 22;
+  const spineHeight = isLarge ? 222 : isStandardSection ? 156 : 132;
+  const railWidth = isLarge ? 154 : isStandardSection ? 112 : 86;
+  const railInset = isLarge ? 34 : isStandardSection ? 24 : 18;
+  const edgeOffset = isLarge ? "18px" : isStandardSection ? "14px" : "12px";
+  const topRailY = isLarge ? "18px" : "12px";
+  const bottomRailY = isLarge ? "calc(100% - 18px)" : "calc(100% - 12px)";
+  const leftSpineY = isLarge ? "68px" : isStandardSection ? "52px" : "42px";
+  const rightSpineY = isLarge ? "68px" : isStandardSection ? "52px" : "42px";
+
+  const topLeft = toCelestialAsset(`
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 118 84" preserveAspectRatio="xMinYMin meet">
+      <defs><linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#fff2c6"/><stop offset="45%" stop-color="#f4d67a"/><stop offset="100%" stop-color="#c89639"/></linearGradient></defs>
+      <path d="M10 46 Q10 12 46 12 H116" fill="none" stroke="url(#g)" stroke-width="1.8"/>
+      <path d="M22 56 Q22 26 54 26 H98" fill="none" stroke="rgba(244,214,122,0.52)" stroke-width="1.1"/>
+      <g transform="translate(12 12)">
+        <polygon points="0,-10 4,-4 10,0 4,4 0,10 -4,4 -10,0 -4,-4" fill="rgba(255,240,195,0.18)" stroke="#fff0c3" stroke-width="1.2"/>
+        <polygon points="0,-6 2.5,-2.5 6,0 2.5,2.5 0,6 -2.5,2.5 -6,0 -2.5,-2.5" fill="rgba(244,214,122,0.22)" stroke="rgba(244,214,122,0.9)" stroke-width="0.8"/>
+      </g>
+    </svg>`);
+  const topRight = toCelestialAsset(`
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 118 84" preserveAspectRatio="xMaxYMin meet">
+      <defs><linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#fff2c6"/><stop offset="45%" stop-color="#f4d67a"/><stop offset="100%" stop-color="#c89639"/></linearGradient></defs>
+      <path d="M108 46 Q108 12 72 12 H2" fill="none" stroke="url(#g)" stroke-width="1.8"/>
+      <path d="M96 56 Q96 26 64 26 H20" fill="none" stroke="rgba(244,214,122,0.52)" stroke-width="1.1"/>
+      <g transform="translate(106 12)">
+        <polygon points="0,-10 4,-4 10,0 4,4 0,10 -4,4 -10,0 -4,-4" fill="rgba(255,240,195,0.18)" stroke="#fff0c3" stroke-width="1.2"/>
+        <polygon points="0,-6 2.5,-2.5 6,0 2.5,2.5 0,6 -2.5,2.5 -6,0 -2.5,-2.5" fill="rgba(244,214,122,0.22)" stroke="rgba(244,214,122,0.9)" stroke-width="0.8"/>
+      </g>
+    </svg>`);
+  const bottomLeft = toCelestialAsset(`
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 122 96" preserveAspectRatio="xMinYMax meet">
+      <defs><linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#fff2c6"/><stop offset="45%" stop-color="#f4d67a"/><stop offset="100%" stop-color="#c89639"/></linearGradient></defs>
+      <path d="M10 48 Q10 84 48 84 H120" fill="none" stroke="url(#g)" stroke-width="1.7"/>
+      <path d="M22 38 Q22 70 54 70 H98" fill="none" stroke="rgba(244,214,122,0.5)" stroke-width="1.05"/>
+      <path d="M34 30 Q34 58 60 58 H82" fill="none" stroke="rgba(244,214,122,0.22)" stroke-width="0.9"/>
+      <g transform="translate(12 84)">
+        <polygon points="0,-8 3.5,-3.5 8,0 3.5,3.5 0,8 -3.5,3.5 -8,0 -3.5,-3.5" fill="rgba(255,240,195,0.16)" stroke="rgba(244,214,122,0.86)" stroke-width="1"/>
+      </g>
+    </svg>`);
+  const bottomRight = toCelestialAsset(`
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 122 96" preserveAspectRatio="xMaxYMax meet">
+      <defs><linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#fff2c6"/><stop offset="45%" stop-color="#f4d67a"/><stop offset="100%" stop-color="#c89639"/></linearGradient></defs>
+      <path d="M112 48 Q112 84 74 84 H2" fill="none" stroke="url(#g)" stroke-width="1.7"/>
+      <path d="M100 38 Q100 70 68 70 H24" fill="none" stroke="rgba(244,214,122,0.5)" stroke-width="1.05"/>
+      <path d="M88 30 Q88 58 62 58 H40" fill="none" stroke="rgba(244,214,122,0.22)" stroke-width="0.9"/>
+      <g transform="translate(110 84)">
+        <polygon points="0,-8 3.5,-3.5 8,0 3.5,3.5 0,8 -3.5,3.5 -8,0 -3.5,-3.5" fill="rgba(255,240,195,0.16)" stroke="rgba(244,214,122,0.86)" stroke-width="1"/>
+      </g>
+    </svg>`);
+  const leftSpine = toCelestialAsset(`
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 34 222" preserveAspectRatio="xMinYMid meet">
+      <path d="M24 8 C8 28, 8 56, 24 78 C40 100, 40 126, 24 148" fill="none" stroke="rgba(244,214,122,0.62)" stroke-width="1.7"/>
+      <path d="M18 24 C6 42, 6 62, 18 78 C30 94, 30 114, 18 128" fill="none" stroke="rgba(244,214,122,0.3)" stroke-width="1"/>
+    </svg>`);
+  const rightSpine = toCelestialAsset(`
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 34 222" preserveAspectRatio="xMaxYMid meet">
+      <path d="M10 8 C26 28, 26 56, 10 78 C-6 100, -6 126, 10 148" fill="none" stroke="rgba(244,214,122,0.62)" stroke-width="1.7"/>
+      <path d="M16 24 C28 42, 28 62, 16 78 C4 94, 4 114, 16 128" fill="none" stroke="rgba(244,214,122,0.3)" stroke-width="1"/>
+    </svg>`);
+  const topRail = toCelestialAsset(`
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 154 18" preserveAspectRatio="none">
+      <path d="M0 8 H154" fill="none" stroke="rgba(244,214,122,0.42)" stroke-width="1"/>
+      <path d="M18 2 H136" fill="none" stroke="rgba(244,214,122,0.18)" stroke-width="0.85"/>
+    </svg>`);
+  const bottomRail = toCelestialAsset(`
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 154 18" preserveAspectRatio="none">
+      <path d="M0 10 H154" fill="none" stroke="rgba(244,214,122,0.28)" stroke-width="1"/>
+      <path d="M18 16 H136" fill="none" stroke="rgba(244,214,122,0.14)" stroke-width="0.85"/>
+    </svg>`);
+
+  return {
+    backgroundImage: [
+      topLeft,
+      topRight,
+      bottomLeft,
+      bottomRight,
+      leftSpine,
+      rightSpine,
+      topRail,
+      topRail,
+      bottomRail,
+      bottomRail,
+    ].join(", "),
+    backgroundSize: [
+      `${topCornerWidth}px ${topCornerHeight}px`,
+      `${topCornerWidth}px ${topCornerHeight}px`,
+      `${bottomCornerWidth}px ${bottomCornerHeight}px`,
+      `${bottomCornerWidth}px ${bottomCornerHeight}px`,
+      `${spineWidth}px ${spineHeight}px`,
+      `${spineWidth}px ${spineHeight}px`,
+      `${railWidth}px 18px`,
+      `${railWidth}px 18px`,
+      `${railWidth}px 18px`,
+      `${railWidth}px 18px`,
+    ].join(", "),
+    backgroundRepeat: "no-repeat",
+    backgroundPosition: [
+      `${edgeOffset} ${edgeOffset}`,
+      `calc(100% - ${edgeOffset}) ${edgeOffset}`,
+      `${edgeOffset} calc(100% - ${edgeOffset})`,
+      `calc(100% - ${edgeOffset}) calc(100% - ${edgeOffset})`,
+      `${edgeOffset} ${leftSpineY}`,
+      `calc(100% - ${edgeOffset}) ${rightSpineY}`,
+      `${railInset} ${topRailY}`,
+      `calc(100% - ${railInset + railWidth}px) ${topRailY}`,
+      `${railInset} ${bottomRailY}`,
+      `calc(100% - ${railInset + railWidth}px) ${bottomRailY}`,
+    ].join(", "),
+  };
+}
+
+function getCelestialGalaxyCardStyle(section = "dashboard", variant = "section") {
+  const paletteBySection = {
+    dashboard: {
+      aura:
+        "radial-gradient(circle at 16% 18%, rgba(140,126,255,0.14) 0%, rgba(140,126,255,0) 28%), radial-gradient(circle at 84% 18%, rgba(255,240,195,0.1) 0%, rgba(255,240,195,0) 22%), radial-gradient(circle at 50% 100%, rgba(160,148,255,0.08) 0%, rgba(160,148,255,0) 36%)",
+      shadow:
+        "0 0 0 1px rgba(255,245,214,0.08), 0 26px 46px rgba(4,8,24,0.34), 0 0 26px rgba(244,214,122,0.08)",
+    },
+    signals: {
+      aura:
+        "radial-gradient(circle at 78% 18%, rgba(108,170,255,0.16) 0%, rgba(108,170,255,0) 26%), radial-gradient(circle at 14% 22%, rgba(255,240,195,0.09) 0%, rgba(255,240,195,0) 18%), radial-gradient(circle at 50% 100%, rgba(136,152,255,0.08) 0%, rgba(136,152,255,0) 34%)",
+      shadow:
+        "0 0 0 1px rgba(255,245,214,0.08), 0 24px 42px rgba(4,8,24,0.32), 0 0 22px rgba(116,208,255,0.08)",
+    },
+    goals: {
+      aura:
+        "radial-gradient(circle at 18% 18%, rgba(166,150,255,0.16) 0%, rgba(166,150,255,0) 26%), radial-gradient(circle at 84% 18%, rgba(255,240,195,0.1) 0%, rgba(255,240,195,0) 22%), radial-gradient(circle at 84% 82%, rgba(126,170,255,0.08) 0%, rgba(126,170,255,0) 32%)",
+      shadow:
+        "0 0 0 1px rgba(255,245,214,0.08), 0 24px 42px rgba(4,8,24,0.32), 0 0 24px rgba(166,150,255,0.08)",
+    },
+    care: {
+      aura:
+        "radial-gradient(circle at 16% 18%, rgba(245,163,255,0.16) 0%, rgba(245,163,255,0) 26%), radial-gradient(circle at 84% 18%, rgba(166,150,255,0.12) 0%, rgba(166,150,255,0) 22%), radial-gradient(circle at 50% 100%, rgba(255,209,102,0.08) 0%, rgba(255,209,102,0) 36%)",
+      shadow:
+        "0 0 0 1px rgba(255,245,214,0.08), 0 26px 46px rgba(4,8,24,0.34), 0 0 26px rgba(244,214,122,0.08)",
+    },
+    charts: {
+      aura:
+        "radial-gradient(circle at 16% 18%, rgba(114,208,255,0.16) 0%, rgba(114,208,255,0) 26%), radial-gradient(circle at 84% 18%, rgba(255,240,195,0.1) 0%, rgba(255,240,195,0) 22%), radial-gradient(circle at 50% 100%, rgba(160,148,255,0.08) 0%, rgba(160,148,255,0) 36%)",
+      shadow:
+        "0 0 0 1px rgba(255,245,214,0.08), 0 26px 46px rgba(4,8,24,0.34), 0 0 26px rgba(244,214,122,0.08)",
+    },
+  };
+
+  const palette = paletteBySection[section] || paletteBySection.dashboard;
+  const radiusByVariant = {
+    section: "30px",
+    summary: "26px",
+    reward: "24px",
+    item: "22px",
+    chart: "30px",
+  };
+
+  if (variant === "summary" || variant === "reward" || variant === "item") {
+    return {
+      ...getCelestialGalaxyOrnamentStyle(variant),
+      backgroundColor: "rgba(12,16,30,0.92)",
+      backgroundImage: `${getCelestialGalaxyOrnamentStyle(variant).backgroundImage}, ${palette.aura}, linear-gradient(180deg, rgba(12,16,30,0.92) 0%, rgba(16,21,40,0.88) 100%)`,
+      backgroundSize: `${getCelestialGalaxyOrnamentStyle(variant).backgroundSize}, auto, auto`,
+      backgroundRepeat: `${getCelestialGalaxyOrnamentStyle(variant).backgroundRepeat}, no-repeat, no-repeat`,
+      backgroundPosition: `${getCelestialGalaxyOrnamentStyle(variant).backgroundPosition}, center, center`,
+      border: "1px solid rgba(244,214,122,0.12)",
+      borderRadius: radiusByVariant[variant],
+      boxShadow: `0 14px 26px rgba(4,8,24,0.22), inset 0 0 0 1px rgba(255,245,214,0.05), inset 0 1px 0 rgba(255,255,255,0.04)`,
+      clipPath: "none",
+    };
+  }
+
+  return {
+    ...getCelestialGalaxyOrnamentStyle(variant),
+    backgroundColor: "rgba(12,16,30,0.94)",
+    backgroundImage: `${getCelestialGalaxyOrnamentStyle(variant).backgroundImage}, ${palette.aura}, linear-gradient(180deg, rgba(12,16,30,0.94) 0%, rgba(16,21,40,0.9) 100%)`,
+    backgroundSize: `${getCelestialGalaxyOrnamentStyle(variant).backgroundSize}, auto, auto`,
+    backgroundRepeat: `${getCelestialGalaxyOrnamentStyle(variant).backgroundRepeat}, no-repeat, no-repeat`,
+    backgroundPosition: `${getCelestialGalaxyOrnamentStyle(variant).backgroundPosition}, center, center`,
+    border: "1px solid rgba(244,214,122,0.14)",
+    borderRadius: radiusByVariant[variant] || "26px",
+    boxShadow: `${palette.shadow}, inset 0 0 0 1px rgba(255,245,214,0.06), inset 0 1px 0 rgba(255,255,255,0.05)`,
+    clipPath: "none",
+  };
+}
+
 function getThemeCardClipPath() {
   return "none";
 }
@@ -5832,7 +7470,7 @@ const featureCardStyle = (theme) => ({
   isolation: "isolate",
 });
 
-const sectionCardStyle = (theme, section) => {
+const sectionCardStyle = (theme, section, options = {}) => {
   const sectionThemes = {
     dashboard: {
       glow: darkModeSafe(theme, "rgba(155, 145, 255, 0.18)", "rgba(216, 176, 255, 0.16)"),
@@ -6011,12 +7649,22 @@ const sectionCardStyle = (theme, section) => {
   if (theme.trackerObservatory) {
     return {
       ...featureCardStyle(theme),
-      background: `${getThemeCardOrnament(theme, "feature")}, ${theme.trackerGlassBackground || theme.cardBackground}`,
-      boxShadow: `${theme.shadow}, ${frame.boxShadow}, 0 22px 40px rgba(0, 0, 0, 0.28), inset 0 0 0 1px rgba(255,255,255,0.04)`,
-      border: theme.border,
-      borderRadius: theme.featureRadius || "24px",
+      background: `${accent.tint}, linear-gradient(180deg, ${theme.trackerGlassBackground || "rgba(4, 4, 10, 0.54)"} 0%, rgba(8,8,20,0.72) 100%)`,
+      boxShadow: `${theme.shadow}, ${frame.boxShadow}, 0 18px 34px ${accent.glow}`,
+      border: theme.observerBorder || theme.border,
+      borderRadius: theme.sectionRadius || theme.featureRadius || "24px",
       backdropFilter: "blur(22px) saturate(150%)",
       WebkitBackdropFilter: "blur(22px) saturate(150%)",
+    };
+  }
+
+  if (isCelestialGalaxyTrackerTheme(theme) && !options.disableCelestialFrame) {
+    return {
+      ...featureCardStyle(theme),
+      ...getCelestialGalaxyCardStyle(section, "section"),
+      padding: "34px 30px 28px",
+      backdropFilter: "blur(28px) saturate(155%)",
+      WebkitBackdropFilter: "blur(28px) saturate(155%)",
     };
   }
 
@@ -6502,12 +8150,15 @@ const mealListStyle = {
   margin: "12px 0 0 0",
 };
 
-const mealItemStyle = (theme) => ({
+const mealItemStyle = (theme, options = {}) => ({
   display: "flex",
   justifyContent: "space-between",
   alignItems: "flex-start",
   gap: "12px",
   flexWrap: "wrap",
+  ...(!options.disableCelestialFrame && isCelestialGalaxyTrackerTheme(theme)
+    ? getCelestialGalaxyCardStyle("signals", "item")
+    : {}),
   background: theme.trackerReef || theme.trackerAbyss
     ? `radial-gradient(circle at 82% 18%, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0) 22%), ${theme.itemBackground}`
     : theme.themeFamily === "forest"
@@ -6676,7 +8327,7 @@ const dashboardStatsGridStyle = {
   gap: "16px",
 };
 
-const summaryCardStyle = (theme) => ({
+const summaryCardStyle = (theme, options = {}) => ({
   background: isSpaceConsoleTheme(theme)
     ? `${getThemeCardOrnament(theme, "summary")}, linear-gradient(180deg, rgba(8,12,20,0.9) 0%, rgba(14,18,29,0.95) 100%)`
     : theme.themeFamily === "underwater"
@@ -6691,6 +8342,9 @@ const summaryCardStyle = (theme) => ({
     ? `inset 0 2px 4px rgba(0,0,0,0.5), 0 10px 20px rgba(0,0,0,0.18), ${getThemeEdgeHighlight(theme)}`
     : `0 16px 32px ${theme.glow}, ${getThemeEdgeHighlight(theme)}`,
   clipPath: getThemeCardClipPath(theme, "summary"),
+  ...(!options.disableCelestialFrame && isCelestialGalaxyTrackerTheme(theme)
+    ? getCelestialGalaxyCardStyle("signals", "summary")
+    : {}),
 });
 
 const summaryLabelStyle = (theme) => ({
@@ -6892,6 +8546,7 @@ const chartStackStyle = {
 };
 
 const chartCardStyle = (theme) => ({
+  ...(isCelestialGalaxyTrackerTheme(theme) ? getCelestialGalaxyCardStyle("charts", "chart") : {}),
   background: isSpaceConsoleTheme(theme)
     ? theme.modeName === "Solar"
       ? `${getThemeCardOrnament(theme, "chart")}, linear-gradient(180deg, rgba(245, 239, 227, 0.98) 0%, rgba(225, 217, 203, 0.995) 100%)`
@@ -6908,8 +8563,8 @@ const chartCardStyle = (theme) => ({
   clipPath: getThemeCardClipPath(theme, "feature"),
 });
 
-const goalCardItemStyle = (theme) => ({
-  ...mealItemStyle(theme),
+const goalCardItemStyle = (theme, options = {}) => ({
+  ...mealItemStyle(theme, options),
   alignItems: "stretch",
 });
 
@@ -6942,7 +8597,10 @@ const rewardGridStyle = {
   gap: "14px",
 };
 
-const rewardCardStyle = (theme) => ({
+const rewardCardStyle = (theme, options = {}) => ({
+  ...(!options.disableCelestialFrame && isCelestialGalaxyTrackerTheme(theme)
+    ? getCelestialGalaxyCardStyle("goals", "reward")
+    : {}),
   background: isSpaceConsoleTheme(theme)
     ? `${getThemeCardOrnament(theme, "reward")}, linear-gradient(180deg, rgba(9,13,21,0.95) 0%, rgba(15,20,31,0.98) 100%)`
     : theme.themeFamily === "underwater"
@@ -6994,7 +8652,7 @@ function buildTrackerTutorialSteps(selectedTrackingAreaOptions) {
   const categorySummary =
     selectedTrackingAreaOptions.length > 0
       ? selectedTrackingAreaOptions.map((area) => area.label).join(", ")
-      : "Meds, Food, Hygiene, Sleep, Cleaning, Exercise, and Mood";
+      : "Meds, Food, Hygiene, Sleep, Cleaning, Exercise, To-Do, and Mood";
   const firstCategory = selectedTrackingAreaOptions[0];
   const hasMoodCategory = selectedTrackingAreaOptions.some((area) => area.pageKey === "mood");
   const secondCategory = selectedTrackingAreaOptions[1] || null;

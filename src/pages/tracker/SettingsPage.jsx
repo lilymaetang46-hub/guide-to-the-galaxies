@@ -54,10 +54,18 @@ function TrackerSettingsPage({ app }) {
     startTrackerTutorial,
     showTrackerTutorial,
   } = app;
+  const disableGalaxyFrame =
+    theme.themeFamily === "galaxy" &&
+    !theme.observerConsole &&
+    !theme.trackerSolar &&
+    !theme.trackerReef &&
+    !theme.trackerAbyss;
+  const sectionStyle = (sectionKey) =>
+    sectionCardStyle(theme, sectionKey, { disableCelestialFrame: disableGalaxyFrame });
 
   return (
     <div style={chartsPageStyle}>
-      <section className="galaxy-panel" style={sectionCardStyle(theme, "signals")}>
+      <section className="galaxy-panel" style={sectionStyle("signals")}>
         {renderSectionHeader("Settings", "Update your profile, theme, and security details here.", "Halo", "Moon")}
         <div style={goalFormGridStyle}>
           <div>
@@ -88,7 +96,7 @@ function TrackerSettingsPage({ app }) {
         </div>
       </section>
 
-      <section className="galaxy-panel" style={sectionCardStyle(theme, "jump")}>
+      <section className="galaxy-panel" style={sectionStyle("jump")}>
         {renderSectionHeader("Tracking Areas", "Add more tracker sections later without repeating the first-time chooser.", "Areas", "Areas")}
         <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
           {selectedTrackingAreaOptions.map((area) => (
@@ -143,7 +151,7 @@ function TrackerSettingsPage({ app }) {
         {renderFeedbackMessage(trackingAreasMessage, theme)}
       </section>
 
-      <section className="galaxy-panel" style={sectionCardStyle(theme, "dashboard")}>
+      <section className="galaxy-panel" style={sectionStyle("dashboard")}>
         {renderSectionHeader("Tutorial", "Replay the tracker walkthrough anytime while staying logged in.", "Guide", "Guide")}
         <p style={{ margin: "0 0 16px 0", color: theme.subtleText, lineHeight: 1.6 }}>
           Use this as a test harness while we tune the onboarding flow.
@@ -157,7 +165,7 @@ function TrackerSettingsPage({ app }) {
         </button>
       </section>
 
-      <section className="galaxy-panel" style={sectionCardStyle(theme, "goals")}>
+      <section className="galaxy-panel" style={sectionStyle("goals")}>
         {renderSectionHeader("Change PIN", "Use your current PIN, then choose a new one with 4 to 8 digits.", "Bloom", "Constellation")}
         <div style={goalFormGridStyle}>
           <div>
@@ -179,7 +187,7 @@ function TrackerSettingsPage({ app }) {
         {renderFeedbackMessage(settingsMessage, theme)}
       </section>
 
-      <section className="galaxy-panel" style={sectionCardStyle(theme, "care")}>
+      <section className="galaxy-panel" style={sectionStyle("care")}>
         {renderSectionHeader(
           "Native Push",
           "Turn on device notifications for the native app shell while keeping the shared web app flow intact.",
@@ -214,7 +222,7 @@ function TrackerSettingsPage({ app }) {
         {renderFeedbackMessage(pushStatusMessage, theme)}
       </section>
 
-      <section className="galaxy-panel" style={sectionCardStyle(theme, "care")}>
+      <section className="galaxy-panel" style={sectionStyle("care")}>
         {renderSectionHeader("Forgot PIN / Reset PIN", "Use your account password to reset your PIN if you do not remember the current one.", "Reset", "Reset")}
         <div style={goalFormGridStyle}>
           <div>
@@ -236,7 +244,7 @@ function TrackerSettingsPage({ app }) {
         {renderFeedbackMessage(settingsMessage, theme)}
       </section>
 
-      <section className="galaxy-panel" style={sectionCardStyle(theme, "signals")}>
+      <section className="galaxy-panel" style={sectionStyle("signals")}>
         {renderSectionHeader("Session", "Account actions stay at the bottom so the main settings are easier to scan.", "Session", "Session")}
         <button style={softButtonStyle(theme)} onClick={handleLogout}>Logout</button>
       </section>

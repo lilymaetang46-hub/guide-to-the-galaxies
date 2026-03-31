@@ -2,8 +2,10 @@ import { useState } from "react";
 
 const OBSERVATORY_NAV_ITEMS = [
   { key: "charts", label: "Map", icon: "auto_awesome" },
+  { key: "calendar", label: "Calendar", icon: "calendar_month" },
   { key: "tracking", label: "Log", icon: "terminal" },
   { key: "orbit", label: "Orbit", icon: "adjust" },
+  { key: "goals", label: "Goals", icon: "trophy" },
   { key: "support", label: "Signal", icon: "rss_feed" },
   { key: "connections", label: "Portal", icon: "blur_on" },
   { key: "settings", label: "Settings", icon: "settings" },
@@ -11,8 +13,10 @@ const OBSERVATORY_NAV_ITEMS = [
 
 const SOLAR_NAV_ITEMS = [
   { key: "mission", label: "Observe", icon: "visibility" },
+  { key: "calendar", label: "Calendar", icon: "calendar_month" },
   { key: "charts", label: "Reflect", icon: "auto_awesome" },
   { key: "tracking", label: "Log", icon: "edit_note" },
+  { key: "goals", label: "Goals", icon: "trophy" },
   { key: "support", label: "Signal", icon: "notifications" },
   { key: "connections", label: "Orbit", icon: "wb_sunny" },
   { key: "settings", label: "Settings", icon: "settings" },
@@ -104,12 +108,14 @@ function TrackerLayout({
   if (isReefTrackerTheme(theme)) {
     const underwaterTrackingPage =
       trackerNavItems.find((navItem) =>
-        ["meds", "food", "sleep", "hygiene", "cleaning", "exercise", "mood"].includes(navItem.key)
+        ["meds", "food", "sleep", "hygiene", "cleaning", "exercise", "todo", "period", "appointments", "mood"].includes(navItem.key)
       )?.key || "mood";
     const reefNavItems = [
       { key: "charts", label: "Current", icon: "query_stats" },
+      { key: "calendar", label: "Calendar", icon: "calendar_month" },
       { key: "tracking", label: "Flow", icon: "explore" },
       { key: "orbit", label: "Reef", icon: "waves" },
+      { key: "goals", label: "Goals", icon: "trophy" },
       { key: "support", label: "Pings", icon: "sailing" },
       { key: "connections", label: "Portal", icon: "blur_on" },
       { key: "settings", label: "Config", icon: "settings" },
@@ -120,7 +126,7 @@ function TrackerLayout({
       }
 
       if (itemKey === "tracking") {
-        return ["meds", "food", "sleep", "hygiene", "cleaning", "exercise", "mood"].includes(activePage);
+        return ["meds", "food", "sleep", "hygiene", "cleaning", "exercise", "todo", "period", "appointments", "mood"].includes(activePage);
       }
 
       return activePage === itemKey;
@@ -383,19 +389,21 @@ function TrackerLayout({
   if (isAbyssTrackerTheme(theme)) {
     const underwaterTrackingPage =
       trackerNavItems.find((navItem) =>
-        ["meds", "food", "sleep", "hygiene", "cleaning", "exercise", "mood"].includes(navItem.key)
+        ["meds", "food", "sleep", "hygiene", "cleaning", "exercise", "todo", "period", "appointments", "mood"].includes(navItem.key)
       )?.key || "mood";
     const abyssNavItems = [
       { key: "charts", label: "Logs", icon: "query_stats" },
+      { key: "calendar", label: "Calendar", icon: "calendar_month" },
       { key: "tracking", label: "Biometrics", icon: "monitor_heart" },
       { key: "orbit", label: "Depth", icon: "water_lux" },
+      { key: "goals", label: "Goals", icon: "trophy" },
       { key: "support", label: "Signal", icon: "rss_feed" },
       { key: "connections", label: "Portal", icon: "blur_on" },
       { key: "settings", label: "Settings", icon: "settings" },
     ];
     const abyssNavActive = (itemKey) => {
       if (itemKey === "tracking") {
-        return ["meds", "food", "sleep", "hygiene", "cleaning", "exercise", "mood"].includes(activePage);
+        return ["meds", "food", "sleep", "hygiene", "cleaning", "exercise", "todo", "period", "appointments", "mood"].includes(activePage);
       }
 
       if (itemKey === "orbit") {
@@ -673,7 +681,7 @@ function TrackerLayout({
       }
 
       if (itemKey === "tracking") {
-        return ["meds", "food", "sleep", "hygiene", "cleaning", "exercise", "mood"].includes(activePage);
+        return ["meds", "food", "sleep", "hygiene", "cleaning", "exercise", "todo", "period", "appointments", "mood"].includes(activePage);
       }
 
       if (itemKey === "orbit") {
@@ -1003,7 +1011,7 @@ function TrackerLayout({
                   handleSelectPage(
                     item.key === "tracking"
                       ? trackerNavItems.find((navItem) =>
-                          ["meds", "food", "sleep", "hygiene", "cleaning", "exercise", "mood"].includes(navItem.key)
+                          ["meds", "food", "sleep", "hygiene", "cleaning", "exercise", "todo", "period", "appointments", "mood"].includes(navItem.key)
                         )?.key || "mood"
                       : item.key === "charts"
                       ? "charts"
@@ -1068,8 +1076,8 @@ function TrackerLayout({
         return activePage === "mission" || activePage === "dashboard";
       }
 
-       if (itemKey === "tracking") {
-        return ["meds", "food", "sleep", "hygiene", "cleaning", "exercise", "mood"].includes(activePage);
+      if (itemKey === "tracking") {
+        return ["meds", "food", "sleep", "hygiene", "cleaning", "exercise", "todo", "period", "appointments", "mood"].includes(activePage);
       }
 
       return activePage === itemKey;
@@ -1277,7 +1285,7 @@ function TrackerLayout({
                   handleSelectPage(
                     item.key === "tracking"
                       ? trackerNavItems.find((navItem) =>
-                          ["meds", "food", "sleep", "hygiene", "cleaning", "exercise", "mood"].includes(navItem.key)
+                          ["meds", "food", "sleep", "hygiene", "cleaning", "exercise", "todo", "period", "appointments", "mood"].includes(navItem.key)
                         )?.key || "mood"
                       : item.key
                   )

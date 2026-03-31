@@ -202,6 +202,9 @@ function getGoalUnitValue(entry, category) {
   const exerciseCount = Array.isArray(entry.exercise_logs)
     ? entry.exercise_logs.length
     : 0;
+  const todoCompletedCount = (Array.isArray(entry.todo_items) ? entry.todo_items : []).filter(
+    (item) => item?.completed
+  ).length;
 
   switch (category) {
     case "Meds":
@@ -216,6 +219,8 @@ function getGoalUnitValue(entry, category) {
       return cleaningValue;
     case "Exercise":
       return Math.max(exerciseCount, entry.exercise_done ? 1 : 0);
+    case "To-Do":
+      return todoCompletedCount;
     default:
       return 0;
   }
@@ -331,6 +336,129 @@ export function calculateSimpleDailyStreak(rows, predicate, today) {
   }
 
   return streak;
+}
+
+function addDays(date, days) {
+  const nextDate = new Date(date);
+  nextDate.setDate(nextDate.getDate() + days);
+  return nextDate;
+}
+
+function expandDateRange(startDateKey, endDateKey) {
+  const startDate = parseDateKey(startDateKey);
+  const endDate = parseDateKey(endDateKey || startDateKey);
+  const safeEndDate = endDate >= startDate ? endDate : startDate;
+  const dates = [];
+
+  for (
+    let cursor = new Date(startDate);
+    cursor <= safeEndDate;
+    cursor.setDate(cursor.getDate() + 1)
+  ) {
+    dates.push(formatDateKey(cursor));
+  }
+
+  return dates;
+}
+
+export function buildCalendarEvents({
+  todoItems = [],
+  appointments = [],
+  periodCycles = [],
+  nextCycleEstimateDate = "",
+}) {
+  const events = [];
+
+  (Array.isArray(todoItems) ? todoItems : []).forEach((item) => {
+    if (!item?.dueDate) return;
+
+    events.push({
+      id: `todo-${item.id || item.dueDate}-${item.text || "task"}`,
+      kind: "todo",
+      date: item.dueDate,
+      time: item.time || "",
+      title: item.text || "Untitled task",
+      detail: item.completed
+        ? "Completed task"
+        : item.time
+        ? `Due by ${item.time}`
+        : "Task due",
+      note: item.note || "",
+      completed: Boolean(item.completed),
+      sourcePageKey: "todo",
+      sourceLabel: "To-Do",
+      badgeLabel: item.completed ? "Task done" : "To-Do",
+    });
+  });
+
+  (Array.isArray(appointments) ? appointments : []).forEach((item) => {
+    if (!item?.eventDate) return;
+
+    const itemType = item.itemType === "reminder" ? "Reminder" : "Appointment";
+    const detailParts = [item.eventTime || "", item.location || ""].filter(Boolean);
+
+    events.push({
+      id: `appointment-${item.id || item.eventDate}-${item.title || "item"}`,
+      kind: "appointment",
+      date: item.eventDate,
+      time: item.eventTime || "",
+      title: item.title || itemType,
+      detail: detailParts.join(" · "),
+      note: item.note || "",
+      sourcePageKey: "appointments",
+      sourceLabel: "Appointments",
+      badgeLabel: itemType,
+    });
+  });
+
+  (Array.isArray(periodCycles) ? periodCycles : []).forEach((cycle, index) => {
+    if (!cycle?.startDate) return;
+
+    expandDateRange(cycle.startDate, cycle.endDate || cycle.startDate).forEach((dateKey, dayIndex) => {
+      events.push({
+        id: `period-${cycle.id || index}-${dateKey}`,
+        kind: "period",
+        date: dateKey,
+        title: `Period day ${dayIndex + 1}`,
+        detail: cycle.flowLevel ? `${cycle.flowLevel} flow` : "Period tracked",
+        note:
+          Array.isArray(cycle.symptomTags) && cycle.symptomTags.length > 0
+            ? cycle.symptomTags.join(", ")
+            : cycle.privateNotes || "",
+        sourcePageKey: "period",
+        sourceLabel: "Period",
+        badgeLabel: "Period",
+      });
+    });
+  });
+
+  if (nextCycleEstimateDate) {
+    expandDateRange(
+      nextCycleEstimateDate,
+      formatDateKey(addDays(parseDateKey(nextCycleEstimateDate), 4))
+    ).forEach((dateKey, index) => {
+      events.push({
+        id: `period-estimate-${dateKey}`,
+        kind: "period",
+        date: dateKey,
+        title: index === 0 ? "Next cycle estimate" : `Estimated cycle day ${index + 1}`,
+        detail: "Predicted from recent cycle timing",
+        note: "",
+        estimated: true,
+        sourcePageKey: "period",
+        sourceLabel: "Period",
+        badgeLabel: "Estimate",
+      });
+    });
+  }
+
+  return events.sort((left, right) => {
+    if (left.date !== right.date) return left.date.localeCompare(right.date);
+    if ((left.time || "") !== (right.time || "")) {
+      return (left.time || "").localeCompare(right.time || "");
+    }
+    return left.title.localeCompare(right.title);
+  });
 }
 
 export function getThemeLanguage(family = "galaxy") {
