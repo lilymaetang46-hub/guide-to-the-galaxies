@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+﻿import { useEffect, useMemo, useState } from "react";
 import { supabase } from "./supabase";
 import { useEffectEvent } from "react";
 import { App as CapacitorApp } from "@capacitor/app";
@@ -2238,7 +2238,7 @@ function App() {
         .eq("user_id", user.id)
         .in("period_cycle_id", cycleIds);
 
-        if (privateNotesError) {
+      if (privateNotesError) {
         console.error("Period cycle private note load error:", privateNotesError);
         setPeriodStatusMessage("Could not load period history.");
         return;
@@ -2715,6 +2715,8 @@ function App() {
     );
   };
 
+  const activePeriodCycle = periodCycles.find((cycle) => !cycle.endDate) || null;
+
   const savePeriodPrivateNotes = async (periodCycleId, notesValue) => {
     if (!user || !periodCycleId) return { error: null };
 
@@ -2743,8 +2745,6 @@ function App() {
     return { error };
   };
 
-  const activePeriodCycle = periodCycles.find((cycle) => !cycle.endDate) || null;
-
   const startPeriodCycle = async () => {
     if (!user) return;
 
@@ -2755,17 +2755,33 @@ function App() {
 
     const startDate = periodStartDate || today;
 
-    const { error } = await supabase.from("period_cycles").insert({
-      user_id: user.id,
-      start_date: startDate,
-      flow_level: periodFlowLevel || "medium",
-      symptom_tags: periodSymptomTags,
-      updated_at: new Date().toISOString(),
-    });
+    const { data: insertedCycle, error } = await supabase
+      .from("period_cycles")
+      .insert({
+        user_id: user.id,
+        start_date: startDate,
+        flow_level: periodFlowLevel || "medium",
+        symptom_tags: periodSymptomTags,
+        updated_at: new Date().toISOString(),
+      })
+      .select("id")
+      .single();
 
     if (error) {
       console.error("Period start error:", error);
       setPeriodStatusMessage("Could not start the period entry.");
+      return;
+    }
+
+    const { error: privateNotesError } = await savePeriodPrivateNotes(
+      insertedCycle?.id,
+      periodPrivateNotes
+    );
+
+    if (privateNotesError) {
+      console.error("Period private note save error:", privateNotesError);
+      setPeriodStatusMessage("Cycle saved, but private notes could not be saved.");
+      await loadPeriodCycles();
       return;
     }
 
@@ -2802,6 +2818,18 @@ function App() {
     if (error) {
       console.error("Period update error:", error);
       setPeriodStatusMessage("Could not save period details.");
+      return;
+    }
+
+    const { error: privateNotesError } = await savePeriodPrivateNotes(
+      activePeriodCycle.id,
+      periodPrivateNotes
+    );
+
+    if (privateNotesError) {
+      console.error("Period private note update error:", privateNotesError);
+      setPeriodStatusMessage("Period details saved, but private notes could not be saved.");
+      await loadPeriodCycles();
       return;
     }
 
@@ -7981,7 +8009,6 @@ const smallInfoStyle = (theme) => ({
   overflowWrap: "anywhere",
   lineHeight: 1.55,
 });
-
 
 const buttonWrapStyle = {
   display: "flex",

@@ -24,6 +24,7 @@ Use this file as the shared handoff note for any Codex thread working in this re
 - Avoid putting temporary task state here; use `Active Work` or `Handoff Notes` for that.
 - Memory items:
   - `docs/project-context.md` is the shared source-of-truth file that new Codex threads should read before making changes.
+  - Always update this file and Linear when completing a task to avoid confusion in future areas.
   - After finishing a meaningful piece of work, Codex should ask whether now is a good time to commit and give a recommendation about whether committing now makes sense.
   - Codex should read `docs/project-context.md` before making changes so parallel threads stay aligned.
   - The user does not have a coding background, so key technical terms should be explained in plain language when they matter.
@@ -63,14 +64,23 @@ Use this file as the shared handoff note for any Codex thread working in this re
 ## Active Work
 
 - Active ownership note:
-  - Area/files: tracker navigation regression for GUI-65
+  - Area/files: tracker navigation regression for `GUI-65`
   - Goal: Fix the tracker nav bug where Appointments disappears after switching from Log to Mood.
   - Status: Done in this thread on 2026-04-02
   - Notes:
-    - Chosen because it is a focused tracker bug with a narrower write scope than the larger Now issues.
+    - Chosen because it is a focused tracker bug with a narrower write scope than the larger `Now` issues.
     - Avoids the reserved outsider policy lane and should be safer around the current dirty worktree than broader app-wide tasks.
-    - Fixed in src/pages/tracker/MoodPage.jsx by keeping Appointments in the Mood page section switcher list.
-    - Verified with npm run build.
+    - Fixed in `src/pages/tracker/MoodPage.jsx` by keeping Appointments in the Mood page section switcher list.
+    - Verified with `npm run build`.
+
+- Active ownership note:
+  - Area/files: tracker polish cleanup for `GUI-22`
+  - Goal: Restore clean lint/build baseline and remove recent tracker UI polish regressions after expansion work.
+  - Status: Done in this thread on 2026-04-02
+  - Notes:
+    - Chosen because it is a current `Now` issue in Tracker Stabilization, aligns with the latest cleanup handoff notes, and avoids the reserved outsider policy work around `GUI-42`.
+    - Removed unused `rowStyle` plumbing from `src/App.jsx`, normalized tracker punctuation in `src/pages/tracker/TrackingPage.jsx`, and re-verified `npm run lint` plus `npm run build`.
+
 - Confirmed finished work in latest commit:
   - Area/files: `src/App.jsx`, `src/pages/tracker/SettingsPage.jsx`, `src/pages/tracker/TrackingPage.jsx`
   - Goal: Shell cleanup, form behavior cleanup, and tracker responsiveness/polish.
@@ -92,12 +102,14 @@ Use this file as the shared handoff note for any Codex thread working in this re
     - Local JSON exports are present as snapshots of current Linear projects and issues before and after the planning migration work.
     - `docs/tracking-expansion-plan.md` now includes an outsider implementation checklist and a cross-reference to calendar visibility planning.
 
-- Active ownership note:
-  - Area/files: outsider policy work for `GUI-42`
-  - Goal: Add outsider read policies for appointments and period cycles.
-  - Status: Claimed by another thread
+- Current working-tree completion:
+  - Area/files: `src/App.jsx`, `supabase/migrations/20260402214500_add_outsider_access_for_appointments_and_period_cycles.sql`
+  - Goal: Finish `GUI-42` by adding outsider read access for appointments and period cycles without exposing private period notes.
+  - Status: Implemented locally, not committed yet
   - Notes:
-    - Treat Supabase policy files and related outsider permission work as reserved unless intentionally coordinating with that thread.
+    - Outsider row-level access is added for `appointments` and `period_cycles` using approved connection permissions.
+    - Period `private_notes` were moved into a new tracker-only table so outsiders cannot read them through `period_cycles`.
+    - Tracker-side period loading now reads private notes from the new table and writes them separately.
 
 ## Recent Decisions
 
@@ -122,7 +134,7 @@ Use this file as the shared handoff note for any Codex thread working in this re
 
 - `src/App.jsx` is the biggest coordination hotspot in the repo. It mixes auth, tracker state, outsider state, support inbox work, connections, and calendar normalization.
 - Avoid overlapping edits in these files while active threads are running:
-  - any Supabase migration or policy files related to outsider access while `GUI-42` is in progress
+  - coordinate before touching `src/App.jsx` because it remains the main integration hotspot
 - The outsider experience is still behind the tracker feature set. Current data loading relies heavily on `daily_entries` history and needs a better unified summary model before outsider parity gets much better.
 - To-do data still lives inside `daily_entries.todo_items`, which makes richer scheduling and cross-day behavior harder. Longer-term Linear work already exists to move this into dedicated storage.
 - Period sharing is extra sensitive:
@@ -144,20 +156,22 @@ Use this file as the shared handoff note for any Codex thread working in this re
 ## Handoff Notes
 
 - What changed:
-  - Fixed GUI-65 locally by restoring the Appointments button in the Mood page section switcher and verified the app still builds.
+  - Fixed `GUI-65` locally by restoring the Appointments button in the Mood page section switcher and verified the app still builds.
+  - Completed `GUI-22` by removing unused `rowStyle` plumbing from `src/App.jsx`, normalizing tracker punctuation in `src/pages/tracker/TrackingPage.jsx`, and updating the Linear issue with a dated progress note.
   - Added a shared `docs/project-context.md` file so multiple Codex threads can ground themselves in one current repo snapshot.
   - Updated this note after the clean commit `08fdaed` so the old "inferred" work items are now recorded as completed work.
-  - Recorded that another thread wants to take `GUI-42`, so outsider policy/migration work is effectively reserved.
+  - Added the shared-memory rule to keep this file and Linear updated after task completion.
+  - Implemented `GUI-42` locally by adding outsider read policies for appointments and period cycles, while moving period `private_notes` into a tracker-only table.
 - What still needs attention:
   - Confirm the latest commit still builds and behaves correctly after the auth/settings/tracking cleanup.
   - Keep outsider follow-up work anchored to the current Linear sequence instead of reviving old ad hoc planning.
-  - Coordinate carefully around `GUI-42` so app-side outsider work does not drift from the policy layer being built elsewhere.
+  - Apply the new Supabase migration in the linked environment before starting outsider data-loading work that depends on these policies.
 - What should the next thread verify:
   - Whether the `useEffectEvent` refactor in `src/App.jsx` clears lint warnings without changing app behavior.
   - Whether tracker auth/settings forms still work correctly on desktop and mobile.
   - Whether tracker to-do and appointment UI changes in `src/pages/tracker/TrackingPage.jsx` behave correctly on narrow screens.
   - Whether the local Linear CLI and JSON exports should remain checked in or become a lighter workflow artifact.
-  - Whether any outsider UI/data-loading work should wait on `GUI-42` or proceed behind safe assumptions.
+  - Whether outsider app-side loading for appointments and period summaries should now proceed as `GUI-45`.
 
 ## Linear Focus
 
@@ -166,8 +180,6 @@ Use this file as the shared handoff note for any Codex thread working in this re
   - `GUI-54` Build grouped Log picker with recent and pinned categories
   - `GUI-52` Add task priority and due time to To-Do items
   - `GUI-45` Load and normalize To-Do, Period, and Appointments for outsider views
-  - `GUI-42` Add outsider read policies for appointments and period cycles
-    - ownership note: another thread plans to work this now
   - `GUI-28` Make responsive layout handling reactive across tracker and outsider screens
   - `GUI-26` Clean up mobile UI across tracker and outsider flows
   - `GUI-22` Clean up tracking UI polish regressions from expansion work
