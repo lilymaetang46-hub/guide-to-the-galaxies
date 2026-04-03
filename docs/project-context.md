@@ -7,9 +7,28 @@ Use this file as the shared handoff note for any Codex thread working in this re
 - Project: tracker-app
 - Purpose: Personal tracking app with tracker and outsider experiences, Supabase-backed data, mobile support via Capacitor, and local Linear planning support.
 - Last updated: 2026-04-02
+- Latest repo commit: `08fdaed` - `Add Linear tooling and auth autofill fixes`
 - Current product shape:
   - Tracker side is the main logged-in experience for daily tracking, goals, to-dos, appointments, period tracking, settings, and support flows.
   - Outsider side is a permission-limited, read-only sharing experience that still needs to catch up with newer tracker features.
+
+## Memory
+
+- Use this section for durable context that future threads should treat as "remembered" project guidance.
+- Keep items short, concrete, and stable over time.
+- Good fits:
+  - user preferences about how Codex should work in this repo
+  - naming decisions
+  - recurring product rules
+  - collaboration rules for parallel threads
+- Avoid putting temporary task state here; use `Active Work` or `Handoff Notes` for that.
+- Memory items:
+  - `docs/project-context.md` is the shared source-of-truth file that new Codex threads should read before making changes.
+  - After finishing a meaningful piece of work, Codex should ask whether now is a good time to commit and give a recommendation about whether committing now makes sense.
+  - Codex should read `docs/project-context.md` before making changes so parallel threads stay aligned.
+  - The user does not have a coding background, so key technical terms should be explained in plain language when they matter.
+  - If Codex notices a useful tool or integration that would help but is not available, Codex should tell the user and help set it up.
+  - If the user says to remember something, Codex should add it to `docs/project-context.md` instead of relying on chat memory alone.
 
 ## Current Priorities
 
@@ -20,33 +39,33 @@ Use this file as the shared handoff note for any Codex thread working in this re
 
 ## Active Work
 
-- In-progress thread A (inferred from working tree):
-  - Area/files: `src/App.jsx`, `src/pages/tracker/SettingsPage.jsx`
-  - Goal: Shell and form cleanup, especially around effect handling and auth/settings form behavior.
-  - Status: In progress
+- Confirmed finished work in latest commit:
+  - Area/files: `src/App.jsx`, `src/pages/tracker/SettingsPage.jsx`, `src/pages/tracker/TrackingPage.jsx`
+  - Goal: Shell cleanup, form behavior cleanup, and tracker responsiveness/polish.
+  - Status: Done in `08fdaed`
   - Notes:
-    - `src/App.jsx` is being refactored to use React 19 `useEffectEvent` wrappers around effect-driven async work.
-    - The same file is getting auth form improvements such as real `<form>` submission, labels, `htmlFor`, and browser autocomplete hints.
-    - `src/pages/tracker/SettingsPage.jsx` is being updated so PIN change and PIN reset flows submit through forms instead of click-only buttons.
+    - `src/App.jsx` now uses React 19 `useEffectEvent` wrappers around effect-triggered async work to reduce stale closure and exhaustive-deps friction.
+    - Auth flows now use real form submission with labels, ids, and browser autofill/autocomplete hints.
+    - `src/pages/tracker/SettingsPage.jsx` now treats PIN change and PIN reset as proper forms.
+    - `src/pages/tracker/TrackingPage.jsx` cleaned up dead UI code, improved narrow-screen layout behavior, and tightened appointment draft detection.
 
-- In-progress thread B (inferred from working tree):
-  - Area/files: `src/pages/tracker/TrackingPage.jsx`
-  - Goal: Tracking UI cleanup and responsiveness improvements.
-  - Status: In progress
-  - Notes:
-    - Removes dead UI code and an unused prop.
-    - Makes action rows more flexible on narrow screens.
-    - Adjusts appointment draft detection and to-do rendering cleanup.
-
-- In-progress thread C (inferred from working tree):
-  - Area/files: `package.json`, `scripts/linear-cli.mjs`, `linear-projects.json`, `linear-issues.json`, `docs/tracking-expansion-plan.md`
-  - Goal: Move planning context into Linear and make local Linear queries easier from the repo.
-  - Status: In progress
+- Confirmed finished work in latest commit:
+  - Area/files: `package.json`, `scripts/linear-cli.mjs`, `scripts/backfill-linear-plans.mjs`, `linear-projects.json`, `linear-projects-after.json`, `linear-issues.json`, `linear-issues-after.json`, `docs/tracking-expansion-plan.md`
+  - Goal: Move planning context into Linear and make local Linear workflows available from the repo.
+  - Status: Done in `08fdaed`
   - Notes:
     - Adds `npm run linear`, `npm run linear:teams`, and `npm run linear:create`.
     - `scripts/linear-cli.mjs` loads `LINEAR_API_KEY` from `.env.local` and supports listing and creating/updating Linear projects and issues.
-    - Local JSON exports are present as snapshots of current Linear projects and issues.
+    - `scripts/backfill-linear-plans.mjs` exists to help move planning docs into Linear.
+    - Local JSON exports are present as snapshots of current Linear projects and issues before and after the planning migration work.
     - `docs/tracking-expansion-plan.md` now includes an outsider implementation checklist and a cross-reference to calendar visibility planning.
+
+- Active ownership note:
+  - Area/files: outsider policy work for `GUI-42`
+  - Goal: Add outsider read policies for appointments and period cycles.
+  - Status: Claimed by another thread
+  - Notes:
+    - Treat Supabase policy files and related outsider permission work as reserved unless intentionally coordinating with that thread.
 
 ## Recent Decisions
 
@@ -71,11 +90,7 @@ Use this file as the shared handoff note for any Codex thread working in this re
 
 - `src/App.jsx` is the biggest coordination hotspot in the repo. It mixes auth, tracker state, outsider state, support inbox work, connections, and calendar normalization.
 - Avoid overlapping edits in these files while active threads are running:
-  - `src/App.jsx`
-  - `src/pages/tracker/SettingsPage.jsx`
-  - `src/pages/tracker/TrackingPage.jsx`
-  - `docs/tracking-expansion-plan.md`
-  - `package.json`
+  - any Supabase migration or policy files related to outsider access while `GUI-42` is in progress
 - The outsider experience is still behind the tracker feature set. Current data loading relies heavily on `daily_entries` history and needs a better unified summary model before outsider parity gets much better.
 - To-do data still lives inside `daily_entries.todo_items`, which makes richer scheduling and cross-day behavior harder. Longer-term Linear work already exists to move this into dedicated storage.
 - Period sharing is extra sensitive:
@@ -98,16 +113,18 @@ Use this file as the shared handoff note for any Codex thread working in this re
 
 - What changed:
   - Added a shared `docs/project-context.md` file so multiple Codex threads can ground themselves in one current repo snapshot.
-  - Captured current in-progress work by reading the working tree and local Linear exports.
+  - Updated this note after the clean commit `08fdaed` so the old "inferred" work items are now recorded as completed work.
+  - Recorded that another thread wants to take `GUI-42`, so outsider policy/migration work is effectively reserved.
 - What still needs attention:
-  - Confirm the in-progress app-shell and tracking UI changes still build and behave correctly once the active threads finish.
+  - Confirm the latest commit still builds and behaves correctly after the auth/settings/tracking cleanup.
   - Keep outsider follow-up work anchored to the current Linear sequence instead of reviving old ad hoc planning.
-  - Decide when to convert the "inferred from working tree" entries above into confirmed ownership notes from finished threads.
+  - Coordinate carefully around `GUI-42` so app-side outsider work does not drift from the policy layer being built elsewhere.
 - What should the next thread verify:
   - Whether the `useEffectEvent` refactor in `src/App.jsx` clears lint warnings without changing app behavior.
   - Whether tracker auth/settings forms still work correctly on desktop and mobile.
   - Whether tracker to-do and appointment UI changes in `src/pages/tracker/TrackingPage.jsx` behave correctly on narrow screens.
   - Whether the local Linear CLI and JSON exports should remain checked in or become a lighter workflow artifact.
+  - Whether any outsider UI/data-loading work should wait on `GUI-42` or proceed behind safe assumptions.
 
 ## Linear Focus
 
@@ -117,6 +134,7 @@ Use this file as the shared handoff note for any Codex thread working in this re
   - `GUI-52` Add task priority and due time to To-Do items
   - `GUI-45` Load and normalize To-Do, Period, and Appointments for outsider views
   - `GUI-42` Add outsider read policies for appointments and period cycles
+    - ownership note: another thread plans to work this now
   - `GUI-28` Make responsive layout handling reactive across tracker and outsider screens
   - `GUI-26` Clean up mobile UI across tracker and outsider flows
   - `GUI-22` Clean up tracking UI polish regressions from expansion work
