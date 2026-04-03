@@ -3971,7 +3971,6 @@ function App() {
     mealListStyle,
     mealItemStyle,
     smallRemoveButtonStyle,
-    rowStyle,
     buttonWrapStyle,
     sleepGridStyle,
     rangeStyle,
@@ -4893,7 +4892,6 @@ function App() {
       emptyTextStyle,
       smallInfoStyle,
       trackerSectionSwitcherButtonStyle,
-      rowStyle,
       sleepGridStyle,
       sliderValueStyle,
       rangeStyle,
@@ -7984,14 +7982,6 @@ const smallInfoStyle = (theme) => ({
   lineHeight: 1.55,
 });
 
-const rowStyle = {
-  display: "flex",
-  gap: "12px",
-  alignItems: "stretch",
-  flexWrap: "wrap",
-  flexDirection: "column",
-  width: "100%",
-};
 
 const buttonWrapStyle = {
   display: "flex",

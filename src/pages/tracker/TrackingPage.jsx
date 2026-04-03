@@ -437,7 +437,7 @@ function TrackerTrackingPage({ app, pageKey }) {
               : item.time
               ? `Planned for ${formatTimeLabel(item.time)}`
               : "No due date"}
-            {item.completed && item.completedAt ? ` · Done at ${formatTimeLabel(item.completedAt)}` : ""}
+            {item.completed && item.completedAt ? ` - Done at ${formatTimeLabel(item.completedAt)}` : ""}
           </div>
           {item.note ? <div style={{ fontSize: "0.88rem", opacity: 0.82 }}>{item.note}</div> : null}
         </div>
@@ -1197,7 +1197,7 @@ function TrackerTrackingPage({ app, pageKey }) {
             </div>
           </div>
           <p style={smallInfoStyle(theme)}>
-            Minutes and “worth it” are still saved, but they live here so the quick cleaning wins stay front and center.
+            Minutes and "worth it" are still saved, but they live here so the quick cleaning wins stay front and center.
           </p>
         </div>
       </section>
