@@ -56,6 +56,17 @@ function formatTimeLabel(value) {
   return `${displayHours}:${String(minutes).padStart(2, "0")} ${suffix}`;
 }
 
+function getTodoPriorityLabel(priority) {
+  switch (priority) {
+    case "high":
+      return "High priority";
+    case "low":
+      return "Low priority";
+    default:
+      return "Medium priority";
+  }
+}
+
 function getAgendaItemTone(theme, item) {
   if (item.kind === "period") {
     return {
@@ -372,6 +383,19 @@ function TrackerCalendarPage({ app }) {
                         >
                           {item.badgeLabel}
                         </span>
+                        {item.kind === "todo" ? (
+                          <span
+                            style={{
+                              padding: "0.2rem 0.55rem",
+                              borderRadius: "999px",
+                              background: "rgba(59, 130, 246, 0.12)",
+                              fontSize: "0.76rem",
+                              fontWeight: 700,
+                            }}
+                          >
+                            {getTodoPriorityLabel(item.priority)}
+                          </span>
+                        ) : null}
                         {item.estimated ? <span style={{ ...smallInfoStyle(theme), margin: 0 }}>Estimate</span> : null}
                       </div>
                       <div style={{ fontSize: "1rem", fontWeight: 700 }}>{item.title}</div>

@@ -1,4 +1,6 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+
+import useResponsiveViewport from "../app/useResponsiveViewport";
 
 const OBSERVATORY_NAV_ITEMS = [
   { key: "charts", label: "Map", icon: "auto_awesome" },
@@ -83,13 +85,14 @@ function TrackerLayout({
   tutorialActive,
   children,
 }) {
-  const [navOpen, setNavOpen] = useState(
-    () => typeof window !== "undefined" && window.innerWidth >= 900
-  );
-  const viewportWidth = typeof window !== "undefined" ? window.innerWidth : 1280;
+  const { width: viewportWidth } = useResponsiveViewport();
+  const [navOpen, setNavOpen] = useState(() => viewportWidth >= 900);
   const isMobile = viewportWidth < 768;
-
   const shouldCollapseAfterAction = viewportWidth < 900;
+
+  useEffect(() => {
+    setNavOpen(viewportWidth >= 900);
+  }, [viewportWidth]);
 
   const handleSelectPage = (page) => {
     setActivePage(page);

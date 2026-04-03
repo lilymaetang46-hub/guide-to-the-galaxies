@@ -1,3 +1,5 @@
+import useResponsiveViewport from "../../app/useResponsiveViewport";
+
 function consolePanel(theme, accent = "primary") {
   const borderColor =
     accent === "warning" ? "rgba(253, 139, 0, 0.35)" : `${theme.observerAccent}26`;
@@ -35,7 +37,7 @@ function consoleLabel(color = "#6b7078") {
 }
 
 function OutsiderGoalsPage({ app }) {
-  const viewportWidth = typeof window !== "undefined" ? window.innerWidth : 1280;
+  const { width: viewportWidth } = useResponsiveViewport();
   const isMobile = viewportWidth < 768;
   const {
     theme,

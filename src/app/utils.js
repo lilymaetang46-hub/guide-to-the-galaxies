@@ -361,6 +361,21 @@ function expandDateRange(startDateKey, endDateKey) {
   return dates;
 }
 
+function normalizeTodoPriority(priority) {
+  return ["low", "medium", "high"].includes(priority) ? priority : "medium";
+}
+
+function getTodoPriorityLabel(priority) {
+  switch (normalizeTodoPriority(priority)) {
+    case "high":
+      return "High priority";
+    case "low":
+      return "Low priority";
+    default:
+      return "Medium priority";
+  }
+}
+
 export function buildCalendarEvents({
   todoItems = [],
   appointments = [],
@@ -372,17 +387,25 @@ export function buildCalendarEvents({
   (Array.isArray(todoItems) ? todoItems : []).forEach((item) => {
     if (!item?.dueDate) return;
 
+    const priority = normalizeTodoPriority(item.priority);
+    const detailParts = [];
+
+    if (!item.completed && priority !== "medium") {
+      detailParts.push(getTodoPriorityLabel(priority));
+    }
+
+    if (!item.completed) {
+      detailParts.push(item.time ? `Due by ${item.time}` : "Task due");
+    }
+
     events.push({
       id: `todo-${item.id || item.dueDate}-${item.text || "task"}`,
       kind: "todo",
       date: item.dueDate,
       time: item.time || "",
+      priority,
       title: item.text || "Untitled task",
-      detail: item.completed
-        ? "Completed task"
-        : item.time
-        ? `Due by ${item.time}`
-        : "Task due",
+      detail: item.completed ? "Completed task" : detailParts.join(" · "),
       note: item.note || "",
       completed: Boolean(item.completed),
       sourcePageKey: "todo",

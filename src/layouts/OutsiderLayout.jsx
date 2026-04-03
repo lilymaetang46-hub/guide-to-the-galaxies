@@ -1,4 +1,6 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+
+import useResponsiveViewport from "../app/useResponsiveViewport";
 
 const CONSOLE_NAV_ITEMS = [
   { key: "outsiderOverview", label: "Overview", desktopLabel: "ENGINE_ROOM", icon: "settings_input_hdmi" },
@@ -44,23 +46,19 @@ function OutsiderLayout({
   startOutsiderTutorial,
   children,
 }) {
-  const [navOpen, setNavOpen] = useState(
-    () => typeof window !== "undefined" && window.innerWidth >= 900
-  );
-
-  const shouldCollapseAfterAction =
-    typeof window !== "undefined" && window.innerWidth < 900;
+  const { width: viewportWidth, isCoarsePointer } = useResponsiveViewport();
+  const [navOpen, setNavOpen] = useState(() => viewportWidth >= 900);
+  const shouldCollapseAfterAction = viewportWidth < 900;
   const isConsole = theme.observerConsole;
   const isAbyssBridge = isAbyssOutsiderTheme(theme);
-  const viewportWidth = typeof window !== "undefined" ? window.innerWidth : 1280;
-  const isCoarsePointer =
-    typeof window !== "undefined" &&
-    typeof window.matchMedia === "function" &&
-    window.matchMedia("(pointer: coarse)").matches;
   const isMobile = viewportWidth < 768 || (isCoarsePointer && viewportWidth < 1024);
   const showDesktopSidebar = !isCoarsePointer && viewportWidth >= 1180;
   const showCompactConsoleNav = !showDesktopSidebar;
   const consoleSidebarWidth = viewportWidth >= 1480 ? 248 : 224;
+
+  useEffect(() => {
+    setNavOpen(viewportWidth >= 900);
+  }, [viewportWidth]);
 
   const handleSelectPage = (page) => {
     setOutsiderPage(page);

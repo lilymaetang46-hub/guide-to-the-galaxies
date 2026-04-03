@@ -1,4 +1,5 @@
 import LineTrendChart from "../../components/LineTrendChart";
+import useResponsiveViewport from "../../app/useResponsiveViewport";
 
 function buildWaveformPath(data, yMax = 5) {
   if (!data?.length) {
@@ -71,7 +72,7 @@ function mobileChartScrollerStyle(theme) {
 }
 
 function OutsiderTrackerDataPage({ app }) {
-  const viewportWidth = typeof window !== "undefined" ? window.innerWidth : 1280;
+  const { width: viewportWidth } = useResponsiveViewport();
   const isMobile = viewportWidth < 768;
   const {
     theme,

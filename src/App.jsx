@@ -54,6 +54,7 @@ const OUTSIDER_DARK_MODE_KEY = "outsiderDarkMode";
 const TRACKER_TUTORIAL_SEEN_KEY = "trackerTutorialSeen";
 const OUTSIDER_TUTORIAL_SEEN_KEY = "outsiderTutorialSeen";
 const NATIVE_PUSH_TARGET_PAGE = "support";
+const TRACKING_PAGE_KEYS = TRACKING_AREA_OPTIONS.map((area) => area.pageKey);
 
 function makeConnectionCode() {
   return `STAR-${crypto.randomUUID().replace(/-/g, "").slice(0, 6).toUpperCase()}`;
@@ -217,12 +218,30 @@ function getTrackedAreasStorageKey(userId) {
   return `trackedAreas:${userId}`;
 }
 
+function getTrackerLogPreferencesStorageKey(userId) {
+  return `trackerLogPreferences:${userId}`;
+}
+
 function getTrackerTutorialSeenKey(userId) {
   return `${TRACKER_TUTORIAL_SEEN_KEY}:${userId}`;
 }
 
 function getOutsiderTutorialSeenKey(userId) {
   return `${OUTSIDER_TUTORIAL_SEEN_KEY}:${userId}`;
+}
+
+function normalizeTrackerLogPreferences(rawPreferences, allowedPageKeys = TRACKING_PAGE_KEYS) {
+  const allowedPageKeySet = new Set(allowedPageKeys);
+  const normalizeList = (value, limit) =>
+    (Array.isArray(value) ? value : [])
+      .filter((pageKey, index, array) => typeof pageKey === "string" && array.indexOf(pageKey) === index)
+      .filter((pageKey) => allowedPageKeySet.has(pageKey))
+      .slice(0, limit);
+
+  return {
+    pinned: normalizeList(rawPreferences?.pinned, 4),
+    recent: normalizeList(rawPreferences?.recent, 4),
+  };
 }
 
 function normalizePeriodCycles(rawCycles) {
@@ -274,6 +293,48 @@ function formatDisplayDate(value) {
         day: "numeric",
         year: "numeric",
       });
+}
+
+function formatDisplayTime(value) {
+  if (!value) return "";
+  const [hoursText, minutesText] = String(value).split(":");
+  const hours = Number(hoursText);
+  const minutes = Number(minutesText);
+
+  if (Number.isNaN(hours) || Number.isNaN(minutes)) {
+    return value;
+  }
+
+  const suffix = hours >= 12 ? "PM" : "AM";
+  const displayHours = hours % 12 || 12;
+  return `${displayHours}:${String(minutes).padStart(2, "0")} ${suffix}`;
+}
+
+function normalizeTodoPriorityValue(priority) {
+  return ["low", "medium", "high"].includes(priority) ? priority : "medium";
+}
+
+function getTodoPriorityLabel(priority) {
+  switch (normalizeTodoPriorityValue(priority)) {
+    case "high":
+      return "High priority";
+    case "low":
+      return "Low priority";
+    default:
+      return "Medium priority";
+  }
+}
+
+function getTodoScheduleSummary(item) {
+  if (!item?.dueDate) {
+    return item?.time ? `Planned for ${formatDisplayTime(item.time)}` : "Open";
+  }
+
+  if (item.time) {
+    return `Due ${formatDisplayDate(item.dueDate)} at ${formatDisplayTime(item.time)}`;
+  }
+
+  return `Due ${formatDisplayDate(item.dueDate)}`;
 }
 
 function App() {
@@ -348,6 +409,8 @@ function App() {
   const [outsiderPage, setOutsiderPage] = useState("outsiderOverview");
   const [trackedAreas, setTrackedAreas] = useState([]);
   const [pendingTrackedAreas, setPendingTrackedAreas] = useState([]);
+  const [trackerLogPinnedPages, setTrackerLogPinnedPages] = useState([]);
+  const [trackerLogRecentPages, setTrackerLogRecentPages] = useState([]);
   const [showTrackingAreaPicker, setShowTrackingAreaPicker] = useState(false);
   const [trackingAreasMessage, setTrackingAreasMessage] = useState("");
   const [showAddTrackingAreaPicker, setShowAddTrackingAreaPicker] = useState(false);
@@ -399,6 +462,8 @@ function App() {
   const [todoItems, setTodoItems] = useState([]);
   const [todoText, setTodoText] = useState("");
   const [todoDueDate, setTodoDueDate] = useState("");
+  const [todoDueTime, setTodoDueTime] = useState("");
+  const [todoPriority, setTodoPriority] = useState("medium");
   const [todoNote, setTodoNote] = useState("");
   const [periodCycles, setPeriodCycles] = useState([]);
   const [periodStartDate, setPeriodStartDate] = useState(today);
@@ -2408,8 +2473,9 @@ function App() {
       id: item?.id || `todo-${index}`,
       text: item?.text ?? item?.title ?? "Untitled task",
       dueDate: item?.dueDate ?? item?.due_date ?? "",
+      priority: normalizeTodoPriorityValue(item?.priority),
       note: item?.note ?? "",
-      time: item?.time ?? "",
+      time: item?.time ?? item?.dueTime ?? item?.due_time ?? "",
       completed: Boolean(item?.completed),
       completedAt: item?.completedAt ?? "",
     }));
@@ -2662,8 +2728,9 @@ function App() {
         id: crypto.randomUUID(),
         text: trimmedText,
         dueDate: todoDueDate,
+        priority: normalizeTodoPriorityValue(todoPriority),
         note: trimmedNote,
-        time: "",
+        time: todoDueTime,
         completed: false,
         completedAt: "",
       },
@@ -2672,6 +2739,8 @@ function App() {
     setTodoItems(nextTodoItems);
     setTodoText("");
     setTodoDueDate("");
+    setTodoDueTime("");
+    setTodoPriority("medium");
     setTodoNote("");
     setLastAction(`Added task: ${trimmedText}`);
     await saveEntry({ todo_items: nextTodoItems });
@@ -3220,6 +3289,8 @@ function App() {
       setHistoryData([]);
       setTrackedAreas([]);
       setPendingTrackedAreas([]);
+      setTrackerLogPinnedPages([]);
+      setTrackerLogRecentPages([]);
       setShowTrackingAreaPicker(false);
       setTrackingAreasMessage("");
       setShowAddTrackingAreaPicker(false);
@@ -3275,6 +3346,85 @@ function App() {
       setActivePage("hygiene");
     }
   }, [activePage]);
+
+  useEffect(() => {
+    if (!user || typeof window === "undefined") {
+      return;
+    }
+
+    const selectedAreaPageKeys = normalizeTrackedAreas(trackedAreas)
+      .map((areaId) => getTrackingAreaOption(areaId))
+      .filter(Boolean)
+      .map((area) => area.pageKey);
+    const normalizedPreferences = normalizeTrackerLogPreferences(
+      (() => {
+        try {
+          return JSON.parse(localStorage.getItem(getTrackerLogPreferencesStorageKey(user.id)) || "null");
+        } catch {
+          return null;
+        }
+      })(),
+      selectedAreaPageKeys
+    );
+
+    setTrackerLogPinnedPages((current) =>
+      current.join("|") === normalizedPreferences.pinned.join("|") ? current : normalizedPreferences.pinned
+    );
+    setTrackerLogRecentPages((current) =>
+      current.join("|") === normalizedPreferences.recent.join("|") ? current : normalizedPreferences.recent
+    );
+  }, [trackedAreas, user]);
+
+  useEffect(() => {
+    if (!user || typeof window === "undefined") {
+      return;
+    }
+
+    const selectedAreaPageKeys = normalizeTrackedAreas(trackedAreas)
+      .map((areaId) => getTrackingAreaOption(areaId))
+      .filter(Boolean)
+      .map((area) => area.pageKey);
+    const normalizedPreferences = normalizeTrackerLogPreferences(
+      {
+        pinned: trackerLogPinnedPages,
+        recent: trackerLogRecentPages,
+      },
+      selectedAreaPageKeys
+    );
+
+    if (normalizedPreferences.pinned.join("|") !== trackerLogPinnedPages.join("|")) {
+      setTrackerLogPinnedPages(normalizedPreferences.pinned);
+      return;
+    }
+
+    if (normalizedPreferences.recent.join("|") !== trackerLogRecentPages.join("|")) {
+      setTrackerLogRecentPages(normalizedPreferences.recent);
+      return;
+    }
+
+    localStorage.setItem(
+      getTrackerLogPreferencesStorageKey(user.id),
+      JSON.stringify(normalizedPreferences)
+    );
+  }, [trackedAreas, trackerLogPinnedPages, trackerLogRecentPages, user]);
+
+  useEffect(() => {
+    const selectedAreaPageKeys = normalizeTrackedAreas(trackedAreas)
+      .map((areaId) => getTrackingAreaOption(areaId))
+      .filter(Boolean)
+      .map((area) => area.pageKey);
+
+    if (!selectedAreaPageKeys.includes(activePage)) {
+      return;
+    }
+
+    setTrackerLogRecentPages((current) => {
+      const nextRecentPages = [activePage, ...current.filter((pageKey) => pageKey !== activePage)].filter((pageKey) =>
+        selectedAreaPageKeys.includes(pageKey)
+      );
+      return nextRecentPages.slice(0, 4);
+    });
+  }, [activePage, trackedAreas]);
 
   useEffect(() => {
     const selectedAreaPageKeys = normalizeTrackedAreas(trackedAreas)
@@ -3538,6 +3688,10 @@ function App() {
     (showered ? 1 : 0) + (brushedTeeth ? 1 : 0) + (skincare ? 1 : 0);
   const completedTodoCount = todoItems.filter((item) => item.completed).length;
   const openTodoCount = todoItems.length - completedTodoCount;
+  const highPriorityOpenCount = todoItems.filter(
+    (item) => !item.completed && normalizeTodoPriorityValue(item.priority) === "high"
+  ).length;
+  const timedTodoCount = todoItems.filter((item) => !item.completed && item.time).length;
   const upcomingAppointments = appointments.filter((item) => item.eventDate >= today);
   const todayAppointments = upcomingAppointments.filter((item) => item.eventDate === today);
   const nextAppointment = upcomingAppointments[0] || null;
@@ -3604,6 +3758,20 @@ function App() {
     { key: "connections", label: "Connections" },
     { key: "settings", label: "Settings" },
   ];
+  const selectedTrackingPageKeys = selectedTrackingAreaOptions.map((area) => area.pageKey);
+  const toggleTrackerLogPinnedPage = (pageKey) => {
+    if (!selectedTrackingPageKeys.includes(pageKey)) {
+      return;
+    }
+
+    setTrackerLogPinnedPages((current) => {
+      if (current.includes(pageKey)) {
+        return current.filter((item) => item !== pageKey);
+      }
+
+      return [pageKey, ...current.filter((item) => item !== pageKey)].slice(0, 4);
+    });
+  };
   const trackerTutorialSteps = buildTrackerTutorialSteps(selectedTrackingAreaOptions);
   const trackerTutorialStep = trackerTutorialSteps[trackerTutorialStepIndex] || null;
   const outsiderTutorialSteps = buildOutsiderTutorialSteps(outsiderTrackers, selectedOutsider);
@@ -3630,7 +3798,14 @@ function App() {
       value: `${completedTodoCount}/${todoItems.length}`,
       note:
         todoItems.length > 0
-          ? `${openTodoCount} open${todoItems.some((item) => item.dueDate === today && !item.completed) ? " · due today" : ""}`
+          ? [
+              `${openTodoCount} open`,
+              todoItems.some((item) => item.dueDate === today && !item.completed) ? "due today" : "",
+              highPriorityOpenCount > 0 ? `${highPriorityOpenCount} high priority` : "",
+              timedTodoCount > 0 ? `${timedTodoCount} timed` : "",
+            ]
+              .filter(Boolean)
+              .join(" · ")
           : "No tasks added yet",
     },
     {
@@ -3715,7 +3890,14 @@ function App() {
       value: completedTodoCount > 0 ? `${completedTodoCount} done` : "Open",
       note:
         todoItems.length > 0
-          ? `${openTodoCount} task${openTodoCount === 1 ? "" : "s"} left${todoItems.some((item) => item.dueDate === today && !item.completed) ? " · due today" : ""}`
+          ? [
+              `${openTodoCount} task${openTodoCount === 1 ? "" : "s"} left`,
+              todoItems.some((item) => item.dueDate === today && !item.completed) ? "due today" : "",
+              highPriorityOpenCount > 0 ? `${highPriorityOpenCount} high priority` : "",
+              timedTodoCount > 0 ? `${timedTodoCount} timed` : "",
+            ]
+              .filter(Boolean)
+              .join(" · ")
           : "No tasks added yet",
     },
     {
@@ -3831,9 +4013,9 @@ function App() {
       detail: `${todoItems[todoItems.length - 1].text} · ${
         todoItems[todoItems.length - 1].completed
           ? "Completed"
-          : todoItems[todoItems.length - 1].dueDate
-          ? `Due ${formatDisplayDate(todoItems[todoItems.length - 1].dueDate)}`
-          : "Open"
+          : `${getTodoPriorityLabel(todoItems[todoItems.length - 1].priority)} · ${getTodoScheduleSummary(
+              todoItems[todoItems.length - 1]
+            )}`
       }`,
     },
     nextAppointment && {
@@ -4029,6 +4211,9 @@ function App() {
     trackerNavItems,
     trackedAreas,
     selectedTrackingAreaOptions,
+    trackerLogPinnedPages,
+    trackerLogRecentPages,
+    toggleTrackerLogPinnedPage,
     inactiveTrackingAreaOptions,
     pendingTrackedAreas,
     togglePendingTrackedArea,
@@ -4104,6 +4289,10 @@ function App() {
     setTodoText,
     todoDueDate,
     setTodoDueDate,
+    todoDueTime,
+    setTodoDueTime,
+    todoPriority,
+    setTodoPriority,
     todoNote,
     setTodoNote,
     addTodoItem,
@@ -4126,6 +4315,7 @@ function App() {
     savePeriodNotesAndSymptoms,
     togglePeriodSymptomTag,
     nextCycleEstimateDate,
+    activePeriodDayCount,
     calendarEvents,
     averageCycleLengthDays,
     appointments,
@@ -5052,6 +5242,41 @@ function App() {
       addMeal: () => {},
       meals: [{ text: "Bagel and fruit", time: "8:30 AM" }],
       removeMeal: () => {},
+      todoItems: [
+        {
+          id: "todo-1",
+          text: "Pack notes for therapy",
+          dueDate: "2026-03-31",
+          time: "13:30",
+          priority: "high",
+          note: "Put them in the blue folder.",
+          completed: false,
+          completedAt: "",
+        },
+        {
+          id: "todo-2",
+          text: "Refill water bottle",
+          dueDate: "",
+          time: "",
+          priority: "low",
+          note: "",
+          completed: true,
+          completedAt: "08:45",
+        },
+      ],
+      todoText: "",
+      setTodoText: () => {},
+      todoDueDate: "2026-03-31",
+      setTodoDueDate: () => {},
+      todoDueTime: "13:30",
+      setTodoDueTime: () => {},
+      todoPriority: "medium",
+      setTodoPriority: () => {},
+      todoNote: "",
+      setTodoNote: () => {},
+      addTodoItem: () => {},
+      toggleTodoItem: () => {},
+      removeTodoItem: () => {},
       periodCycles: [
         {
           id: "period-cycle-1",
@@ -5190,6 +5415,7 @@ function App() {
       removeExerciseLog: () => {},
     };
     previewTrackingApp.calendarEvents = buildCalendarEvents({
+      todoItems: previewTrackingApp.todoItems,
       appointments: previewTrackingApp.appointments,
       periodCycles: previewTrackingApp.periodCycles,
       nextCycleEstimateDate: previewTrackingApp.nextCycleEstimateDate,

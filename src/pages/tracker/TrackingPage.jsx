@@ -1,9 +1,15 @@
+import { useMemo, useState } from "react";
+
 function TrackerTrackingPage({ app, pageKey }) {
   const {
     theme,
     sectionCardStyle,
     renderSectionHeader,
     trackerNavItems,
+    selectedTrackingAreaOptions,
+    trackerLogPinnedPages,
+    trackerLogRecentPages,
+    toggleTrackerLogPinnedPage,
     setActivePage,
     today,
     trackerSectionSwitcherButtonStyle,
@@ -46,6 +52,10 @@ function TrackerTrackingPage({ app, pageKey }) {
     setTodoText,
     todoDueDate,
     setTodoDueDate,
+    todoDueTime,
+    setTodoDueTime,
+    todoPriority,
+    setTodoPriority,
     todoNote,
     setTodoNote,
     addTodoItem,
@@ -68,6 +78,7 @@ function TrackerTrackingPage({ app, pageKey }) {
     savePeriodNotesAndSymptoms,
     togglePeriodSymptomTag,
     nextCycleEstimateDate,
+    activePeriodDayCount,
     averageCycleLengthDays,
     appointments,
     editingAppointmentId,
@@ -191,6 +202,67 @@ function TrackerTrackingPage({ app, pageKey }) {
   };
 
   const periodSymptomOptions = ["Cramps", "Headache", "Fatigue", "Bloating", "Acne", "Back pain"];
+  const todoPriorityOptions = [
+    { value: "high", label: "High priority" },
+    { value: "medium", label: "Medium priority" },
+    { value: "low", label: "Low priority" },
+  ];
+
+  const normalizeTodoPriority = (priority) =>
+    ["high", "medium", "low"].includes(priority) ? priority : "medium";
+
+  const getTodoPriorityRank = (priority) => {
+    switch (normalizeTodoPriority(priority)) {
+      case "high":
+        return 0;
+      case "medium":
+        return 1;
+      case "low":
+        return 2;
+      default:
+        return 1;
+    }
+  };
+
+  const getTodoPriorityLabel = (priority) => {
+    const option = todoPriorityOptions.find((item) => item.value === normalizeTodoPriority(priority));
+    return option?.label || "Medium priority";
+  };
+
+  const getTodoPriorityTone = (priority) => {
+    switch (normalizeTodoPriority(priority)) {
+      case "high":
+        return {
+          background: "rgba(239, 68, 68, 0.12)",
+          border: "1px solid rgba(239, 68, 68, 0.24)",
+          color: theme.text,
+        };
+      case "low":
+        return {
+          background: "rgba(34, 197, 94, 0.1)",
+          border: "1px solid rgba(34, 197, 94, 0.22)",
+          color: theme.text,
+        };
+      default:
+        return {
+          background: theme.surfaceElevated || theme.cardBackground || "rgba(255,255,255,0.06)",
+          border: theme.border,
+          color: theme.text,
+        };
+    }
+  };
+
+  const getTodoScheduleLabel = (item) => {
+    if (!item?.dueDate) {
+      return item?.time ? `Planned for ${formatTimeLabel(item.time)}` : "No due date";
+    }
+
+    if (item.time) {
+      return `Due ${formatDateLabel(item.dueDate)} at ${formatTimeLabel(item.time)}`;
+    }
+
+    return `Due ${formatDateLabel(item.dueDate)}`;
+  };
 
   const actionTimeRowStyle = {
     display: "grid",
@@ -198,10 +270,37 @@ function TrackerTrackingPage({ app, pageKey }) {
     gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 160px), 1fr))",
     alignItems: "end",
   };
+  const [showLogPicker, setShowLogPicker] = useState(false);
+  const [showPeriodDetails, setShowPeriodDetails] = useState(false);
+  const trackingSections = useMemo(() => {
+    if (Array.isArray(selectedTrackingAreaOptions) && selectedTrackingAreaOptions.length > 0) {
+      return selectedTrackingAreaOptions.map((area) => ({
+        key: area.pageKey,
+        label: area.label,
+        description: area.description || "",
+      }));
+    }
 
-  const trackingSections = (trackerNavItems || []).filter((item) =>
-    ["meds", "food", "sleep", "hygiene", "cleaning", "exercise", "todo", "period", "appointments", "mood"].includes(item.key)
-  );
+    return (trackerNavItems || [])
+      .filter((item) =>
+        ["meds", "food", "sleep", "hygiene", "cleaning", "exercise", "todo", "period", "appointments", "mood"].includes(item.key)
+      )
+      .map((item) => ({
+        key: item.key,
+        label: item.label,
+        description: "",
+      }));
+  }, [selectedTrackingAreaOptions, trackerNavItems]);
+  const currentTrackingSection = trackingSections.find((item) => item.key === pageKey) || trackingSections[0] || null;
+  const pinnedSectionKeys = Array.isArray(trackerLogPinnedPages) ? trackerLogPinnedPages : [];
+  const recentSectionKeys = Array.isArray(trackerLogRecentPages) ? trackerLogRecentPages : [];
+  const pinnedSections = pinnedSectionKeys
+    .map((page) => trackingSections.find((item) => item.key === page))
+    .filter(Boolean);
+  const recentSections = recentSectionKeys
+    .filter((page) => !pinnedSectionKeys.includes(page))
+    .map((page) => trackingSections.find((item) => item.key === page))
+    .filter(Boolean);
   const disableGalaxyFrame =
     theme.themeFamily === "galaxy" &&
     !theme.observerConsole &&
@@ -234,28 +333,165 @@ function TrackerTrackingPage({ app, pageKey }) {
     fontSize: "0.9rem",
     letterSpacing: emphasis ? "0.01em" : "normal",
   });
-
+  const trackerLogPickerPanelStyle = {
+    ...trackerSummaryPanelStyle,
+    marginBottom: "18px",
+    gap: "16px",
+  };
+  const compactButtonRowStyle = {
+    display: "flex",
+    gap: "10px",
+    flexWrap: "wrap",
+    alignItems: "center",
+  };
+  const compactPanelStyle = {
+    ...trackerSummaryPanelStyle,
+    gap: "12px",
+  };
+  const trackerLogPickerGridStyle = {
+    display: "grid",
+    gap: "12px",
+    gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 220px), 1fr))",
+  };
+  const trackerLogSectionCardStyle = (active) => ({
+    display: "grid",
+    gap: "10px",
+    textAlign: "left",
+    padding: "14px 16px",
+    borderRadius: "20px",
+    border: active ? "none" : theme.border,
+    background: active
+      ? theme.primary
+      : theme.surfaceElevated || theme.cardBackground || "rgba(255,255,255,0.04)",
+    color: active ? theme.primaryText : theme.text,
+    boxShadow: active ? `0 16px 30px ${theme.glow}` : "none",
+  });
+  const trackerLogSectionMetaStyle = (active) => ({
+    margin: 0,
+    fontSize: "0.88rem",
+    lineHeight: 1.5,
+    color: active ? theme.primaryText : theme.subtleText,
+    opacity: active ? 0.92 : 1,
+  });
   const sectionSwitcher = trackingSections.length > 1 ? (
-    <div
-      style={{
-        display: "flex",
-        flexWrap: "wrap",
-        gap: "10px",
-        marginBottom: "18px",
-      }}
-    >
-      {trackingSections.map((item) => {
-        const active = item.key === pageKey;
-        return (
+    <div style={trackerLogPickerPanelStyle}>
+      <div
+        style={{
+          display: "flex",
+          flexWrap: "wrap",
+          gap: "12px",
+          justifyContent: "space-between",
+          alignItems: "flex-start",
+        }}
+      >
+        <div style={{ display: "grid", gap: "6px", minWidth: 0 }}>
+          <p style={{ ...tagGroupLabelStyle(theme), margin: 0 }}>Log category</p>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "10px", alignItems: "center" }}>
+            <h3 style={{ margin: 0, fontSize: "1.12rem", color: theme.text }}>
+              {currentTrackingSection?.label || "Log"}
+            </h3>
+            {pinnedSectionKeys.includes(pageKey) ? <div style={trackerInfoChipStyle()}>Pinned</div> : null}
+          </div>
+          {currentTrackingSection?.description ? (
+            <p style={{ ...smallInfoStyle(theme), margin: 0 }}>{currentTrackingSection.description}</p>
+          ) : null}
+        </div>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", justifyContent: "flex-end" }}>
           <button
-            key={item.key}
-            onClick={() => setActivePage(item.key)}
-            style={trackerSectionSwitcherButtonStyle(active, theme)}
+            style={pinnedSectionKeys.includes(pageKey) ? successButtonStyle(theme) : softButtonStyle(theme)}
+            onClick={() => toggleTrackerLogPinnedPage?.(pageKey)}
           >
-            {item.label}
+            {pinnedSectionKeys.includes(pageKey) ? "Pinned" : "Pin"}
           </button>
-        );
-      })}
+          <button style={trackerSectionSwitcherButtonStyle(showLogPicker, theme)} onClick={() => setShowLogPicker((current) => !current)}>
+            {showLogPicker ? "Hide categories" : "Browse categories"}
+          </button>
+        </div>
+      </div>
+
+      <div style={{ display: "grid", gap: "10px" }}>
+        {pinnedSections.length > 0 ? (
+          <div style={{ display: "grid", gap: "8px" }}>
+            <p style={{ ...tagGroupLabelStyle(theme), margin: 0 }}>Pinned</p>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
+              {pinnedSections.map((item) => (
+                <button
+                  key={`pinned-${item.key}`}
+                  onClick={() => setActivePage(item.key)}
+                  style={trackerSectionSwitcherButtonStyle(item.key === pageKey, theme)}
+                >
+                  {item.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        ) : null}
+
+        {recentSections.length > 0 ? (
+          <div style={{ display: "grid", gap: "8px" }}>
+            <p style={{ ...tagGroupLabelStyle(theme), margin: 0 }}>Recent</p>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
+              {recentSections.map((item) => (
+                <button
+                  key={`recent-${item.key}`}
+                  onClick={() => setActivePage(item.key)}
+                  style={trackerSectionSwitcherButtonStyle(item.key === pageKey, theme)}
+                >
+                  {item.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        ) : null}
+      </div>
+
+      {showLogPicker ? (
+        <div style={{ display: "grid", gap: "12px" }}>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "10px", alignItems: "center" }}>
+            <p style={{ ...tagGroupLabelStyle(theme), margin: 0 }}>All categories</p>
+            <div style={trackerInfoChipStyle()}>{`${trackingSections.length} available`}</div>
+          </div>
+          <div style={trackerLogPickerGridStyle}>
+            {trackingSections.map((item) => {
+              const active = item.key === pageKey;
+              const pinned = pinnedSectionKeys.includes(item.key);
+
+              return (
+                <div key={item.key} style={trackerLogSectionCardStyle(active)}>
+                  <div style={{ display: "flex", justifyContent: "space-between", gap: "10px", alignItems: "flex-start" }}>
+                    <div style={{ display: "grid", gap: "6px", minWidth: 0 }}>
+                      <strong style={{ fontSize: "1rem" }}>{item.label}</strong>
+                      {item.description ? <p style={trackerLogSectionMetaStyle(active)}>{item.description}</p> : null}
+                    </div>
+                    {pinned ? <div style={trackerInfoChipStyle(active)}>Pinned</div> : null}
+                  </div>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
+                    <button
+                      onClick={() => {
+                        setActivePage(item.key);
+                        setShowLogPicker(false);
+                      }}
+                      style={trackerSectionSwitcherButtonStyle(active, theme)}
+                    >
+                      {active ? "Current category" : "Open"}
+                    </button>
+                    <button
+                      onClick={() => toggleTrackerLogPinnedPage?.(item.key)}
+                      style={pinned ? successButtonStyle(theme) : softButtonStyle(theme)}
+                    >
+                      {pinned ? "Unpin" : "Pin"}
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      ) : (
+        <p style={{ ...smallInfoStyle(theme), margin: 0 }}>
+          Browse categories when you want the full list, and pin the ones you reach for most often.
+        </p>
+      )}
     </div>
   ) : null;
 
@@ -401,9 +637,13 @@ function TrackerTrackingPage({ app, pageKey }) {
     const activeTodoItems = [...todoItems]
       .filter((item) => !item.completed)
       .sort((left, right) => {
+        const priorityDifference =
+          getTodoPriorityRank(left.priority) - getTodoPriorityRank(right.priority);
+        if (priorityDifference !== 0) return priorityDifference;
         if (left.dueDate && right.dueDate) return left.dueDate.localeCompare(right.dueDate);
         if (left.dueDate) return -1;
         if (right.dueDate) return 1;
+        if ((left.time || "") !== (right.time || "")) return (left.time || "").localeCompare(right.time || "");
         return left.text.localeCompare(right.text);
       });
     const completedTodoItems = [...todoItems]
@@ -412,7 +652,13 @@ function TrackerTrackingPage({ app, pageKey }) {
     const completedTodoCount = completedTodoItems.length;
     const openTodoCount = activeTodoItems.length;
     const dueTodayCount = activeTodoItems.filter((item) => item.dueDate === today).length;
-    const hasTodoDraft = Boolean(todoText?.trim() || todoDueDate || todoNote?.trim());
+    const highPriorityCount = activeTodoItems.filter(
+      (item) => normalizeTodoPriority(item.priority) === "high"
+    ).length;
+    const timedTaskCount = activeTodoItems.filter((item) => item.time).length;
+    const hasTodoDraft = Boolean(
+      todoText?.trim() || todoDueDate || todoDueTime || todoNote?.trim() || todoPriority !== "medium"
+    );
 
     const renderTodoItem = (item) => (
       <li
@@ -423,6 +669,26 @@ function TrackerTrackingPage({ app, pageKey }) {
         }}
       >
         <div style={{ display: "grid", gap: "6px" }}>
+          <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", alignItems: "center" }}>
+            <div
+              style={{
+                ...getTodoPriorityTone(item.priority),
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                minHeight: "28px",
+                padding: "0.2rem 0.65rem",
+                borderRadius: "999px",
+                fontSize: "0.78rem",
+                fontWeight: 700,
+              }}
+            >
+              {getTodoPriorityLabel(item.priority)}
+            </div>
+            {item.time ? (
+              <div style={trackerInfoChipStyle()}>{`Time set: ${formatTimeLabel(item.time)}`}</div>
+            ) : null}
+          </div>
           <div
             style={{
               fontWeight: "bold",
@@ -432,11 +698,7 @@ function TrackerTrackingPage({ app, pageKey }) {
             {item.text}
           </div>
           <div style={{ fontSize: "0.85rem", opacity: 0.72 }}>
-            {item.dueDate
-              ? `Due ${formatDateLabel(item.dueDate)}`
-              : item.time
-              ? `Planned for ${formatTimeLabel(item.time)}`
-              : "No due date"}
+            {getTodoScheduleLabel(item)}
             {item.completed && item.completedAt ? ` - Done at ${formatTimeLabel(item.completedAt)}` : ""}
           </div>
           {item.note ? <div style={{ fontSize: "0.88rem", opacity: 0.82 }}>{item.note}</div> : null}
@@ -480,12 +742,40 @@ function TrackerTrackingPage({ app, pageKey }) {
               value={todoText}
               onChange={(e) => setTodoText(e.target.value)}
             />
-            <input
-              style={inputStyle(theme)}
-              type="date"
-              value={todoDueDate}
-              onChange={(e) => setTodoDueDate(e.target.value)}
-            />
+            <div style={actionTimeRowStyle}>
+              <div style={{ display: "grid", gap: "8px" }}>
+                <label style={labelStyle(theme)}>Due date</label>
+                <input
+                  style={inputStyle(theme)}
+                  type="date"
+                  value={todoDueDate}
+                  onChange={(e) => setTodoDueDate(e.target.value)}
+                />
+              </div>
+              <div style={{ display: "grid", gap: "8px" }}>
+                <label style={labelStyle(theme)}>Due time</label>
+                <input
+                  style={inputStyle(theme)}
+                  type="time"
+                  value={todoDueTime}
+                  onChange={(e) => setTodoDueTime(e.target.value)}
+                />
+              </div>
+              <div style={{ display: "grid", gap: "8px" }}>
+                <label style={labelStyle(theme)}>Priority</label>
+                <select
+                  style={inputStyle(theme)}
+                  value={todoPriority}
+                  onChange={(e) => setTodoPriority(e.target.value)}
+                >
+                  {todoPriorityOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
             <textarea
               style={{ ...inputStyle(theme), minHeight: "88px", resize: "vertical" }}
               placeholder="Optional note"
@@ -497,7 +787,7 @@ function TrackerTrackingPage({ app, pageKey }) {
             </button>
           </div>
           <p style={{ ...smallInfoStyle(theme), marginTop: 0 }}>
-            Keep this light: the task is the main thing. Due date and note are optional support, not requirements.
+            Keep this light: the task is the main thing. Priority, due date, due time, and notes are optional support.
           </p>
         </div>
 
@@ -507,6 +797,8 @@ function TrackerTrackingPage({ app, pageKey }) {
             <div style={trackerInfoChipStyle()}>{`${completedTodoCount}/${todoItems.length} done`}</div>
             <div style={trackerInfoChipStyle()}>{`${openTodoCount} open`}</div>
             {dueTodayCount > 0 ? <div style={trackerInfoChipStyle()}>{`${dueTodayCount} due today`}</div> : null}
+            {highPriorityCount > 0 ? <div style={trackerInfoChipStyle()}>{`${highPriorityCount} high priority`}</div> : null}
+            {timedTaskCount > 0 ? <div style={trackerInfoChipStyle()}>{`${timedTaskCount} timed`}</div> : null}
           </div>
           {todoItems.length === 0 ? (
             <p style={emptyTextStyle(theme)}>No tasks added yet.</p>
@@ -706,6 +998,13 @@ function TrackerTrackingPage({ app, pageKey }) {
 
   if (pageKey === "period") {
     const hasDraftSymptoms = periodSymptomTags.length > 0 || periodPrivateNotes?.trim();
+    const activeCycleLengthLabel = activePeriodCycle ? getCycleLengthLabel(activePeriodCycle) : "";
+    const activeCycleDayLabel = activePeriodDayCount > 0 ? `Day ${activePeriodDayCount}` : "No active cycle";
+    const periodQuickSummary = activePeriodCycle
+      ? periodSymptomTags.length > 0
+        ? `${periodFlowLevel} flow with ${periodSymptomTags.join(", ")}`
+        : `${periodFlowLevel} flow`
+      : "No active cycle";
 
     return (
       <section className="galaxy-panel" style={trackerSectionStyle("period")}>
@@ -723,7 +1022,7 @@ function TrackerTrackingPage({ app, pageKey }) {
           >
             <p style={{ ...sliderValueStyle(theme), margin: 0 }}>Cycle status</p>
             <div style={trackerInfoChipStyle(true)}>
-              {activePeriodCycle ? `Day ${getCycleLengthLabel(activePeriodCycle).split(" ")[0]}` : "Private"}
+              {activePeriodCycle ? activeCycleDayLabel : "Private"}
             </div>
           </div>
           <div style={{ display: "grid", gap: "12px" }}>
@@ -767,54 +1066,171 @@ function TrackerTrackingPage({ app, pageKey }) {
           {periodStatusMessage ? <p style={{ ...smallInfoStyle(theme), marginTop: 0 }}>{periodStatusMessage}</p> : null}
         </div>
 
-        <div style={{ marginTop: "18px", display: "grid", gap: "12px" }}>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: "10px", alignItems: "center" }}>
-            <p style={{ ...tagGroupLabelStyle(theme), margin: 0 }}>Flow and symptoms</p>
-            <div style={trackerInfoChipStyle()}>{hasDraftSymptoms ? "Added" : "Optional"}</div>
-          </div>
-          <div>
-            <label style={labelStyle(theme)}>Flow level</label>
-            <select style={inputStyle(theme)} value={periodFlowLevel} onChange={(e) => setPeriodFlowLevel(e.target.value)}>
-              <option value="light">light</option>
-              <option value="medium">medium</option>
-              <option value="heavy">heavy</option>
-            </select>
-          </div>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: "10px" }}>
-            {periodSymptomOptions.map((symptom) => {
-              const selected = periodSymptomTags.includes(symptom);
-              return (
+        {activePeriodCycle ? (
+          <div style={{ marginTop: "18px", display: "grid", gap: "12px" }}>
+            <div style={compactPanelStyle}>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: "10px", alignItems: "center", justifyContent: "space-between" }}>
+                <div style={{ display: "grid", gap: "4px" }}>
+                  <p style={{ ...tagGroupLabelStyle(theme), margin: 0 }}>Today&apos;s update</p>
+                  <p style={{ ...smallInfoStyle(theme), margin: 0 }}>
+                    Save a quick check-in for this active cycle without reopening the full setup.
+                  </p>
+                </div>
+                <div style={trackerInfoChipStyle()}>{activeCycleLengthLabel}</div>
+              </div>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: "10px" }}>
                 <button
-                  key={symptom}
-                  style={selected ? successButtonStyle(theme) : softButtonStyle(theme)}
-                  onClick={() => togglePeriodSymptomTag(symptom)}
+                  style={periodFlowLevel === "light" ? successButtonStyle(theme) : softButtonStyle(theme)}
+                  onClick={() => setPeriodFlowLevel("light")}
                 >
-                  {symptom}
+                  Light
                 </button>
-              );
-            })}
+                <button
+                  style={periodFlowLevel === "medium" ? successButtonStyle(theme) : softButtonStyle(theme)}
+                  onClick={() => setPeriodFlowLevel("medium")}
+                >
+                  Medium
+                </button>
+                <button
+                  style={periodFlowLevel === "heavy" ? successButtonStyle(theme) : softButtonStyle(theme)}
+                  onClick={() => setPeriodFlowLevel("heavy")}
+                >
+                  Heavy
+                </button>
+              </div>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: "10px" }}>
+                {periodSymptomOptions.map((symptom) => {
+                  const selected = periodSymptomTags.includes(symptom);
+                  return (
+                    <button
+                      key={symptom}
+                      style={selected ? successButtonStyle(theme) : softButtonStyle(theme)}
+                      onClick={() => togglePeriodSymptomTag(symptom)}
+                    >
+                      {symptom}
+                    </button>
+                  );
+                })}
+              </div>
+              <div>
+                <label style={labelStyle(theme)}>Private notes for today</label>
+                <textarea
+                  style={{ ...inputStyle(theme), minHeight: "88px", resize: "vertical" }}
+                  placeholder="Optional notes for how today feels"
+                  value={periodPrivateNotes}
+                  onChange={(e) => setPeriodPrivateNotes(e.target.value)}
+                />
+              </div>
+              <div style={compactButtonRowStyle}>
+                <button style={primaryButtonStyle(theme)} onClick={savePeriodNotesAndSymptoms}>
+                  Save Today&apos;s Update
+                </button>
+                <div style={trackerInfoChipStyle()}>{hasDraftSymptoms ? "Notes or symptoms added" : periodQuickSummary}</div>
+              </div>
+            </div>
+
+            <div style={compactPanelStyle}>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: "10px", alignItems: "center", justifyContent: "space-between" }}>
+                <div style={{ display: "grid", gap: "4px" }}>
+                  <p style={{ ...tagGroupLabelStyle(theme), margin: 0 }}>Cycle controls</p>
+                  <p style={{ ...smallInfoStyle(theme), margin: 0 }}>
+                    Open the fuller controls when you need to adjust dates or close out the cycle.
+                  </p>
+                </div>
+                <button style={trackerSectionSwitcherButtonStyle(showPeriodDetails, theme)} onClick={() => setShowPeriodDetails((current) => !current)}>
+                  {showPeriodDetails ? "Hide details" : "Show details"}
+                </button>
+              </div>
+              {showPeriodDetails ? (
+                <div style={{ display: "grid", gap: "12px" }}>
+                  <div>
+                    <label style={labelStyle(theme)}>Flow level</label>
+                    <select style={inputStyle(theme)} value={periodFlowLevel} onChange={(e) => setPeriodFlowLevel(e.target.value)}>
+                      <option value="light">light</option>
+                      <option value="medium">medium</option>
+                      <option value="heavy">heavy</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label style={labelStyle(theme)}>Private notes</label>
+                    <textarea
+                      style={{ ...inputStyle(theme), minHeight: "110px", resize: "vertical" }}
+                      placeholder="Private notes for this cycle"
+                      value={periodPrivateNotes}
+                      onChange={(e) => setPeriodPrivateNotes(e.target.value)}
+                    />
+                  </div>
+                  <div style={compactButtonRowStyle}>
+                    <button style={softButtonStyle(theme)} onClick={savePeriodNotesAndSymptoms}>
+                      Save Full Details
+                    </button>
+                    <button style={primaryButtonStyle(theme)} onClick={endPeriodCycle}>
+                      Mark Period Ended
+                    </button>
+                    <div style={trackerInfoChipStyle()}>{`Started ${formatDateLabel(activePeriodCycle.startDate)}`}</div>
+                  </div>
+                </div>
+              ) : (
+                <div style={compactButtonRowStyle}>
+                  <div style={trackerInfoChipStyle()}>{`Started ${formatDateLabel(activePeriodCycle.startDate)}`}</div>
+                  <div style={trackerInfoChipStyle()}>{activeCycleDayLabel}</div>
+                  {nextCycleEstimateDate ? (
+                    <div style={trackerInfoChipStyle()}>{`Average cycle ${averageCycleLengthDays} days`}</div>
+                  ) : null}
+                </div>
+              )}
+            </div>
           </div>
-          <div>
-            <label style={labelStyle(theme)}>Private notes</label>
-            <textarea
-              style={{ ...inputStyle(theme), minHeight: "110px", resize: "vertical" }}
-              placeholder="Private notes for this cycle"
-              value={periodPrivateNotes}
-              onChange={(e) => setPeriodPrivateNotes(e.target.value)}
-            />
+        ) : (
+          <div style={{ marginTop: "18px", display: "grid", gap: "12px" }}>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "10px", alignItems: "center" }}>
+              <p style={{ ...tagGroupLabelStyle(theme), margin: 0 }}>Flow and symptoms</p>
+              <div style={trackerInfoChipStyle()}>{hasDraftSymptoms ? "Added" : "Optional"}</div>
+            </div>
+            <div>
+              <label style={labelStyle(theme)}>Flow level</label>
+              <select style={inputStyle(theme)} value={periodFlowLevel} onChange={(e) => setPeriodFlowLevel(e.target.value)}>
+                <option value="light">light</option>
+                <option value="medium">medium</option>
+                <option value="heavy">heavy</option>
+              </select>
+            </div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "10px" }}>
+              {periodSymptomOptions.map((symptom) => {
+                const selected = periodSymptomTags.includes(symptom);
+                return (
+                  <button
+                    key={symptom}
+                    style={selected ? successButtonStyle(theme) : softButtonStyle(theme)}
+                    onClick={() => togglePeriodSymptomTag(symptom)}
+                  >
+                    {symptom}
+                  </button>
+                );
+              })}
+            </div>
+            <div>
+              <label style={labelStyle(theme)}>Private notes</label>
+              <textarea
+                style={{ ...inputStyle(theme), minHeight: "110px", resize: "vertical" }}
+                placeholder="Private notes for this cycle"
+                value={periodPrivateNotes}
+                onChange={(e) => setPeriodPrivateNotes(e.target.value)}
+              />
+            </div>
+            <div style={compactButtonRowStyle}>
+              <button
+                style={primaryButtonStyle(theme)}
+                onClick={startPeriodCycle}
+              >
+                Start With These Details
+              </button>
+              {nextCycleEstimateDate ? (
+                <div style={trackerInfoChipStyle()}>{`Average cycle ${averageCycleLengthDays} days`}</div>
+              ) : null}
+            </div>
           </div>
-          <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
-            <button
-              style={primaryButtonStyle(theme)}
-              onClick={activePeriodCycle ? savePeriodNotesAndSymptoms : startPeriodCycle}
-            >
-              {activePeriodCycle ? "Save Cycle Details" : "Start With These Details"}
-            </button>
-            {nextCycleEstimateDate ? (
-              <div style={trackerInfoChipStyle()}>{`Average cycle ${averageCycleLengthDays} days`}</div>
-            ) : null}
-          </div>
-        </div>
+        )}
 
         <div style={{ marginTop: "18px", display: "grid", gap: "12px" }}>
           <div style={{ display: "flex", flexWrap: "wrap", gap: "10px", alignItems: "center" }}>

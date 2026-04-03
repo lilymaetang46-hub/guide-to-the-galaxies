@@ -30,6 +30,7 @@ Use this file as the shared handoff note for any Codex thread working in this re
   - The user does not have a coding background, so key technical terms should be explained in plain language when they matter.
   - If Codex notices a useful tool or integration that would help but is not available, Codex should tell the user and help set it up.
   - If the user says to remember something, Codex should add it to `docs/project-context.md` instead of relying on chat memory alone.
+  - Please always immedietly update `docs/project-context.md` to say that you are working on whatever GUI you have chosen!
   - Codex can run helpful checks like build, lint, and tests without asking first.
   - Keep technical explanations short and plain by default.
 
@@ -62,6 +63,45 @@ Use this file as the shared handoff note for any Codex thread working in this re
 - Keep privacy boundaries intact while shared calendar and outsider features expand.
 
 ## Active Work
+
+- Active ownership note:
+  - Area/files: `src/App.jsx`, `src/pages/tracker/TrackingPage.jsx`, `src/app/utils.js`, `src/pages/tracker/CalendarPage.jsx` touched by `GUI-52`
+  - Goal: Add task priority and optional due time to tracker To-Do items while keeping the flow lightweight and backward-compatible with existing task data.
+  - Status: Done in this thread on 2026-04-02
+  - Notes:
+    - Added tracker-side To-Do form support for priority and due time, while keeping existing saved tasks working through normalization defaults.
+    - Updated task summaries and calendar event shaping so priority and due-time context shows up in overview-style surfaces where it helps.
+    - Verified with `npm run build`.
+
+- Active ownership note:
+  - Area/files: tracker period logging flow touched by `GUI-56`
+  - Goal: Add a quicker active-cycle daily logging flow for period tracking so updates feel lightweight during an ongoing cycle.
+  - Status: Done in this thread on 2026-04-02
+  - Notes:
+    - Chosen because it was a narrower tracker issue than the currently busy outsider and mobile lanes, and it avoided the reserved issues the user excluded.
+    - Updated `src/pages/tracker/TrackingPage.jsx` so active cycles now open into a compact "Today's update" flow with quick flow buttons, symptom toggles, lighter notes entry, and a separate collapsible details area for fuller controls.
+    - Exposed `activePeriodDayCount` from `src/App.jsx` so the period UI can show clearer day-of-cycle status.
+    - Verified with `npm run build` and `npm run lint`.
+
+- Active ownership note:
+  - Area/files: tracker Log picker and related navigation surfaces touched by `GUI-54`
+  - Goal: Build a calmer grouped Log picker with recent and pinned categories while keeping tracker navigation easy to reach on desktop and mobile.
+  - Status: Implemented locally in this thread on 2026-04-02 after avoiding `GUI-28` and `GUI-52` because those issues are already taken
+  - Notes:
+    - Chosen because it is a current `Now` issue with a narrower UX scope than the broader outsider/mobile lanes and less collision risk than the taken task work.
+    - Replaced the flat in-page category row with a calmer grouped picker inside `src/pages/tracker/TrackingPage.jsx`.
+    - Added lightweight per-user recent and pinned Log category memory in `src/App.jsx` so frequent categories stay easier to reach across sessions.
+    - Verified with `npm run build` and `npm run lint`.
+
+- Active ownership note:
+  - Area/files: `src/layouts/TrackerLayout.jsx`, `src/layouts/OutsiderLayout.jsx`, responsive helpers touched by `GUI-28`
+  - Goal: Make responsive layout handling reactive across tracker and outsider screens instead of reading `window.innerWidth` directly during render.
+  - Status: Done in this thread on 2026-04-02
+  - Notes:
+    - Added `src/app/useResponsiveViewport.js` so viewport width and coarse-pointer state react to resize, rotation, and pointer-mode changes.
+    - Updated `src/layouts/TrackerLayout.jsx` and `src/layouts/OutsiderLayout.jsx` to use the shared hook and re-sync sidebar openness when crossing desktop/mobile breakpoints.
+    - Updated outsider pages still using direct render-time viewport reads: `src/pages/outsider/OverviewPage.jsx`, `src/pages/outsider/SupportPage.jsx`, `src/pages/outsider/GoalsPage.jsx`, and `src/pages/outsider/TrackerDataPage.jsx`.
+    - Verified with `npm run build` and `npm run lint`.
 
 - Active ownership note:
   - Area/files: tracker navigation regression for `GUI-65`
@@ -156,6 +196,11 @@ Use this file as the shared handoff note for any Codex thread working in this re
 ## Handoff Notes
 
 - What changed:
+  - Completed `GUI-56` by turning active period cycles into a lighter daily update flow with quick flow selection, symptom toggles, compact notes, and a collapsible full-controls section for date changes and ending the cycle.
+  - Completed `GUI-54` locally by replacing the flat Log category row with a grouped picker that shows the current category, recent categories, pinned categories, and a browsable full category grid.
+  - Added per-user local persistence for pinned and recent Log categories in `src/App.jsx` so the picker can stay calmer while still surfacing frequent destinations quickly.
+  - Completed `GUI-52` by adding To-Do priority and due-time support in tracker state, the tracker To-Do form/list UI, and tracker calendar task surfaces, then verified with `npm run build`.
+  - Completed `GUI-28` by adding a shared reactive viewport hook and replacing direct render-time viewport reads in tracker and outsider layouts plus outsider overview, support, goals, and tracker-data pages.
   - Fixed `GUI-65` locally by restoring the Appointments button in the Mood page section switcher and verified the app still builds.
   - Completed `GUI-22` by removing unused `rowStyle` plumbing from `src/App.jsx`, normalizing tracker punctuation in `src/pages/tracker/TrackingPage.jsx`, and updating the Linear issue with a dated progress note.
   - Added a shared `docs/project-context.md` file so multiple Codex threads can ground themselves in one current repo snapshot.
