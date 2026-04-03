@@ -21,7 +21,7 @@ function TrackerMoodPage({ app }) {
   } = app;
 
   const trackingSections = (trackerNavItems || []).filter((item) =>
-    ["meds", "food", "sleep", "hygiene", "cleaning", "exercise", "todo", "period", "mood"].includes(item.key)
+    ["meds", "food", "sleep", "hygiene", "cleaning", "exercise", "todo", "period", "appointments", "mood"].includes(item.key)
   );
   const disableGalaxyFrame =
     theme.themeFamily === "galaxy" &&

@@ -62,6 +62,15 @@ Use this file as the shared handoff note for any Codex thread working in this re
 
 ## Active Work
 
+- Active ownership note:
+  - Area/files: tracker navigation regression for GUI-65
+  - Goal: Fix the tracker nav bug where Appointments disappears after switching from Log to Mood.
+  - Status: Done in this thread on 2026-04-02
+  - Notes:
+    - Chosen because it is a focused tracker bug with a narrower write scope than the larger Now issues.
+    - Avoids the reserved outsider policy lane and should be safer around the current dirty worktree than broader app-wide tasks.
+    - Fixed in src/pages/tracker/MoodPage.jsx by keeping Appointments in the Mood page section switcher list.
+    - Verified with npm run build.
 - Confirmed finished work in latest commit:
   - Area/files: `src/App.jsx`, `src/pages/tracker/SettingsPage.jsx`, `src/pages/tracker/TrackingPage.jsx`
   - Goal: Shell cleanup, form behavior cleanup, and tracker responsiveness/polish.
@@ -135,6 +144,7 @@ Use this file as the shared handoff note for any Codex thread working in this re
 ## Handoff Notes
 
 - What changed:
+  - Fixed GUI-65 locally by restoring the Appointments button in the Mood page section switcher and verified the app still builds.
   - Added a shared `docs/project-context.md` file so multiple Codex threads can ground themselves in one current repo snapshot.
   - Updated this note after the clean commit `08fdaed` so the old "inferred" work items are now recorded as completed work.
   - Recorded that another thread wants to take `GUI-42`, so outsider policy/migration work is effectively reserved.
