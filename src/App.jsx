@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { supabase } from "./supabase";
 import { useEffectEvent } from "react";
 import { App as CapacitorApp } from "@capacitor/app";
@@ -2228,7 +2228,35 @@ function App() {
       return;
     }
 
-    setPeriodCycles(normalizePeriodCycles(data || []));
+    const cycleIds = (data || []).map((cycle) => cycle.id).filter(Boolean);
+    let privateNotesByCycleId = new Map();
+
+    if (cycleIds.length > 0) {
+      const { data: privateNotesRows, error: privateNotesError } = await supabase
+        .from("period_cycle_private_notes")
+        .select("period_cycle_id, private_notes")
+        .eq("user_id", user.id)
+        .in("period_cycle_id", cycleIds);
+
+        if (privateNotesError) {
+        console.error("Period cycle private note load error:", privateNotesError);
+        setPeriodStatusMessage("Could not load period history.");
+        return;
+      }
+
+      privateNotesByCycleId = new Map(
+        (privateNotesRows || []).map((row) => [row.period_cycle_id, row.private_notes || ""])
+      );
+    }
+
+    setPeriodCycles(
+      normalizePeriodCycles(
+        (data || []).map((cycle) => ({
+          ...cycle,
+          private_notes: privateNotesByCycleId.get(cycle.id) || "",
+        }))
+      )
+    );
   }
 
   async function loadAppointments() {
@@ -2687,6 +2715,34 @@ function App() {
     );
   };
 
+  const savePeriodPrivateNotes = async (periodCycleId, notesValue) => {
+    if (!user || !periodCycleId) return { error: null };
+
+    const trimmedNotes = notesValue.trim();
+
+    if (!trimmedNotes) {
+      const { error } = await supabase
+        .from("period_cycle_private_notes")
+        .delete()
+        .eq("period_cycle_id", periodCycleId)
+        .eq("user_id", user.id);
+
+      return { error };
+    }
+
+    const { error } = await supabase.from("period_cycle_private_notes").upsert(
+      {
+        period_cycle_id: periodCycleId,
+        user_id: user.id,
+        private_notes: trimmedNotes,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "period_cycle_id" }
+    );
+
+    return { error };
+  };
+
   const activePeriodCycle = periodCycles.find((cycle) => !cycle.endDate) || null;
 
   const startPeriodCycle = async () => {
@@ -2704,7 +2760,6 @@ function App() {
       start_date: startDate,
       flow_level: periodFlowLevel || "medium",
       symptom_tags: periodSymptomTags,
-      private_notes: periodPrivateNotes.trim() || null,
       updated_at: new Date().toISOString(),
     });
 
@@ -2734,7 +2789,6 @@ function App() {
     const payload = {
       flow_level: periodFlowLevel || "medium",
       symptom_tags: periodSymptomTags,
-      private_notes: periodPrivateNotes.trim() || null,
       updated_at: new Date().toISOString(),
       ...updates,
     };
