@@ -3,7 +3,7 @@ import {
   DEFAULT_PUBLIC_APP_URL,
   DEFAULT_PUSH_ENVIRONMENT,
   TRACKING_AREA_OPTIONS,
-} from "./constants";
+} from "./constants.js";
 
 export function getInviteTokenFromUrl(urlLike) {
   if (!urlLike) return "";
@@ -421,10 +421,7 @@ export function buildCalendarEvents({
         date: dateKey,
         title: `Period day ${dayIndex + 1}`,
         detail: cycle.flowLevel ? `${cycle.flowLevel} flow` : "Period tracked",
-        note:
-          Array.isArray(cycle.symptomTags) && cycle.symptomTags.length > 0
-            ? cycle.symptomTags.join(", ")
-            : cycle.privateNotes || "",
+        note: "",
         sourcePageKey: "period",
         sourceLabel: "Period",
         badgeLabel: "Period",

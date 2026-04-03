@@ -4906,6 +4906,7 @@ function App() {
 
     const previewTrackingApp = {
       ...previewSharedApp,
+      today: "2026-03-25",
       trackerNavItems: [
         { key: "meds", label: "Meds" },
         { key: "food", label: "Food" },
@@ -5075,6 +5076,11 @@ function App() {
       exerciseLogs: [{ type: "Walk", time: "6:30 PM", minutes: 25, feeling: "Looser", extraWalk: true, afterState: "Calm" }],
       removeExerciseLog: () => {},
     };
+    previewTrackingApp.calendarEvents = buildCalendarEvents({
+      appointments: previewTrackingApp.appointments,
+      periodCycles: previewTrackingApp.periodCycles,
+      nextCycleEstimateDate: previewTrackingApp.nextCycleEstimateDate,
+    });
 
     const previewSupportApp = {
       ...previewSharedApp,
@@ -5124,6 +5130,7 @@ function App() {
           <TrackerTrackingPage app={previewTrackingApp} pageKey="meds" />
           <TrackerTrackingPage app={previewTrackingApp} pageKey="food" />
           <TrackerTrackingPage app={previewTrackingApp} pageKey="period" />
+          <TrackerCalendarPage app={previewTrackingApp} />
           <TrackerTrackingPage app={previewTrackingApp} pageKey="exercise" />
         </div>
       </div>
