@@ -29,6 +29,29 @@ Use this file as the shared handoff note for any Codex thread working in this re
   - The user does not have a coding background, so key technical terms should be explained in plain language when they matter.
   - If Codex notices a useful tool or integration that would help but is not available, Codex should tell the user and help set it up.
   - If the user says to remember something, Codex should add it to `docs/project-context.md` instead of relying on chat memory alone.
+  - Codex can run helpful checks like build, lint, and tests without asking first.
+  - Keep technical explanations short and plain by default.
+
+## Product Background
+
+- The app exists to help the user build enough day-to-day support, consistency, and visible progress to live more independently.
+- The user built it in the context of severe ADHD and major depression, with family concern about whether living alone would be safe and manageable.
+- A major product goal is to let the user share chosen stats with trusted people so they can see when things are going okay and quickly notice when support may be needed.
+- Meds and emotions are especially important parts of the app because they connect directly to safety, wellbeing, and timely check-ins.
+- The app is meant to feel like a life tracker or "pocket secretary": supportive, encouraging, caring, and helpful with reminders.
+- The product should be useful not just for the user, but for other people with similar struggles.
+- Privacy is a core product value:
+  - sharing must be intentional and permission-based
+  - people may have unsafe, tense, or deeply personal family situations
+  - sensitive identity-related or personal information must be protected carefully
+- Accessibility and trust matter more than monetization:
+  - the user wants the app to be free
+  - free should not mean lower-quality care or support
+- When making product decisions, favor:
+  - privacy
+  - emotional safety
+  - supportive tone
+  - practical usefulness in everyday life
 
 ## Current Priorities
 
