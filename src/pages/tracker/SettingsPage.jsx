@@ -11,6 +11,7 @@ function TrackerSettingsPage({ app }) {
     setDisplayName,
     secondaryDisplayName,
     setSecondaryDisplayName,
+    user,
     themeFamily,
     setThemeFamily,
     themeToggleStyle,
@@ -167,23 +168,59 @@ function TrackerSettingsPage({ app }) {
 
       <section className="galaxy-panel" style={sectionStyle("goals")}>
         {renderSectionHeader("Change PIN", "Use your current PIN, then choose a new one with 4 to 8 digits.", "Bloom", "Constellation")}
-        <div style={goalFormGridStyle}>
+        <form
+          style={goalFormGridStyle}
+          onSubmit={(event) => {
+            event.preventDefault();
+            changePin();
+          }}
+        >
           <div>
-            <label style={labelStyle(theme)}>Current PIN</label>
-            <input style={inputStyle(theme)} type="password" inputMode="numeric" value={currentPinInput} onChange={(e) => setCurrentPinInput(e.target.value.replace(/\D/g, ""))} placeholder="Current PIN" />
+            <label htmlFor="settings-current-pin" style={labelStyle(theme)}>Current PIN</label>
+            <input
+              id="settings-current-pin"
+              style={inputStyle(theme)}
+              type="password"
+              name="current-pin"
+              autoComplete="off"
+              inputMode="numeric"
+              value={currentPinInput}
+              onChange={(e) => setCurrentPinInput(e.target.value.replace(/\D/g, ""))}
+              placeholder="Current PIN"
+            />
           </div>
           <div>
-            <label style={labelStyle(theme)}>New PIN</label>
-            <input style={inputStyle(theme)} type="password" inputMode="numeric" value={newPinInput} onChange={(e) => setNewPinInput(e.target.value.replace(/\D/g, ""))} placeholder="New PIN" />
+            <label htmlFor="settings-new-pin" style={labelStyle(theme)}>New PIN</label>
+            <input
+              id="settings-new-pin"
+              style={inputStyle(theme)}
+              type="password"
+              name="new-pin"
+              autoComplete="off"
+              inputMode="numeric"
+              value={newPinInput}
+              onChange={(e) => setNewPinInput(e.target.value.replace(/\D/g, ""))}
+              placeholder="New PIN"
+            />
           </div>
           <div>
-            <label style={labelStyle(theme)}>Confirm new PIN</label>
-            <input style={inputStyle(theme)} type="password" inputMode="numeric" value={confirmNewPinInput} onChange={(e) => setConfirmNewPinInput(e.target.value.replace(/\D/g, ""))} placeholder="Confirm new PIN" />
+            <label htmlFor="settings-confirm-new-pin" style={labelStyle(theme)}>Confirm new PIN</label>
+            <input
+              id="settings-confirm-new-pin"
+              style={inputStyle(theme)}
+              type="password"
+              name="confirm-new-pin"
+              autoComplete="off"
+              inputMode="numeric"
+              value={confirmNewPinInput}
+              onChange={(e) => setConfirmNewPinInput(e.target.value.replace(/\D/g, ""))}
+              placeholder="Confirm new PIN"
+            />
           </div>
-        </div>
-        <div style={{ marginTop: "18px", display: "flex", gap: "10px", flexWrap: "wrap" }}>
-          <button style={primaryButtonStyle(theme)} onClick={changePin}>Update PIN</button>
-        </div>
+          <div style={{ gridColumn: "1 / -1", marginTop: "18px", display: "flex", gap: "10px", flexWrap: "wrap" }}>
+            <button type="submit" style={primaryButtonStyle(theme)}>Update PIN</button>
+          </div>
+        </form>
         {renderFeedbackMessage(settingsMessage, theme)}
       </section>
 
@@ -224,23 +261,59 @@ function TrackerSettingsPage({ app }) {
 
       <section className="galaxy-panel" style={sectionStyle("care")}>
         {renderSectionHeader("Forgot PIN / Reset PIN", "Use your account password to reset your PIN if you do not remember the current one.", "Reset", "Reset")}
-        <div style={goalFormGridStyle}>
+        <form
+          style={goalFormGridStyle}
+          onSubmit={(event) => {
+            event.preventDefault();
+            resetPinWithPassword();
+          }}
+        >
+          <input type="hidden" name="username" autoComplete="username" value={user?.email || ""} readOnly />
           <div>
-            <label style={labelStyle(theme)}>Account password</label>
-            <input style={inputStyle(theme)} type="password" value={resetPinPassword} onChange={(e) => setResetPinPassword(e.target.value)} placeholder="Account password" />
+            <label htmlFor="settings-reset-account-password" style={labelStyle(theme)}>Account password</label>
+            <input
+              id="settings-reset-account-password"
+              style={inputStyle(theme)}
+              type="password"
+              name="current-password"
+              autoComplete="current-password"
+              value={resetPinPassword}
+              onChange={(e) => setResetPinPassword(e.target.value)}
+              placeholder="Account password"
+            />
           </div>
           <div>
-            <label style={labelStyle(theme)}>New PIN</label>
-            <input style={inputStyle(theme)} type="password" inputMode="numeric" value={resetNewPinInput} onChange={(e) => setResetNewPinInput(e.target.value.replace(/\D/g, ""))} placeholder="New PIN" />
+            <label htmlFor="settings-reset-new-pin" style={labelStyle(theme)}>New PIN</label>
+            <input
+              id="settings-reset-new-pin"
+              style={inputStyle(theme)}
+              type="password"
+              name="new-pin"
+              autoComplete="off"
+              inputMode="numeric"
+              value={resetNewPinInput}
+              onChange={(e) => setResetNewPinInput(e.target.value.replace(/\D/g, ""))}
+              placeholder="New PIN"
+            />
           </div>
           <div>
-            <label style={labelStyle(theme)}>Confirm new PIN</label>
-            <input style={inputStyle(theme)} type="password" inputMode="numeric" value={resetConfirmNewPinInput} onChange={(e) => setResetConfirmNewPinInput(e.target.value.replace(/\D/g, ""))} placeholder="Confirm new PIN" />
+            <label htmlFor="settings-reset-confirm-new-pin" style={labelStyle(theme)}>Confirm new PIN</label>
+            <input
+              id="settings-reset-confirm-new-pin"
+              style={inputStyle(theme)}
+              type="password"
+              name="confirm-new-pin"
+              autoComplete="off"
+              inputMode="numeric"
+              value={resetConfirmNewPinInput}
+              onChange={(e) => setResetConfirmNewPinInput(e.target.value.replace(/\D/g, ""))}
+              placeholder="Confirm new PIN"
+            />
           </div>
-        </div>
-        <div style={{ marginTop: "18px" }}>
-          <button style={primaryButtonStyle(theme)} onClick={resetPinWithPassword}>Reset PIN</button>
-        </div>
+          <div style={{ gridColumn: "1 / -1", marginTop: "18px" }}>
+            <button type="submit" style={primaryButtonStyle(theme)}>Reset PIN</button>
+          </div>
+        </form>
         {renderFeedbackMessage(settingsMessage, theme)}
       </section>
 

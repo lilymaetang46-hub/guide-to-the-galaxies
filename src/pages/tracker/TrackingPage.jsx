@@ -34,7 +34,6 @@ function TrackerTrackingPage({ app, pageKey }) {
     setMedNotes,
     addMedication,
     handleMedsTimeChange,
-    rowStyle,
     mealText,
     setMealText,
     mealTime,
@@ -196,7 +195,7 @@ function TrackerTrackingPage({ app, pageKey }) {
   const actionTimeRowStyle = {
     display: "grid",
     gap: "12px",
-    gridTemplateColumns: "minmax(0, 1fr) 160px",
+    gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 160px), 1fr))",
     alignItems: "end",
   };
 
@@ -513,7 +512,7 @@ function TrackerTrackingPage({ app, pageKey }) {
             <p style={emptyTextStyle(theme)}>No tasks added yet.</p>
           ) : (
             <>
-              <div style={{ display: "grid", gap: "18px", marginBottom: "18px" }}>
+              <div style={{ display: "grid", gap: "18px" }}>
                 <div style={{ display: "grid", gap: "12px" }}>
                   <div style={{ display: "flex", flexWrap: "wrap", gap: "10px", alignItems: "center" }}>
                     <p style={{ ...tagGroupLabelStyle(theme), margin: 0 }}>Active tasks</p>
@@ -538,45 +537,6 @@ function TrackerTrackingPage({ app, pageKey }) {
                   )}
                 </div>
               </div>
-              <ul style={{ ...mealListStyle, display: "none" }}>
-              {todoItems.map((item) => (
-                <li
-                  key={item.id}
-                  style={{
-                    ...mealItemStyle(theme),
-                    opacity: item.completed ? 0.82 : 1,
-                  }}
-                >
-                  <div style={{ display: "grid", gap: "4px" }}>
-                    <div
-                      style={{
-                        fontWeight: "bold",
-                        textDecoration: item.completed ? "line-through" : "none",
-                      }}
-                    >
-                      {item.text}
-                    </div>
-                    <div style={{ fontSize: "0.85rem", opacity: 0.72 }}>
-                      {item.time ? `Planned for ${formatTimeLabel(item.time)}` : "No time set"}
-                      {item.completed && item.completedAt
-                        ? ` · Done at ${formatTimeLabel(item.completedAt)}`
-                        : ""}
-                    </div>
-                  </div>
-                  <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", justifyContent: "flex-end" }}>
-                    <button
-                      style={item.completed ? softButtonStyle(theme) : successButtonStyle(theme)}
-                      onClick={() => toggleTodoItem(item.id)}
-                    >
-                      {item.completed ? "Mark Open" : "Mark Done"}
-                    </button>
-                    <button style={smallRemoveButtonStyle(theme)} onClick={() => removeTodoItem(item.id)}>
-                      Remove
-                    </button>
-                  </div>
-                </li>
-              ))}
-              </ul>
             </>
           )}
         </div>
@@ -590,8 +550,8 @@ function TrackerTrackingPage({ app, pageKey }) {
     const pastAppointments = (appointments || []).filter((item) => item.eventDate < today).slice().reverse();
     const todayAppointments = upcomingAppointments.filter((item) => item.eventDate === today);
     const hasAppointmentDraft = Boolean(
-      appointmentTitle?.trim() ||
-        appointmentDate ||
+      editingAppointmentId ||
+        appointmentTitle?.trim() ||
         appointmentTime ||
         appointmentLocation?.trim() ||
         appointmentNote?.trim()

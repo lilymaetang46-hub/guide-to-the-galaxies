@@ -280,6 +280,8 @@ This shared event layer can also power overview summaries and future widgets.
 
 ## Future Expansion: External Calendar Sync
 
+For the plain-English version of the shared app calendar and Google Calendar visibility plan, see `docs/calendar-visibility-plan.md`.
+
 ### Main idea
 
 After the in-app calendar is stable, add optional sync with outside calendar systems so users can see tracker items in tools they already use.
@@ -644,3 +646,114 @@ If the goal is to make the app meaningfully more useful without turning it into 
 - a unified today agenda in Calendar
 - appointment follow-up tasks
 - next-cycle estimate and active-cycle visibility inside Calendar and Overview
+
+## Outsider View Implementation Checklist
+
+This checklist is specifically for bringing the outsider experience up to date with the tracker changes that have already been added.
+
+The goal is not to mirror the full tracker UI.
+
+The goal is to give outsiders a clean, privacy-aware read-only view of the newer shared data and support actions.
+
+### Scope decision
+
+- [ ] confirm outsider view should show summary-level access, not full tracker-page parity
+- [ ] keep outsider sharing read-only
+- [ ] treat period sharing as extra-sensitive even when enabled
+- [ ] confirm `private_notes` from period tracking must never appear in outsider view
+- [ ] confirm whether symptom tags should stay hidden in the first outsider version
+
+### Data access and policy updates
+
+- [ ] review current outsider read policies for `daily_entries` and `profiles`
+- [ ] add outsider read policy for `appointments` tied to approved tracker connections
+- [ ] add outsider read policy for `period_cycles` tied to approved tracker connections
+- [ ] ensure outsider access respects per-connection permissions, especially `todo`, `appointments`, and `period`
+- [ ] verify no protected fields are exposed by policy changes beyond the intended shared summary data
+
+### Outsider data loading
+
+- [ ] update outsider data loading in `src/App.jsx`
+- [ ] keep loading `daily_entries` for existing shared summaries and chart history
+- [ ] include `todo_items` from `daily_entries` in the outsider data shape
+- [ ] load `appointments` for connected trackers
+- [ ] load `period_cycles` for connected trackers if period sharing is allowed
+- [ ] normalize these sources into one outsider-facing tracker summary object
+- [ ] avoid relying only on `latestEntry` for newer tracker features
+
+### Outsider data model additions
+
+- [ ] add shared to-do summary fields such as open count, completed count, and due today count
+- [ ] add shared appointment summary fields such as next appointment, next reminder, and upcoming count
+- [ ] add shared period summary fields such as cycle active, latest cycle, and next estimate
+- [ ] add a shared agenda/event list shape that can combine to-do, appointments, and period items
+- [ ] reuse the calendar event builder pattern where it helps keep tracker and outsider logic aligned
+
+### Outsider Overview page
+
+- [ ] update outsider overview to surface the new tracker categories at a summary level
+- [ ] add a to-do summary block
+- [ ] add an appointments summary block
+- [ ] add a period summary block
+- [ ] keep the page focused on triage and quick support, not deep detail
+- [ ] ensure empty states still work when a tracker has partial sharing enabled
+
+### Outsider Tracker Data page
+
+- [ ] expand the outsider tracker data page beyond the older chart-only model
+- [ ] add a read-only to-do section
+- [ ] add a read-only appointments section
+- [ ] add a read-only period section
+- [ ] add a shared agenda section if it improves usability
+- [ ] keep charts and newer data blocks consistent with existing outsider themes
+- [ ] ensure sections only render when the corresponding sharing permission is enabled
+
+### Outsider navigation
+
+- [ ] decide whether a shared agenda belongs inside the existing data page or needs a dedicated outsider calendar page
+- [ ] prefer starting inside the existing data page unless the content becomes too crowded
+- [ ] only add a new outsider nav destination if the information no longer fits cleanly in the current structure
+
+### Outsider Support page
+
+- [ ] review existing outsider support shortcuts
+- [ ] add support nudges for `todo` if that permission is enabled
+- [ ] add support nudges for `appointments` if that permission is enabled
+- [ ] decide whether period-related nudges should exist at all
+- [ ] keep support language simple and non-invasive for sensitive categories
+
+### Tracker connection settings
+
+- [ ] verify tracker-side permission toggles already cover `todo`, `period`, and `appointments`
+- [ ] confirm outsider UI actually honors those toggles end to end
+- [ ] confirm disabled categories disappear from outsider summaries, detail sections, and support shortcuts
+- [ ] confirm connection updates still work without breaking older outsider flows
+
+### Privacy and content rules
+
+- [ ] never show tracker-only editing controls in outsider pages
+- [ ] never expose private notes or protected freeform fields in outsider summaries
+- [ ] avoid language that makes period predictions sound certain
+- [ ] keep period sharing off by default unless intentionally enabled
+- [ ] make empty or unavailable states explicit instead of silently implying missing data
+
+### QA and regression checks
+
+- [ ] test outsider with only legacy sharing enabled
+- [ ] test outsider with `todo` enabled
+- [ ] test outsider with `appointments` enabled
+- [ ] test outsider with `period` disabled
+- [ ] test outsider with `period` enabled
+- [ ] verify period private notes never appear
+- [ ] verify shared agenda ordering is correct across mixed event types
+- [ ] verify existing outsider charts and support flows still work after the data-loading changes
+- [ ] verify mobile layouts still hold up for the expanded outsider pages
+
+### Recommended implementation order
+
+- [ ] step 1: add backend access and permission-safe policies
+- [ ] step 2: refactor outsider data loading and normalization
+- [ ] step 3: update outsider overview summaries
+- [ ] step 4: expand outsider tracker data sections
+- [ ] step 5: update outsider support shortcuts
+- [ ] step 6: run regression checks and UI polish

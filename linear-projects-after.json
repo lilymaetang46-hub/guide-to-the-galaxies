@@ -1,0 +1,162 @@
+﻿[
+  {
+    "id": "6de083fa-e9b1-40da-9d96-a7f512b83acb",
+    "name": "Outsider App Fixes and Improvements",
+    "url": "https://linear.app/guide-to-the-galaxies/project/outsider-app-fixes-and-improvements-6dbafc006d30",
+    "description": "Focused execution project for bringing the outsider experience up to date with tracker features, permission-safe sharing, and mobile-ready regressions.",
+    "content": "Objective\nBring the outsider experience up to date with the tracker feature set while preserving read-only access, privacy boundaries, and mobile usability.\n\nInvestigation summary\n\n* The outsider app already has dedicated Overview, Telemetry, Goals, and Comms surfaces.\n* The app currently builds and lints cleanly, so this is mainly a product execution and integration gap rather than a broken baseline.\n* Outsider data loading in src/App.jsx currently relies on tracker_connections plus daily_entries history.\n* The repo planning doc still marks appointments, period sharing, permission-safe policy updates, and outsider summary expansion as unfinished.\n* The highest risk area is privacy drift: newer tracker features can be added without outsider policies, toggles, and UI states staying aligned.\n\nExecution plan\n\n1. Add backend policies and permission-safe access for appointments and period data.\n2. Refactor outsider data loading into a normalized shared summary model that combines daily entries, todos, appointments, and period signals.\n3. Expand the outsider Overview page with summary-level todo, appointments, and period blocks.\n4. Expand the outsider Telemetry/Data page with read-only planning sections and a shared agenda if it improves scanability.\n5. Tighten outsider support shortcuts and visibility rules so they respect per-connection permissions end to end.\n6. Run regression QA across sharing combinations, privacy rules, existing charts/support flows, and mobile layouts.\n\nDefinition of done\n\n* Outsider pages expose only approved summary-level data.\n* Disabled permissions remove related outsider summaries, details, and nudges.\n* Period data stays conservative, privacy-safe, and never exposes private notes.\n* Existing outsider charts and support flows still work after the new data sources are added.\n* Mobile layouts remain usable across the expanded outsider surfaces.",
+    "teams": {
+      "nodes": [
+        {
+          "id": "98137d43-72d0-4802-a6ab-7a758ab24214",
+          "key": "GUI",
+          "name": "Guide to the galaxies"
+        }
+      ]
+    }
+  },
+  {
+    "id": "3c425299-3c5d-4ae3-bde8-1337a2682c33",
+    "name": "To-Do Deepening",
+    "url": "https://linear.app/guide-to-the-galaxies/project/to-do-deepening-2408471b9c4f",
+    "description": "Complete the next wave of task functionality with better scheduling, status handling, and a stronger data model.",
+    "content": "Objective\nStrengthen To-Do with the next highest-value improvements while keeping tasks calm, optional, and lightweight.\n\nScope\n\n* priority and optional due time\n* overdue, skipped, and carry-forward handling\n* simple categories and lightweight grouping\n* groundwork for moving tasks into dedicated storage\n\nExecution plan\n\n1. Stabilize the task model so priority, due-time, and cross-day state are reliable.\n2. Add the highest-value task UX improvements without turning the feature into a heavy productivity tool.\n3. Improve grouping and summaries so the extra metadata actually helps users scan their work.\n4. Prepare the longer-term storage shift away from daily_entries where needed.\n5. Validate backward compatibility, edge cases, and mobile task flows.\n\nDefinition of done\n\n* The next wave of task improvements works end to end.\n* Task state remains understandable for both simple and richer tasks.\n* The implementation leaves To-Do easier to extend, not more coupled.",
+    "teams": {
+      "nodes": [
+        {
+          "id": "98137d43-72d0-4802-a6ab-7a758ab24214",
+          "key": "GUI",
+          "name": "Guide to the galaxies"
+        }
+      ]
+    }
+  },
+  {
+    "id": "8b4f80df-89a7-4621-8747-37a97e79b446",
+    "name": "Period Tracker Deepening",
+    "url": "https://linear.app/guide-to-the-galaxies/project/period-tracker-deepening-fd16e875e79a",
+    "description": "Expand period tracking with richer daily detail, safer summaries, and a faster active-cycle logging flow.",
+    "content": "Objective\nExpand period tracking with richer day-level detail, safer summaries, and a faster active-cycle experience.\n\nScope\n\n* richer daily symptom and bleeding detail\n* active-cycle quick logging\n* improved cycle history and gentle pattern notes\n* supportive notes about relief methods and what helped\n\nExecution plan\n\n1. Define the next period-tracking fields and summaries with privacy-first defaults.\n2. Add compact logging flows for repeated active-cycle updates.\n3. Expand history and review surfaces with richer but careful cycle context.\n4. Verify that new detail stays private, understandable, and low-friction on mobile and desktop.\n5. Keep copy and estimates conservative so the product does not overclaim certainty.\n\nDefinition of done\n\n* Users can capture richer period detail without more friction.\n* Summaries and history are more helpful while still privacy-safe.\n* The feature remains supportive rather than clinical or overwhelming.",
+    "teams": {
+      "nodes": [
+        {
+          "id": "98137d43-72d0-4802-a6ab-7a758ab24214",
+          "key": "GUI",
+          "name": "Guide to the galaxies"
+        }
+      ]
+    }
+  },
+  {
+    "id": "bbd32f16-96d4-434e-bc1e-12c1f5826c2e",
+    "name": "Appointments Deepening",
+    "url": "https://linear.app/guide-to-the-galaxies/project/appointments-deepening-8a682b639f00",
+    "description": "Make appointments and reminders more useful without turning the app into a heavy calendar.",
+    "content": "Objective\nDeepen appointments and reminders with the next most useful planning details while preserving the app's lightweight feel.\n\nScope\n\n* richer appointment metadata\n* optional prep checklist and leave-by time\n* follow-up task creation after appointments\n\nExecution plan\n\n1. Extend the appointment data model with the highest-value optional fields.\n2. Update create and edit flows so richer details stay secondary to the core appointment form.\n3. Surface the new metadata in cards, reminders, and summaries only where it improves planning value.\n4. Connect appointments and follow-up tasks in a lightweight, low-noise way.\n5. Verify that old appointments, partial metadata, and mobile layouts still behave cleanly.\n\nDefinition of done\n\n* Appointments support the targeted richer planning details.\n* The feature still feels lightweight rather than like a full calendar suite.\n* Related reminders and follow-up flows remain easy to understand.",
+    "teams": {
+      "nodes": [
+        {
+          "id": "98137d43-72d0-4802-a6ab-7a758ab24214",
+          "key": "GUI",
+          "name": "Guide to the galaxies"
+        }
+      ]
+    }
+  },
+  {
+    "id": "b3b27b32-260e-4761-8c01-4a953c593761",
+    "name": "Navigation Cleanup",
+    "url": "https://linear.app/guide-to-the-galaxies/project/navigation-cleanup-7aa28bc61011",
+    "description": "Finish the tracker information architecture shift toward a calmer Log hub and a stronger overview home surface.",
+    "content": "Objective\nFinish the tracker information architecture shift toward a calmer Log hub and a stronger Overview home surface.\n\nScope\n\n* grouped Log picker improvements\n* shell and top-level navigation cleanup\n* stronger Overview hierarchy and home-surface behavior\n\nExecution plan\n\n1. Lock the desired tracker information architecture so shell, Overview, and Log all move in the same direction.\n2. Reduce shell-level clutter and move category complexity into calmer in-page navigation patterns.\n3. Build the grouped Log picker with recent and pinned access patterns where they add value.\n4. Strengthen Overview as the resume and home surface for the tracker.\n5. Validate discoverability, reachability, and consistency across desktop and mobile layouts.\n\nDefinition of done\n\n* Tracker navigation is calmer and more coherent.\n* Overview and Log each have a clearer role.\n* New tracker areas can be added without recreating top-level clutter.",
+    "teams": {
+      "nodes": [
+        {
+          "id": "98137d43-72d0-4802-a6ab-7a758ab24214",
+          "key": "GUI",
+          "name": "Guide to the galaxies"
+        }
+      ]
+    }
+  },
+  {
+    "id": "e3f462d8-c023-4dbc-a987-c60c6cc4f7ec",
+    "name": "Outsider Shared Planning",
+    "url": "https://linear.app/guide-to-the-galaxies/project/outsider-shared-planning-084136388522",
+    "description": "Bring outsider permissions, summaries, and support flows up to date with shared To-Do, Period, Appointments, and agenda data.",
+    "content": "Objective\nBring outsider permissions, summaries, and support flows up to date with shared To-Do, Period, Appointments, and agenda data.\n\nScope\n\n* backend read policies for shared planning categories\n* normalized outsider data loading\n* updated outsider overview and tracker data surfaces\n* permission-aware support nudges and regression coverage\n\nExecution plan\n\n1. Tighten outsider read policies and tracker permission alignment for the newly shared planning categories.\n2. Normalize shared planning data into one outsider-facing summary model.\n3. Expand outsider overview and tracker data pages with permission-safe planning summaries.\n4. Update support nudges and actions so they respect what is actually shared.\n5. Run regression coverage across mixed sharing states, privacy constraints, and mobile layouts.\n\nDefinition of done\n\n* Outsider experiences reflect shared planning data safely and clearly.\n* Permission toggles are respected end to end.\n* Sensitive details stay protected across data, UI, and support flows.",
+    "teams": {
+      "nodes": [
+        {
+          "id": "98137d43-72d0-4802-a6ab-7a758ab24214",
+          "key": "GUI",
+          "name": "Guide to the galaxies"
+        }
+      ]
+    }
+  },
+  {
+    "id": "040e7114-d4f6-4afd-a68f-370d4437efe7",
+    "name": "External Calendar Sync Plan",
+    "url": "https://linear.app/guide-to-the-galaxies/project/external-calendar-sync-plan-fca4f058ea62",
+    "description": "Optional external calendar sync after the in-app calendar is stable, with Google Calendar first and Apple-friendly support later.",
+    "content": "# External Calendar Sync Plan\n\nThis project recreates the external calendar sync planning section from docs/tracking-expansion-plan.md.\n\nAfter the in-app calendar is stable, add optional sync with outside calendar systems so users can see tracker items in tools they already use.\n\nRecommended rollout:\n\n* finish the in-app calendar first\n* add Google Calendar sync before Apple-specific sync\n* support Apple Calendar through export or subscription before attempting deeper iCloud-specific behavior\n\nRecommended Version 1 scope:\n\n* app-to-calendar sync for appointments and reminders\n* optional app-to-calendar sync for dated to-dos\n* no write-back from external calendars into the app yet\n\nWhy this order:\n\n* Google Calendar has a clearer and more developer-friendly sync path\n* Apple Calendar support is easier through standard calendar formats than through deep direct iCloud integration\n* the internal calendar needs stable event shapes before outside sync becomes safe and predictable\n\nExecution phases:\n\n1. Define the sync model\n2. Prepare the data model\n3. Build Google Calendar connection\n4. Add app-to-Google sync rules\n5. Add Apple-friendly support\n6. Add controls and safeguards\n7. Test and release carefully\n\nTechnical direction:\nBuild on top of the shared normalized event layer used by the in-app calendar. External calendars should connect to that normalized event layer rather than having each tracker type talk to Google or Apple separately.",
+    "teams": {
+      "nodes": [
+        {
+          "id": "98137d43-72d0-4802-a6ab-7a758ab24214",
+          "key": "GUI",
+          "name": "Guide to the galaxies"
+        }
+      ]
+    }
+  },
+  {
+    "id": "cf7b565e-6fe2-42eb-8f93-6c4be952705b",
+    "name": "Tracker Stabilization",
+    "url": "https://linear.app/guide-to-the-galaxies/project/tracker-stabilization-0004957471b2",
+    "description": "Short-term stabilization work for tracker and outsider product quality, including privacy fixes, mobile responsiveness, UI cleanup, navigation cleanup, test coverage, and architecture risk reduction.",
+    "content": "Objective\nReduce delivery risk in the tracker and outsider product through focused stabilization work across privacy, responsiveness, UI cleanup, navigation, and architecture.\n\nScope\n\n* privacy hardening\n* mobile responsiveness and shell polish\n* navigation regressions and UI cleanup\n* test coverage and architecture risk reduction\n\nExecution plan\n\n1. Fix the highest-risk privacy and correctness regressions first.\n2. Clean up responsive behavior and mobile UI issues across tracker and outsider surfaces.\n3. Resolve navigation regressions and accumulated polish problems that make the product feel unstable.\n4. Add targeted regression coverage around the most failure-prone areas.\n5. Reduce shell-level architecture risk where oversized or tightly coupled code keeps creating fragility.\n\nDefinition of done\n\n* The current tracker and outsider experience feels materially more stable.\n* High-risk regressions are reduced or covered by repeatable checks.\n* Future product work can land on a sturdier baseline.",
+    "teams": {
+      "nodes": [
+        {
+          "id": "98137d43-72d0-4802-a6ab-7a758ab24214",
+          "key": "GUI",
+          "name": "Guide to the galaxies"
+        }
+      ]
+    }
+  },
+  {
+    "id": "84b85651-64e3-4850-99c4-473be84a0fbd",
+    "name": "Calendar Visibility",
+    "url": "https://linear.app/guide-to-the-galaxies/project/calendar-visibility-ec226e97199e",
+    "description": "Plan for making calendar events easier to understand across the in-app calendar and Google Calendar, starting with strong in-app visibility before deeper sync.",
+    "content": "Objective\nMake calendar information easier to understand in the app first, then extend that clarity into Google Calendar visibility and simple sync behavior.\n\nScope\n\n* stronger in-app calendar visibility\n* Google Calendar events shown inside the app\n* simple app-to-Google appointment sync\n* optional dated To-Do syncing\n* reliability and refresh polish\n\nExecution plan\n\n1. Strengthen the in-app calendar so users can understand app-native events at a glance.\n2. Add clearly labeled Google Calendar visibility inside the app without blurring ownership.\n3. Introduce safe, simple app-to-Google sync for supported appointments.\n4. Add optional dated To-Do sync only after the core event path is stable.\n5. Improve status visibility, refresh behavior, and reliability before calling the work complete.\n\nDefinition of done\n\n* Calendar visibility is clearer inside the app and across Google integration surfaces.\n* External events and app-native events remain distinguishable.\n* Reliability and refresh behavior are good enough for daily use.",
+    "teams": {
+      "nodes": [
+        {
+          "id": "98137d43-72d0-4802-a6ab-7a758ab24214",
+          "key": "GUI",
+          "name": "Guide to the galaxies"
+        }
+      ]
+    }
+  },
+  {
+    "id": "b4eebffe-62da-4050-9e38-9e33e17dba60",
+    "name": "Calendar Feature",
+    "url": "https://linear.app/guide-to-the-galaxies/project/calendar-feature-6d214bd42a7a",
+    "description": "Create and polish the Calendar sync between in app and google/any others",
+    "content": "Objective\nCreate and polish the broader calendar experience so it can unify planning data without becoming a heavy scheduler.\n\nScope\n\n* stronger today and overview widgets\n* improved weekly planning summaries\n* calendar polish that builds on the shared event layer\n\nExecution plan\n\n1. Build the most valuable summary surfaces on top of the normalized calendar event layer.\n2. Improve today and weekly planning views so they help users understand what matters next.\n3. Refine labels, grouping, and hierarchy so mixed event types stay easy to scan.\n4. Verify the calendar stays calm on mobile and desktop as more data types appear.\n5. Keep the calendar focused on summary and planning value rather than full scheduling complexity.\n\nDefinition of done\n\n* The calendar adds clearer planning value across the app.\n* Summary widgets and weekly views share a common event model.\n* The experience stays calm and readable as features expand.",
+    "teams": {
+      "nodes": [
+        {
+          "id": "98137d43-72d0-4802-a6ab-7a758ab24214",
+          "key": "GUI",
+          "name": "Guide to the galaxies"
+        }
+      ]
+    }
+  }
+]

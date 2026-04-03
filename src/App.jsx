@@ -1,5 +1,6 @@
 ﻿import { useEffect, useMemo, useState } from "react";
 import { supabase } from "./supabase";
+import { useEffectEvent } from "react";
 import { App as CapacitorApp } from "@capacitor/app";
 import { Capacitor } from "@capacitor/core";
 import {
@@ -45,8 +46,6 @@ import {
   normalizeConnectionPermissions,
   normalizeTrackedAreas,
 } from "./app/utils";
-
-/* eslint-disable react-hooks/exhaustive-deps */
 
 const PENDING_SIGNUP_PROFILE_KEY = "pendingSignupProfile";
 const PREFERRED_APP_EXPERIENCE_KEY = "preferredAppExperience";
@@ -3048,6 +3047,48 @@ function App() {
     await saveEntry({ after_exercise_state: value });
   };
 
+  const hydrateUserSession = useEffectEvent(async (nextUser) => {
+    const profileSync = await ensureProfileExists(nextUser);
+
+    if (!profileSync.ok) {
+      setAuthMessage(profileSync.error || "Could not sync your profile.");
+    }
+
+    await loadProfile(nextUser.id);
+    await loadEntry();
+    await loadHistory();
+    await loadPeriodCycles();
+    await loadAppointments();
+    setProfileSyncLoading(false);
+  });
+
+  const refreshProfileForEffect = useEffectEvent((userId) => {
+    void loadProfile(userId);
+  });
+
+  const refreshConnectionsDataForEffect = useEffectEvent(() => {
+    void loadConnectionsData();
+  });
+
+  const refreshOutsiderTrackersForEffect = useEffectEvent(() => {
+    void loadOutsiderTrackers();
+  });
+
+  const refreshSupportInboxForEffect = useEffectEvent(() => {
+    void loadSupportInbox();
+  });
+
+  const enableNativePushForEffect = useEffectEvent(() => {
+    void enableNativePushNotifications();
+  });
+
+  const persistGoalRewardSnapshot = useEffectEvent((computedGoals, updatedRewards) => {
+    void saveEntry({
+      goals: computedGoals,
+      rewards: updatedRewards,
+    });
+  });
+
   useEffect(() => {
     if (typeof window === "undefined") return undefined;
 
@@ -3092,10 +3133,6 @@ function App() {
 
   useEffect(() => {
     if (!user) {
-      if (pushRegistrationHandle) {
-        pushRegistrationHandle();
-        setPushRegistrationHandle(null);
-      }
       setLoading(false);
       setEntryId(null);
       setHistoryData([]);
@@ -3133,26 +3170,21 @@ function App() {
 
     setLoading(true);
     setProfileSyncLoading(true);
+    void hydrateUserSession(user);
+  }, [user, today]);
 
-    (async () => {
-      const profileSync = await ensureProfileExists(user);
+  useEffect(() => {
+    if (user || !pushRegistrationHandle) {
+      return;
+    }
 
-      if (!profileSync.ok) {
-        setAuthMessage(profileSync.error || "Could not sync your profile.");
-      }
-
-      await loadProfile(user.id);
-      await loadEntry();
-      await loadHistory();
-      await loadPeriodCycles();
-      await loadAppointments();
-      setProfileSyncLoading(false);
-    })();
-  }, [user]);
+    pushRegistrationHandle();
+    setPushRegistrationHandle(null);
+  }, [user, pushRegistrationHandle]);
 
   useEffect(() => {
     if (user && activePage === "settings") {
-      loadProfile(user.id);
+      refreshProfileForEffect(user.id);
     }
   }, [activePage, user]);
 
@@ -3199,7 +3231,7 @@ function App() {
     setPeriodFlowLevel("medium");
     setPeriodSymptomTags([]);
     setPeriodPrivateNotes("");
-  }, [activePeriodCycle?.id, today]);
+  }, [activePeriodCycle, today]);
 
   useEffect(() => {
     if (!user || typeof window === "undefined") {
@@ -3283,7 +3315,7 @@ function App() {
       return;
     }
 
-    enableNativePushNotifications();
+    enableNativePushForEffect();
   }, [
     user,
     pushNotificationsSupported,
@@ -3296,21 +3328,21 @@ function App() {
 
   useEffect(() => {
     if (user) {
-      loadConnectionsData();
-      loadOutsiderTrackers();
-      loadSupportInbox();
+      refreshConnectionsDataForEffect();
+      refreshOutsiderTrackersForEffect();
+      refreshSupportInboxForEffect();
     }
   }, [user]);
 
   useEffect(() => {
     if (user && activePage === "connections") {
-      loadConnectionsData();
+      refreshConnectionsDataForEffect();
     }
   }, [activePage, user]);
 
   useEffect(() => {
     if (user && (activePage === "support" || activePage === "mission" || activePage === "dashboard")) {
-      loadSupportInbox();
+      refreshSupportInboxForEffect();
     }
   }, [activePage, user]);
 
@@ -3318,7 +3350,7 @@ function App() {
     if (!user || activePage !== "connections") return undefined;
 
     const intervalId = window.setInterval(() => {
-      loadConnectionsData();
+      refreshConnectionsDataForEffect();
     }, 10000);
 
     return () => {
@@ -3328,9 +3360,9 @@ function App() {
 
   useEffect(() => {
     if (user && appExperience === "outsider") {
-      loadOutsiderTrackers();
+      refreshOutsiderTrackersForEffect();
     }
-  }, [appExperience, outsiderPage, user]);
+  }, [appExperience, user]);
 
   useEffect(() => {
     localStorage.setItem(TRACKER_DARK_MODE_KEY, String(trackerDarkMode));
@@ -3407,12 +3439,9 @@ function App() {
     }
 
     if (hasGoalChanges || hasRewardChanges) {
-      saveEntry({
-        goals: computedGoals,
-        rewards: updatedRewards,
-      });
+      persistGoalRewardSnapshot(computedGoals, updatedRewards);
     }
-  }, [historyData, goals, rewards, entryId, darkMode, today, themeFamily]);
+  }, [historyData, goals, rewards, entryId, today, themeFamily]);
 
   const chartRangeOptions = [7, 14];
   const recentChartData = useMemo(
@@ -3776,7 +3805,10 @@ function App() {
   const selectedOutsiderPermissions = normalizeConnectionPermissions(
     selectedOutsider?.permissions
   );
-  const selectedOutsiderHistory = selectedOutsider?.history || [];
+  const selectedOutsiderHistory = useMemo(
+    () => selectedOutsider?.history || [],
+    [selectedOutsider]
+  );
   const unreadSupportCount = supportInbox.filter((item) => !item.readAt).length;
   const selectedOutsiderChartData = useMemo(
     () => buildRecentChartData(selectedOutsiderHistory, 7, today),
@@ -3909,6 +3941,7 @@ function App() {
 
   const trackerPageProps = {
     ...sharedPageProps,
+    user,
     themeFamily,
     sectionCardStyle,
     trackerLabels,
@@ -5284,33 +5317,47 @@ function App() {
               </p>
             </div>
             {authMode === "login" ? (
-              <div style={goalFormGridStyle}>
+              <form
+                style={goalFormGridStyle}
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  handleLogin();
+                }}
+              >
                 <div>
-                  <label style={labelStyle(authTheme)}>Email</label>
+                  <label htmlFor="auth-login-email" style={labelStyle(authTheme)}>Email</label>
                   <input
+                    id="auth-login-email"
                     style={inputStyle(authTheme)}
                     type="email"
+                    name="email"
+                    autoComplete="username"
+                    autoCapitalize="none"
+                    spellCheck="false"
                     value={authEmail}
                     onChange={(e) => setAuthEmail(e.target.value)}
                     placeholder="you@example.com"
                   />
                 </div>
                 <div>
-                  <label style={labelStyle(authTheme)}>Password</label>
+                  <label htmlFor="auth-login-password" style={labelStyle(authTheme)}>Password</label>
                   <input
+                    id="auth-login-password"
                     style={inputStyle(authTheme)}
                     type="password"
+                    name="current-password"
+                    autoComplete="current-password"
                     value={authPassword}
                     onChange={(e) => setAuthPassword(e.target.value)}
                     placeholder="Password"
                   />
                 </div>
                 <div style={{ gridColumn: "1 / -1" }}>
-                  <button style={primaryButtonStyle(authTheme)} onClick={handleLogin}>
+                  <button type="submit" style={primaryButtonStyle(authTheme)}>
                     Login
                   </button>
                 </div>
-              </div>
+              </form>
             ) : (
               <div style={{ display: "grid", gap: "18px" }}>
                 {signupStep === 1 && (
@@ -5350,75 +5397,107 @@ function App() {
                 )}
 
                 {signupStep === 2 && (
-                  <div style={goalFormGridStyle}>
+                  <form
+                    style={goalFormGridStyle}
+                    onSubmit={(event) => {
+                      event.preventDefault();
+                      setSignupStep(3);
+                    }}
+                  >
                     <div>
-                      <label style={labelStyle(authTheme)}>Email</label>
+                      <label htmlFor="auth-signup-email" style={labelStyle(authTheme)}>Email</label>
                       <input
+                        id="auth-signup-email"
                         style={inputStyle(authTheme)}
                         type="email"
+                        name="email"
+                        autoComplete="username"
+                        autoCapitalize="none"
+                        spellCheck="false"
                         value={authEmail}
                         onChange={(e) => setAuthEmail(e.target.value)}
                         placeholder="you@example.com"
                       />
                     </div>
                     <div>
-                      <label style={labelStyle(authTheme)}>Password</label>
+                      <label htmlFor="auth-signup-password" style={labelStyle(authTheme)}>Password</label>
                       <input
+                        id="auth-signup-password"
                         style={inputStyle(authTheme)}
                         type="password"
+                        name="new-password"
+                        autoComplete="new-password"
                         value={authPassword}
                         onChange={(e) => setAuthPassword(e.target.value)}
                         placeholder="Password"
                       />
                     </div>
                     <div>
-                      <label style={labelStyle(authTheme)}>Confirm password</label>
+                      <label htmlFor="auth-signup-confirm-password" style={labelStyle(authTheme)}>Confirm password</label>
                       <input
+                        id="auth-signup-confirm-password"
                         style={inputStyle(authTheme)}
                         type="password"
+                        name="confirm-password"
+                        autoComplete="new-password"
                         value={authConfirmPassword}
                         onChange={(e) => setAuthConfirmPassword(e.target.value)}
                         placeholder="Confirm password"
                       />
                     </div>
                     <div style={{ gridColumn: "1 / -1", display: "flex", gap: "10px", flexWrap: "wrap" }}>
-                      <button style={softButtonStyle(authTheme)} onClick={() => setSignupStep(1)}>
+                      <button type="button" style={softButtonStyle(authTheme)} onClick={() => setSignupStep(1)}>
                         Back
                       </button>
-                      <button style={primaryButtonStyle(authTheme)} onClick={() => setSignupStep(3)}>
+                      <button type="submit" style={primaryButtonStyle(authTheme)}>
                         Continue to profile
                       </button>
                     </div>
-                  </div>
+                  </form>
                 )}
 
                 {signupStep === 3 && (
-                  <div style={goalFormGridStyle}>
+                  <form
+                    style={goalFormGridStyle}
+                    onSubmit={(event) => {
+                      event.preventDefault();
+                      handleSignup();
+                    }}
+                  >
                     <div>
-                      <label style={labelStyle(authTheme)}>Display name</label>
+                      <label htmlFor="auth-signup-display-name" style={labelStyle(authTheme)}>Display name</label>
                       <input
+                        id="auth-signup-display-name"
                         style={inputStyle(authTheme)}
                         type="text"
+                        name="name"
+                        autoComplete="name"
                         value={displayName}
                         onChange={(e) => setDisplayName(e.target.value)}
                         placeholder="Your name"
                       />
                     </div>
                     <div>
-                      <label style={labelStyle(authTheme)}>Secondary display name</label>
+                      <label htmlFor="auth-signup-secondary-display-name" style={labelStyle(authTheme)}>Secondary display name</label>
                       <input
+                        id="auth-signup-secondary-display-name"
                         style={inputStyle(authTheme)}
                         type="text"
+                        name="nickname"
+                        autoComplete="nickname"
                         value={secondaryDisplayName}
                         onChange={(e) => setSecondaryDisplayName(e.target.value)}
                         placeholder="Optional"
                       />
                     </div>
                     <div>
-                      <label style={labelStyle(authTheme)}>PIN</label>
+                      <label htmlFor="auth-signup-pin" style={labelStyle(authTheme)}>PIN</label>
                       <input
+                        id="auth-signup-pin"
                         style={inputStyle(authTheme)}
                         type="password"
+                        name="account-pin"
+                        autoComplete="off"
                         inputMode="numeric"
                         value={pin}
                         onChange={(e) => setPin(e.target.value.replace(/\D/g, ""))}
@@ -5426,10 +5505,13 @@ function App() {
                       />
                     </div>
                     <div>
-                      <label style={labelStyle(authTheme)}>Confirm PIN</label>
+                      <label htmlFor="auth-signup-confirm-pin" style={labelStyle(authTheme)}>Confirm PIN</label>
                       <input
+                        id="auth-signup-confirm-pin"
                         style={inputStyle(authTheme)}
                         type="password"
+                        name="account-pin-confirmation"
+                        autoComplete="off"
                         inputMode="numeric"
                         value={confirmPin}
                         onChange={(e) => setConfirmPin(e.target.value.replace(/\D/g, ""))}
@@ -5437,14 +5519,14 @@ function App() {
                       />
                     </div>
                     <div style={{ gridColumn: "1 / -1", display: "flex", gap: "10px", flexWrap: "wrap" }}>
-                      <button style={softButtonStyle(authTheme)} onClick={() => setSignupStep(2)}>
+                      <button type="button" style={softButtonStyle(authTheme)} onClick={() => setSignupStep(2)}>
                         Back
                       </button>
-                      <button style={primaryButtonStyle(authTheme)} onClick={handleSignup}>
+                      <button type="submit" style={primaryButtonStyle(authTheme)}>
                         Create account
                       </button>
                     </div>
-                  </div>
+                  </form>
                 )}
               </div>
             )}
