@@ -411,6 +411,7 @@ function App() {
   const [pendingTrackedAreas, setPendingTrackedAreas] = useState([]);
   const [trackerLogPinnedPages, setTrackerLogPinnedPages] = useState([]);
   const [trackerLogRecentPages, setTrackerLogRecentPages] = useState([]);
+  const [trackerLogPreferencesHydrated, setTrackerLogPreferencesHydrated] = useState(false);
   const [showTrackingAreaPicker, setShowTrackingAreaPicker] = useState(false);
   const [trackingAreasMessage, setTrackingAreasMessage] = useState("");
   const [showAddTrackingAreaPicker, setShowAddTrackingAreaPicker] = useState(false);
@@ -3291,6 +3292,7 @@ function App() {
       setPendingTrackedAreas([]);
       setTrackerLogPinnedPages([]);
       setTrackerLogRecentPages([]);
+      setTrackerLogPreferencesHydrated(false);
       setShowTrackingAreaPicker(false);
       setTrackingAreasMessage("");
       setShowAddTrackingAreaPicker(false);
@@ -3323,6 +3325,7 @@ function App() {
 
     setLoading(true);
     setProfileSyncLoading(true);
+    setTrackerLogPreferencesHydrated(false);
     void hydrateUserSession(user);
   }, [user, today]);
 
@@ -3348,7 +3351,7 @@ function App() {
   }, [activePage]);
 
   useEffect(() => {
-    if (!user || typeof window === "undefined") {
+    if (!user || profileSyncLoading || typeof window === "undefined") {
       return;
     }
 
@@ -3373,10 +3376,11 @@ function App() {
     setTrackerLogRecentPages((current) =>
       current.join("|") === normalizedPreferences.recent.join("|") ? current : normalizedPreferences.recent
     );
-  }, [trackedAreas, user]);
+    setTrackerLogPreferencesHydrated(true);
+  }, [profileSyncLoading, trackedAreas, user]);
 
   useEffect(() => {
-    if (!user || typeof window === "undefined") {
+    if (!user || profileSyncLoading || !trackerLogPreferencesHydrated || typeof window === "undefined") {
       return;
     }
 
@@ -3406,7 +3410,14 @@ function App() {
       getTrackerLogPreferencesStorageKey(user.id),
       JSON.stringify(normalizedPreferences)
     );
-  }, [trackedAreas, trackerLogPinnedPages, trackerLogRecentPages, user]);
+  }, [
+    profileSyncLoading,
+    trackedAreas,
+    trackerLogPinnedPages,
+    trackerLogPreferencesHydrated,
+    trackerLogRecentPages,
+    user,
+  ]);
 
   useEffect(() => {
     const selectedAreaPageKeys = normalizeTrackedAreas(trackedAreas)
