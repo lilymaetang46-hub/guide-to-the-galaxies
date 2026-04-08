@@ -67,6 +67,17 @@ function getTodoPriorityLabel(priority) {
   }
 }
 
+function getCalendarSummaryDateLabel(dateKey) {
+  const date = parseDateKey(dateKey);
+  return Number.isNaN(date.getTime())
+    ? dateKey
+    : date.toLocaleDateString([], {
+        weekday: "short",
+        month: "short",
+        day: "numeric",
+      });
+}
+
 function getAgendaItemTone(theme, item) {
   if (item.kind === "period") {
     return {
@@ -178,6 +189,12 @@ function TrackerCalendarPage({ app }) {
   const nextPlan = calendarEvents.find(
     (item) => item.kind === "appointment" && item.date >= today
   );
+  const upcomingGroupedItems = upcomingWeekItems.reduce((groups, item) => {
+    const currentGroup = groups.get(item.date) || [];
+    currentGroup.push(item);
+    groups.set(item.date, currentGroup);
+    return groups;
+  }, new Map());
 
   return (
     <div style={{ display: "grid", gap: "18px" }} data-testid="tracker-calendar-page">
@@ -310,7 +327,7 @@ function TrackerCalendarPage({ app }) {
           <div style={summaryLabelStyle(theme)}>Today</div>
           <div style={summaryValueStyle(theme)}>{todayItems.length}</div>
           <div style={summaryNoteStyle(theme)}>
-            {todayItems.length === 0 ? "No dated items today." : "Items on today’s agenda."}
+            {todayItems.length === 0 ? "No dated items today." : "Items on today's agenda."}
           </div>
         </div>
         <div style={summaryCardStyle(theme)}>
@@ -339,6 +356,63 @@ function TrackerCalendarPage({ app }) {
           </div>
         </div>
       </div>
+
+      <section className="galaxy-panel" style={sectionCardStyle(theme, "agenda")}>
+        {renderSectionHeader(
+          "Week Ahead",
+          "A calmer grouped readout for the next seven days, built from the normalized event layer.",
+          "Orbit",
+          "Orbit"
+        )}
+        {upcomingGroupedItems.size === 0 ? (
+          <p style={emptyTextStyle(theme)}>Nothing dated in the next week yet.</p>
+        ) : (
+          <div style={{ display: "grid", gap: "12px" }}>
+            {[...upcomingGroupedItems.entries()].map(([dateKey, items]) => (
+              <div
+                key={dateKey}
+                style={{
+                  ...summaryCardStyle(theme),
+                  display: "grid",
+                  gap: "10px",
+                }}
+              >
+                <div style={{ display: "flex", justifyContent: "space-between", gap: "12px", alignItems: "center", flexWrap: "wrap" }}>
+                  <div style={summaryLabelStyle(theme)}>{getCalendarSummaryDateLabel(dateKey)}</div>
+                  <div style={summaryNoteStyle(theme)}>{items.length} item{items.length === 1 ? "" : "s"}</div>
+                </div>
+                <div style={{ display: "grid", gap: "8px" }}>
+                  {items.map((item) => (
+                    <button
+                      key={item.id}
+                      style={{
+                        border: `1px solid ${theme.borderColorStrong || "rgba(255,255,255,0.08)"}`,
+                        background: theme.itemBackground || "rgba(255,255,255,0.03)",
+                        color: theme.text,
+                        borderRadius: "16px",
+                        padding: "12px 14px",
+                        textAlign: "left",
+                      }}
+                      onClick={() => {
+                        setSelectedDate(dateKey);
+                        setActivePage(item.sourcePageKey);
+                      }}
+                    >
+                      <div style={{ display: "flex", justifyContent: "space-between", gap: "10px", alignItems: "center", flexWrap: "wrap" }}>
+                        <div style={{ fontWeight: 700 }}>{item.title}</div>
+                        <div style={{ ...smallInfoStyle(theme), margin: 0 }}>
+                          {item.time ? formatTimeLabel(item.time) : item.badgeLabel}
+                        </div>
+                      </div>
+                      {item.detail ? <div style={{ ...smallInfoStyle(theme), marginTop: "6px" }}>{item.detail}</div> : null}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
 
       <section className="galaxy-panel" style={sectionCardStyle(theme, "agenda")}>
         {renderSectionHeader(

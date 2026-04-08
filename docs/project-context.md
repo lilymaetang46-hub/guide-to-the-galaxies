@@ -65,6 +65,17 @@ Use this file as the shared handoff note for any Codex thread working in this re
 ## Active Work
 
 - Active ownership note:
+  - Area/files: `docs/project-context.md`, `src/pages/tracker/OverviewPage.jsx`, `src/pages/tracker/CalendarPage.jsx` touched by `Calendar Feature`
+  - Goal: Begin the Calendar Feature project by strengthening tracker summary surfaces on top of the shared normalized calendar event layer.
+  - Status: Done in this thread on 2026-04-08
+  - Notes:
+    - Focused first on the project description's execution steps around today and weekly planning summaries rather than deeper external sync work.
+    - Avoiding the current `src/App.jsx` worktree change unless integration pressure makes that necessary.
+    - Added a shared `Calendar Pulse` overview section plus a grouped `Week Ahead` calendar section.
+    - Followed up after QA feedback to render `Calendar Pulse` across all tracker overview theme variants instead of only the default layout.
+    - Verified with `npm run build`.
+
+- Active ownership note:
   - Area/files: `src/App.jsx`, `src/pages/tracker/TrackingPage.jsx`, `src/app/utils.js`, `src/pages/tracker/CalendarPage.jsx` touched by `GUI-52`
   - Goal: Add task priority and optional due time to tracker To-Do items while keeping the flow lightweight and backward-compatible with existing task data.
   - Status: Done in this thread on 2026-04-02
@@ -196,6 +207,11 @@ Use this file as the shared handoff note for any Codex thread working in this re
 ## Handoff Notes
 
 - What changed:
+  - Began `Calendar Feature` execution work by adding tracker-side summary surfaces powered by the shared normalized calendar event layer.
+  - Added a `Calendar Pulse` section to `src/pages/tracker/OverviewPage.jsx` with today agenda, upcoming week, overdue task, and cycle outlook cards plus short upcoming items.
+  - Added a grouped `Week Ahead` section to `src/pages/tracker/CalendarPage.jsx` so the next seven days are easier to scan by date.
+  - Fixed the first pass so `Calendar Pulse` now renders in all tracker overview theme variants, not just the default overview layout.
+  - Updated `GUI-40` in Linear with the implementation progress note for this slice.
   - Completed `GUI-56` by turning active period cycles into a lighter daily update flow with quick flow selection, symptom toggles, compact notes, and a collapsible full-controls section for date changes and ending the cycle.
   - Completed `GUI-54` locally by replacing the flat Log category row with a grouped picker that shows the current category, recent categories, pinned categories, and a browsable full category grid.
   - Added per-user local persistence for pinned and recent Log categories in `src/App.jsx` so the picker can stay calmer while still surfacing frequent destinations quickly.

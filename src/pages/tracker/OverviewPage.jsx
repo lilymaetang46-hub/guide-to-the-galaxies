@@ -128,6 +128,36 @@ const REEF_OVERVIEW_ORBIT_TRANSLATE_Y = {
   desktop: "72px",
 };
 
+function formatCalendarOverviewDate(dateKey) {
+  if (!dateKey) return "";
+  const date = new Date(`${dateKey}T12:00:00`);
+
+  if (Number.isNaN(date.getTime())) {
+    return dateKey;
+  }
+
+  return date.toLocaleDateString([], {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+  });
+}
+
+function formatCalendarOverviewTime(timeValue) {
+  if (!timeValue) return "";
+  const [hoursText, minutesText] = String(timeValue).split(":");
+  const hours = Number(hoursText);
+  const minutes = Number(minutesText);
+
+  if (Number.isNaN(hours) || Number.isNaN(minutes)) {
+    return timeValue;
+  }
+
+  const suffix = hours >= 12 ? "PM" : "AM";
+  const displayHours = hours % 12 || 12;
+  return `${displayHours}:${String(minutes).padStart(2, "0")} ${suffix}`;
+}
+
 const CANONICAL_OVERVIEW_ORBIT_POSITIONS = {
   meds: { x: "44%", y: "82%" },
   food: { x: "14%", y: "38%" },
@@ -183,6 +213,8 @@ function TrackerOverviewPage({ app }) {
     connectedOutsiders,
     trackedAreas,
     selectedTrackingAreaOptions,
+    calendarEvents = [],
+    nextCycleEstimateDate,
   } = app;
   const getDashboardStat = (key) => dashboardStats.find((item) => item.key === key);
   const getDashboardValue = (key, fallback = "Not logged") => getDashboardStat(key)?.value ?? fallback;
@@ -195,6 +227,98 @@ function TrackerOverviewPage({ app }) {
     "No support messages yet. Connected outsiders will show up here when they send one.";
   const recentTrackerEvents = (recentActivityItems || []).slice(0, 3);
   const moodStateLabel = mood >= 4 ? "Strong" : mood >= 3 ? "Steady" : mood >= 2 ? "Low" : "Heavy";
+  const todayAgendaItems = calendarEvents.filter((item) => item.date === today).slice(0, 3);
+  const upcomingWeekItems = calendarEvents.filter((item) => item.date >= today).slice(0, 7);
+  const overdueTaskCount = calendarEvents.filter(
+    (item) => item.kind === "todo" && !item.completed && item.date < today
+  ).length;
+  const nextAppointment = calendarEvents.find(
+    (item) => item.kind === "appointment" && item.date >= today
+  );
+  const activePeriodItem = calendarEvents.find(
+    (item) => item.kind === "period" && !item.estimated && item.date >= today
+  );
+  const renderCalendarPulseSection = () => (
+    <section className="galaxy-panel" style={sectionCardStyle(theme, "agenda")}>
+      {renderSectionHeader(
+        "Calendar Pulse",
+        "Today and the next few days, grouped from the shared calendar event layer.",
+        "Orbit",
+        "Orbit"
+      )}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "12px" }}>
+        <div style={summaryCardStyle(theme)}>
+          <div style={summaryLabelStyle(theme)}>Today agenda</div>
+          <div style={summaryValueStyle(theme)}>{todayAgendaItems.length}</div>
+          <div style={summaryNoteStyle(theme)}>
+            {todayAgendaItems[0]
+              ? `${todayAgendaItems[0].title}${todayAgendaItems[0].time ? ` at ${formatCalendarOverviewTime(todayAgendaItems[0].time)}` : ""}`
+              : "No dated items on today's agenda."}
+          </div>
+        </div>
+        <div style={summaryCardStyle(theme)}>
+          <div style={summaryLabelStyle(theme)}>Upcoming week</div>
+          <div style={summaryValueStyle(theme)}>{upcomingWeekItems.length}</div>
+          <div style={summaryNoteStyle(theme)}>
+            {nextAppointment
+              ? `${nextAppointment.title} on ${formatCalendarOverviewDate(nextAppointment.date)}`
+              : "No upcoming appointment saved yet."}
+          </div>
+        </div>
+        <div style={summaryCardStyle(theme)}>
+          <div style={summaryLabelStyle(theme)}>Overdue tasks</div>
+          <div style={summaryValueStyle(theme)}>{overdueTaskCount}</div>
+          <div style={summaryNoteStyle(theme)}>
+            {overdueTaskCount > 0 ? "Tasks with due dates before today still need attention." : "No overdue tasks right now."}
+          </div>
+        </div>
+        <div style={summaryCardStyle(theme)}>
+          <div style={summaryLabelStyle(theme)}>Cycle outlook</div>
+          <div style={summaryValueStyle(theme)}>
+            {activePeriodItem ? "Active" : nextCycleEstimateDate ? formatCalendarOverviewDate(nextCycleEstimateDate) : "Open"}
+          </div>
+          <div style={summaryNoteStyle(theme)}>
+            {activePeriodItem
+              ? `${activePeriodItem.title}${activePeriodItem.detail ? `, ${activePeriodItem.detail}` : ""}`
+              : nextCycleEstimateDate
+              ? "Next estimate from recent cycle timing."
+              : "No active or estimated cycle block right now."}
+          </div>
+        </div>
+      </div>
+
+      <div style={{ display: "grid", gap: "10px", marginTop: "14px" }}>
+        {upcomingWeekItems.length === 0 ? (
+          <p style={smallInfoStyle(theme)}>Nothing dated in the next week yet.</p>
+        ) : (
+          upcomingWeekItems.slice(0, 4).map((item) => (
+            <button
+              key={`${item.id}-${item.date}`}
+              style={{
+                ...summaryCardStyle(theme),
+                textAlign: "left",
+                cursor: "pointer",
+                width: "100%",
+              }}
+              onClick={() => setActivePage("calendar")}
+            >
+              <div style={{ display: "flex", justifyContent: "space-between", gap: "12px", alignItems: "center", flexWrap: "wrap" }}>
+                <div>
+                  <div style={summaryLabelStyle(theme)}>{item.badgeLabel}</div>
+                  <div style={{ fontSize: "1rem", fontWeight: 700, color: theme.text, marginTop: "4px" }}>{item.title}</div>
+                </div>
+                <div style={{ ...summaryNoteStyle(theme), textAlign: "right" }}>
+                  <div>{formatCalendarOverviewDate(item.date)}</div>
+                  {item.time ? <div>{formatCalendarOverviewTime(item.time)}</div> : null}
+                </div>
+              </div>
+              {item.detail ? <div style={{ ...summaryNoteStyle(theme), marginTop: "8px" }}>{item.detail}</div> : null}
+            </button>
+          ))
+        )}
+      </div>
+    </section>
+  );
 
   if (isReefTrackerTheme(theme)) {
     const trackerUiFamily = theme.trackerUiFamily || theme.trackerBodyFamily;
@@ -297,6 +421,7 @@ function TrackerOverviewPage({ app }) {
     const reefMiniCardRadius = isMobile ? "20px" : "24px";
 
     return (
+      <>
       <div
         style={{
           display: "grid",
@@ -583,6 +708,8 @@ function TrackerOverviewPage({ app }) {
           </section>
         </aside>
       </div>
+      {renderCalendarPulseSection()}
+      </>
     );
   }
 
@@ -671,6 +798,7 @@ function TrackerOverviewPage({ app }) {
     );
 
     return (
+      <>
       <div
         style={{
           display: "grid",
@@ -973,6 +1101,8 @@ function TrackerOverviewPage({ app }) {
           </section>
         </aside>
       </div>
+      {renderCalendarPulseSection()}
+      </>
     );
   }
 
@@ -1015,6 +1145,7 @@ function TrackerOverviewPage({ app }) {
     const observatoryMiniTitleSize = isMobile ? "1.12rem" : "1.42rem";
 
     return (
+      <>
       <div
         style={{
           display: "grid",
@@ -1308,6 +1439,8 @@ function TrackerOverviewPage({ app }) {
           </section>
         </aside>
       </div>
+      {renderCalendarPulseSection()}
+      </>
     );
   }
 
@@ -1405,6 +1538,7 @@ function TrackerOverviewPage({ app }) {
     );
 
     return (
+      <>
       <div
         style={{
           display: "grid",
@@ -1661,6 +1795,8 @@ function TrackerOverviewPage({ app }) {
           </section>
         </aside>
       </div>
+      {renderCalendarPulseSection()}
+      </>
     );
   }
 
@@ -1702,6 +1838,86 @@ function TrackerOverviewPage({ app }) {
               <div style={summaryNoteStyle(theme)}>{item.note}</div>
             </button>
           ))}
+        </div>
+      </section>
+
+      <section className="galaxy-panel" style={sectionCardStyle(theme, "agenda")}>
+        {renderSectionHeader(
+          "Calendar Pulse",
+          "Today and the next few days, grouped from the shared calendar event layer.",
+          "Orbit",
+          "Orbit"
+        )}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "12px" }}>
+          <div style={summaryCardStyle(theme)}>
+            <div style={summaryLabelStyle(theme)}>Today agenda</div>
+            <div style={summaryValueStyle(theme)}>{todayAgendaItems.length}</div>
+            <div style={summaryNoteStyle(theme)}>
+              {todayAgendaItems[0]
+                ? `${todayAgendaItems[0].title}${todayAgendaItems[0].time ? ` at ${formatCalendarOverviewTime(todayAgendaItems[0].time)}` : ""}`
+                : "No dated items on today's agenda."}
+            </div>
+          </div>
+          <div style={summaryCardStyle(theme)}>
+            <div style={summaryLabelStyle(theme)}>Upcoming week</div>
+            <div style={summaryValueStyle(theme)}>{upcomingWeekItems.length}</div>
+            <div style={summaryNoteStyle(theme)}>
+              {nextAppointment
+                ? `${nextAppointment.title} on ${formatCalendarOverviewDate(nextAppointment.date)}`
+                : "No upcoming appointment saved yet."}
+            </div>
+          </div>
+          <div style={summaryCardStyle(theme)}>
+            <div style={summaryLabelStyle(theme)}>Overdue tasks</div>
+            <div style={summaryValueStyle(theme)}>{overdueTaskCount}</div>
+            <div style={summaryNoteStyle(theme)}>
+              {overdueTaskCount > 0 ? "Tasks with due dates before today still need attention." : "No overdue tasks right now."}
+            </div>
+          </div>
+          <div style={summaryCardStyle(theme)}>
+            <div style={summaryLabelStyle(theme)}>Cycle outlook</div>
+            <div style={summaryValueStyle(theme)}>
+              {activePeriodItem ? "Active" : nextCycleEstimateDate ? formatCalendarOverviewDate(nextCycleEstimateDate) : "Open"}
+            </div>
+            <div style={summaryNoteStyle(theme)}>
+              {activePeriodItem
+                ? `${activePeriodItem.title}${activePeriodItem.detail ? `, ${activePeriodItem.detail}` : ""}`
+                : nextCycleEstimateDate
+                ? "Next estimate from recent cycle timing."
+                : "No active or estimated cycle block right now."}
+            </div>
+          </div>
+        </div>
+
+        <div style={{ display: "grid", gap: "10px", marginTop: "14px" }}>
+          {upcomingWeekItems.length === 0 ? (
+            <p style={smallInfoStyle(theme)}>Nothing dated in the next week yet.</p>
+          ) : (
+            upcomingWeekItems.slice(0, 4).map((item) => (
+              <button
+                key={`${item.id}-${item.date}`}
+                style={{
+                  ...summaryCardStyle(theme),
+                  textAlign: "left",
+                  cursor: "pointer",
+                  width: "100%",
+                }}
+                onClick={() => setActivePage("calendar")}
+              >
+                <div style={{ display: "flex", justifyContent: "space-between", gap: "12px", alignItems: "center", flexWrap: "wrap" }}>
+                  <div>
+                    <div style={summaryLabelStyle(theme)}>{item.badgeLabel}</div>
+                    <div style={{ fontSize: "1rem", fontWeight: 700, color: theme.text, marginTop: "4px" }}>{item.title}</div>
+                  </div>
+                  <div style={{ ...summaryNoteStyle(theme), textAlign: "right" }}>
+                    <div>{formatCalendarOverviewDate(item.date)}</div>
+                    {item.time ? <div>{formatCalendarOverviewTime(item.time)}</div> : null}
+                  </div>
+                </div>
+                {item.detail ? <div style={{ ...summaryNoteStyle(theme), marginTop: "8px" }}>{item.detail}</div> : null}
+              </button>
+            ))
+          )}
         </div>
       </section>
 
