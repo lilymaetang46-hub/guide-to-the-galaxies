@@ -283,6 +283,73 @@ function normalizeAppointments(rawAppointments) {
     });
 }
 
+function normalizeCalendarSyncConnection(connection) {
+  if (!connection || typeof connection !== "object") {
+    return {
+      id: null,
+      provider: "google",
+      status: "needs_setup",
+      externalAccountEmail: "",
+      externalCalendarId: "",
+      externalCalendarName: "",
+      syncAppointments: true,
+      syncReminders: true,
+      syncDatedTodos: false,
+      lastSyncedAt: "",
+      lastError: "",
+      connectedAt: "",
+      createdAt: "",
+      updatedAt: "",
+    };
+  }
+
+  return {
+    id: connection.id ?? null,
+    provider: connection.provider || "google",
+    status: connection.status || "needs_setup",
+    externalAccountEmail: connection.external_account_email || "",
+    externalCalendarId: connection.external_calendar_id || "",
+    externalCalendarName: connection.external_calendar_name || "",
+    syncAppointments: connection.sync_appointments !== false,
+    syncReminders: connection.sync_reminders !== false,
+    syncDatedTodos: Boolean(connection.sync_dated_todos),
+    lastSyncedAt: connection.last_synced_at || "",
+    lastError: connection.last_error || "",
+    connectedAt: connection.connected_at || "",
+    createdAt: connection.created_at || "",
+    updatedAt: connection.updated_at || "",
+  };
+}
+
+function summarizeCalendarSyncLinks(rawLinks) {
+  const links = Array.isArray(rawLinks) ? rawLinks : [];
+
+  return links.reduce(
+    (summary, link) => {
+      const status = link?.sync_status || "pending";
+
+      if (status === "synced") {
+        summary.synced += 1;
+      } else if (status === "failed") {
+        summary.failed += 1;
+      } else if (status === "deleted") {
+        summary.deleted += 1;
+      } else {
+        summary.pending += 1;
+      }
+
+      return summary;
+    },
+    {
+      total: links.length,
+      pending: 0,
+      synced: 0,
+      failed: 0,
+      deleted: 0,
+    }
+  );
+}
+
 function formatDisplayDate(value) {
   if (!value) return "";
   const date = new Date(`${value}T12:00:00`);
@@ -434,6 +501,16 @@ function App() {
   const [connectionsLoading, setConnectionsLoading] = useState(false);
   const [pendingRequests, setPendingRequests] = useState([]);
   const [connectedOutsiders, setConnectedOutsiders] = useState([]);
+  const [googleCalendarConnection, setGoogleCalendarConnection] = useState(
+    normalizeCalendarSyncConnection(null)
+  );
+  const [googleCalendarSyncStats, setGoogleCalendarSyncStats] = useState({
+    total: 0,
+    pending: 0,
+    synced: 0,
+    failed: 0,
+    deleted: 0,
+  });
   const [supportInbox, setSupportInbox] = useState([]);
   const [supportInboxLoading, setSupportInboxLoading] = useState(false);
   const [supportInboxMessage, setSupportInboxMessage] = useState("");
@@ -1163,7 +1240,12 @@ function App() {
 
     setConnectionsLoading(true);
 
-    const [{ data: inviteRow, error: inviteError }, { data: connectionRows, error: connectionError }] =
+    const [
+      { data: inviteRow, error: inviteError },
+      { data: connectionRows, error: connectionError },
+      { data: calendarConnectionRow, error: calendarConnectionError },
+      { data: calendarSyncLinkRows, error: calendarSyncLinkError },
+    ] =
       await Promise.all([
         supabase
           .from("connection_invites")
@@ -1189,6 +1271,17 @@ function App() {
           )
           .eq("tracker_id", user.id)
           .order("created_at", { ascending: false }),
+        supabase
+          .from("calendar_sync_connections")
+          .select("*")
+          .eq("user_id", user.id)
+          .eq("provider", "google")
+          .maybeSingle(),
+        supabase
+          .from("calendar_sync_event_links")
+          .select("sync_status")
+          .eq("user_id", user.id)
+          .eq("provider", "google"),
       ]);
 
     if (inviteError) {
@@ -1263,6 +1356,23 @@ function App() {
             permissions: normalizeConnectionPermissions(row.permissions),
           }))
       );
+    }
+
+    if (calendarConnectionError) {
+      console.error("Google Calendar connection load error:", calendarConnectionError);
+      setConnectionsMessage("Could not load Google Calendar sync settings.");
+    } else {
+      setGoogleCalendarConnection(normalizeCalendarSyncConnection(calendarConnectionRow));
+    }
+
+    if (calendarSyncLinkError) {
+      console.error("Google Calendar sync links load error:", calendarSyncLinkError);
+    } else {
+      setGoogleCalendarSyncStats(summarizeCalendarSyncLinks(calendarSyncLinkRows || []));
+    }
+
+    if (!calendarConnectionRow && !calendarConnectionError) {
+      setGoogleCalendarConnection(normalizeCalendarSyncConnection(null));
     }
 
     setConnectionsLoading(false);
@@ -1874,6 +1984,87 @@ function App() {
           : person
       )
     );
+  }
+
+  async function saveGoogleCalendarConnection(changes) {
+    if (!user) return;
+
+    const currentConnection = normalizeCalendarSyncConnection(googleCalendarConnection);
+    const nextConnection = {
+      ...currentConnection,
+      ...changes,
+    };
+    const nextStatus = nextConnection.status || "needs_setup";
+    const payload = {
+      user_id: user.id,
+      provider: "google",
+      status: nextStatus,
+      external_account_email: nextConnection.externalAccountEmail.trim() || null,
+      external_calendar_id: nextConnection.externalCalendarId.trim() || null,
+      external_calendar_name: nextConnection.externalCalendarName.trim() || null,
+      sync_appointments: Boolean(nextConnection.syncAppointments),
+      sync_reminders: Boolean(nextConnection.syncReminders),
+      sync_dated_todos: Boolean(nextConnection.syncDatedTodos),
+      last_error: nextConnection.lastError?.trim() || null,
+      connected_at:
+        nextStatus === "ready"
+          ? nextConnection.connectedAt || new Date().toISOString()
+          : nextConnection.connectedAt || null,
+      updated_at: new Date().toISOString(),
+    };
+
+    const { data, error } = await supabase
+      .from("calendar_sync_connections")
+      .upsert(payload, { onConflict: "user_id,provider" })
+      .select("*")
+      .single();
+
+    if (error) {
+      console.error("Google Calendar connection save error:", error);
+      setConnectionsMessage("Could not save Google Calendar sync settings.");
+      return;
+    }
+
+    setGoogleCalendarConnection(normalizeCalendarSyncConnection(data));
+    setConnectionsMessage("Google Calendar sync settings saved.");
+  }
+
+  async function updateGoogleCalendarSetting(field, value) {
+    await saveGoogleCalendarConnection({
+      [field]: value,
+    });
+  }
+
+  async function prepareGoogleCalendarSync() {
+    await saveGoogleCalendarConnection({
+      status: "needs_setup",
+      lastError: "",
+    });
+    setConnectionsMessage(
+      "Google Calendar sync scaffolding is ready. OAuth and live event syncing are the next slice."
+    );
+  }
+
+  async function markGoogleCalendarReady() {
+    const hasCalendarSelection =
+      googleCalendarConnection.externalCalendarName.trim() ||
+      googleCalendarConnection.externalCalendarId.trim();
+
+    if (!hasCalendarSelection) {
+      setConnectionsMessage("Choose a destination Google calendar name or ID first.");
+      return;
+    }
+
+    await saveGoogleCalendarConnection({
+      status: "ready",
+      lastError: "",
+    });
+  }
+
+  async function disableGoogleCalendarSync() {
+    await saveGoogleCalendarConnection({
+      status: "disabled",
+    });
   }
 
   async function upsertPushDevice(pushTokenValue) {
@@ -3297,6 +3488,15 @@ function App() {
       setTrackingAreasMessage("");
       setShowAddTrackingAreaPicker(false);
       setTrackingAreaToAdd("");
+      setConnectionsMessage("");
+      setGoogleCalendarConnection(normalizeCalendarSyncConnection(null));
+      setGoogleCalendarSyncStats({
+        total: 0,
+        pending: 0,
+        synced: 0,
+        failed: 0,
+        deleted: 0,
+      });
       setPeriodCycles([]);
       setPeriodStartDate(today);
       setPeriodEndDate(today);
@@ -4433,6 +4633,12 @@ function App() {
     requestApproval,
     rejectRequest,
     connectedOutsiders,
+    googleCalendarConnection,
+    googleCalendarSyncStats,
+    prepareGoogleCalendarSync,
+    updateGoogleCalendarSetting,
+    markGoogleCalendarReady,
+    disableGoogleCalendarSync,
     updateOutsiderSetting,
     permissionsGridStyle,
     normalizeConnectionPermissions,
@@ -5162,6 +5368,30 @@ function App() {
           permissions: { tracker_data: true, support: true },
         },
       ],
+      googleCalendarConnection: {
+        id: 1,
+        provider: "google",
+        status: "ready",
+        externalAccountEmail: "lily@gmail.com",
+        externalCalendarId: "primary",
+        externalCalendarName: "Primary calendar",
+        syncAppointments: true,
+        syncReminders: true,
+        syncDatedTodos: false,
+        lastSyncedAt: new Date().toISOString(),
+        lastError: "",
+      },
+      googleCalendarSyncStats: {
+        total: 6,
+        pending: 1,
+        synced: 5,
+        failed: 0,
+        deleted: 0,
+      },
+      prepareGoogleCalendarSync: () => {},
+      updateGoogleCalendarSetting: () => {},
+      markGoogleCalendarReady: () => {},
+      disableGoogleCalendarSync: () => {},
       normalizeConnectionPermissions,
       updateOutsiderSetting: () => {},
       updateOutsiderPermission: () => {},

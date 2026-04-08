@@ -6,7 +6,7 @@ Use this file as the shared handoff note for any Codex thread working in this re
 
 - Project: tracker-app
 - Purpose: Personal tracking app with tracker and outsider experiences, Supabase-backed data, mobile support via Capacitor, and local Linear planning support.
-- Last updated: 2026-04-02
+- Last updated: 2026-04-08
 - Latest repo commit: `08fdaed` - `Add Linear tooling and auth autofill fixes`
 - Current product shape:
   - Tracker side is the main logged-in experience for daily tracking, goals, to-dos, appointments, period tracking, settings, and support flows.
@@ -63,6 +63,16 @@ Use this file as the shared handoff note for any Codex thread working in this re
 - Keep privacy boundaries intact while shared calendar and outsider features expand.
 
 ## Active Work
+
+- Active ownership note:
+  - Area/files: `src/App.jsx`, `src/pages/tracker/ConnectionsPage.jsx`, `supabase/migrations/20260408170000_add_google_calendar_sync_tables.sql` touched by `GUI-33`
+  - Goal: Start Google Calendar sync by adding durable connection storage, sync-link storage, and a tracker-side setup panel before wiring live OAuth and event push behavior.
+  - Status: Started in this thread on 2026-04-08
+  - Notes:
+    - Added Supabase tables for per-user Google Calendar connection metadata and external event-link bookkeeping.
+    - Wired `src/App.jsx` to load, summarize, and save Google Calendar sync settings alongside existing tracker connection data.
+    - Added a new Google Calendar Sync section to the tracker Connections page with destination calendar fields, sync toggles, status, and sync counters.
+    - Verified with `npm run build`.
 
 - Active ownership note:
   - Area/files: `docs/project-context.md`, `src/pages/tracker/OverviewPage.jsx`, `src/pages/tracker/CalendarPage.jsx` touched by `Calendar Feature`
@@ -207,6 +217,9 @@ Use this file as the shared handoff note for any Codex thread working in this re
 ## Handoff Notes
 
 - What changed:
+  - Started `GUI-33` by adding Google Calendar sync foundation storage in Supabase plus a tracker-side setup panel in `src/pages/tracker/ConnectionsPage.jsx`.
+  - Added `calendar_sync_connections` and `calendar_sync_event_links` tables in `supabase/migrations/20260408170000_add_google_calendar_sync_tables.sql`.
+  - Updated `src/App.jsx` to load Google sync metadata, expose save actions, and summarize queued/synced/failed external link records for the new panel.
   - Began `Calendar Feature` execution work by adding tracker-side summary surfaces powered by the shared normalized calendar event layer.
   - Added a `Calendar Pulse` section to `src/pages/tracker/OverviewPage.jsx` with today agenda, upcoming week, overdue task, and cycle outlook cards plus short upcoming items.
   - Added a grouped `Week Ahead` section to `src/pages/tracker/CalendarPage.jsx` so the next seven days are easier to scan by date.
@@ -224,10 +237,14 @@ Use this file as the shared handoff note for any Codex thread working in this re
   - Added the shared-memory rule to keep this file and Linear updated after task completion.
   - Implemented `GUI-42` locally by adding outsider read policies for appointments and period cycles, while moving period `private_notes` into a tracker-only table.
 - What still needs attention:
+  - Apply the new Google Calendar sync migration before testing the setup panel against the live Supabase environment.
+  - Build the next `GUI-33` slice for real Google OAuth, destination-calendar picking, and server-side token handling.
   - Confirm the latest commit still builds and behaves correctly after the auth/settings/tracking cleanup.
   - Keep outsider follow-up work anchored to the current Linear sequence instead of reviving old ad hoc planning.
   - Apply the new Supabase migration in the linked environment before starting outsider data-loading work that depends on these policies.
 - What should the next thread verify:
+  - Whether the new Google Calendar sync panel should keep saving fields on blur or move to an explicit save form once OAuth lands.
+  - How Google OAuth and token refresh should be handled safely, likely through Supabase Edge Functions plus environment secrets.
   - Whether the `useEffectEvent` refactor in `src/App.jsx` clears lint warnings without changing app behavior.
   - Whether tracker auth/settings forms still work correctly on desktop and mobile.
   - Whether tracker to-do and appointment UI changes in `src/pages/tracker/TrackingPage.jsx` behave correctly on narrow screens.
@@ -238,9 +255,14 @@ Use this file as the shared handoff note for any Codex thread working in this re
 
 - Current "Now" issues:
   - `GUI-58` Add overdue, skipped, and carry-forward task handling
+  - `GUI-37` Phase 4: Add app-to-Google sync rules
+  - `GUI-33` Phase 3: Build Google Calendar connection
   - `GUI-54` Build grouped Log picker with recent and pinned categories
   - `GUI-52` Add task priority and due time to To-Do items
   - `GUI-45` Load and normalize To-Do, Period, and Appointments for outsider views
+  - `GUI-21` Phase 4: Add optional dated to-do syncing
+  - `GUI-19` Phase 2: Show Google Calendar events inside the app calendar
+  - `GUI-18` Phase 3: Sync app appointments into Google Calendar
   - `GUI-28` Make responsive layout handling reactive across tracker and outsider screens
   - `GUI-26` Clean up mobile UI across tracker and outsider flows
   - `GUI-22` Clean up tracking UI polish regressions from expansion work
@@ -257,6 +279,7 @@ Use this file as the shared handoff note for any Codex thread working in this re
   - `Outsider App Fixes and Improvements`
   - `Period Tracker Deepening`
   - `Appointments Deepening`
+  - `External Calendar Sync Plan`
   - `Calendar Visibility`
 
 ## Working Agreement
