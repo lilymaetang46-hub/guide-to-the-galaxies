@@ -72,6 +72,11 @@ Use this file as the shared handoff note for any Codex thread working in this re
     - Added Supabase tables for per-user Google Calendar connection metadata and external event-link bookkeeping.
     - Wired `src/App.jsx` to load, summarize, and save Google Calendar sync settings alongside existing tracker connection data.
     - Added a new Google Calendar Sync section to the tracker Connections page with destination calendar fields, sync toggles, status, and sync counters.
+    - Appointment and reminder create, update, and delete flows now queue pending Google sync-link records when the Google connection is marked ready.
+    - Marking the Google connection ready now backfills existing appointments and reminders into the sync queue.
+    - Added a `google-calendar-auth` Supabase Edge Function plus OAuth state and token storage so Google connect can happen server-side instead of exposing client secrets in the browser.
+    - Deployed the OAuth migration and Edge Function to the linked Supabase project, then set `PUBLIC_APP_URL`.
+    - Remaining blocker: the Supabase project still needs `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` secrets before the Connect Google button can complete successfully.
     - Verified with `npm run build`.
 
 - Active ownership note:
@@ -220,6 +225,10 @@ Use this file as the shared handoff note for any Codex thread working in this re
   - Started `GUI-33` by adding Google Calendar sync foundation storage in Supabase plus a tracker-side setup panel in `src/pages/tracker/ConnectionsPage.jsx`.
   - Added `calendar_sync_connections` and `calendar_sync_event_links` tables in `supabase/migrations/20260408170000_add_google_calendar_sync_tables.sql`.
   - Updated `src/App.jsx` to load Google sync metadata, expose save actions, and summarize queued/synced/failed external link records for the new panel.
+  - Began `GUI-37` locally by queueing appointment and reminder create, update, and delete changes into `calendar_sync_event_links` whenever Google sync is ready.
+  - Added a ready-state backfill so existing appointments and reminders are queued when Google Calendar sync is first marked ready.
+  - Added `supabase/functions/google-calendar-auth/index.ts` plus `supabase/migrations/20260408190000_add_google_oauth_state_and_tokens.sql` to start real Google OAuth and server-side token handling.
+  - Deployed the new migration and Edge Function to the linked Supabase project, and fixed the previously missing `period_cycle_private_notes` migration in production.
   - Began `Calendar Feature` execution work by adding tracker-side summary surfaces powered by the shared normalized calendar event layer.
   - Added a `Calendar Pulse` section to `src/pages/tracker/OverviewPage.jsx` with today agenda, upcoming week, overdue task, and cycle outlook cards plus short upcoming items.
   - Added a grouped `Week Ahead` section to `src/pages/tracker/CalendarPage.jsx` so the next seven days are easier to scan by date.
@@ -237,12 +246,15 @@ Use this file as the shared handoff note for any Codex thread working in this re
   - Added the shared-memory rule to keep this file and Linear updated after task completion.
   - Implemented `GUI-42` locally by adding outsider read policies for appointments and period cycles, while moving period `private_notes` into a tracker-only table.
 - What still needs attention:
-  - Apply the new Google Calendar sync migration before testing the setup panel against the live Supabase environment.
-  - Build the next `GUI-33` slice for real Google OAuth, destination-calendar picking, and server-side token handling.
+  - Set `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` in Supabase secrets, then configure the Google OAuth redirect URI to the deployed Edge Function callback.
+  - Once Google secrets are present, test the full connect flow and confirm calendar list loading from the tracker Connections page.
+  - Build the next post-OAuth slice that turns queued `calendar_sync_event_links` rows into real Google Calendar event create, update, and delete calls.
   - Confirm the latest commit still builds and behaves correctly after the auth/settings/tracking cleanup.
   - Keep outsider follow-up work anchored to the current Linear sequence instead of reviving old ad hoc planning.
   - Apply the new Supabase migration in the linked environment before starting outsider data-loading work that depends on these policies.
 - What should the next thread verify:
+  - Whether the deployed `google-calendar-auth` function behaves correctly once real Google OAuth secrets are added.
+  - Whether Google callback success should automatically pull and store the selected calendar list, or keep that as a user-triggered refresh step.
   - Whether the new Google Calendar sync panel should keep saving fields on blur or move to an explicit save form once OAuth lands.
   - How Google OAuth and token refresh should be handled safely, likely through Supabase Edge Functions plus environment secrets.
   - Whether the `useEffectEvent` refactor in `src/App.jsx` clears lint warnings without changing app behavior.

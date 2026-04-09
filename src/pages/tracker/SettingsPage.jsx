@@ -44,6 +44,16 @@ function TrackerSettingsPage({ app }) {
     pushSyncing,
     enableNativePushNotifications,
     disableNativePushNotifications,
+    googleCalendarConnection,
+    googleCalendarSyncStats,
+    googleCalendarCalendars,
+    googleCalendarAuthLoading,
+    startGoogleCalendarOAuth,
+    refreshGoogleCalendarChoices,
+    prepareGoogleCalendarSync,
+    updateGoogleCalendarSetting,
+    markGoogleCalendarReady,
+    disableGoogleCalendarSync,
     selectedTrackingAreaOptions,
     inactiveTrackingAreaOptions,
     showAddTrackingAreaPicker,
@@ -63,6 +73,26 @@ function TrackerSettingsPage({ app }) {
     !theme.trackerAbyss;
   const sectionStyle = (sectionKey) =>
     sectionCardStyle(theme, sectionKey, { disableCelestialFrame: disableGalaxyFrame });
+  const googleSyncStatusLabel =
+    googleCalendarConnection.status === "ready"
+      ? "Ready"
+      : googleCalendarConnection.status === "syncing"
+      ? "Syncing"
+      : googleCalendarConnection.status === "disabled"
+      ? "Paused"
+      : googleCalendarConnection.status === "error"
+      ? "Needs attention"
+      : "Setup";
+  const googleSyncStatusNote =
+    googleCalendarConnection.status === "ready"
+      ? "This tracker has a saved Google Calendar destination and sync preferences."
+      : googleCalendarConnection.status === "disabled"
+      ? "Google Calendar sync is saved but currently turned off."
+      : "Connect Google here, choose a calendar, and control what syncs out from the app.";
+  const googleLastSyncedLabel = googleCalendarConnection.lastSyncedAt
+    ? new Date(googleCalendarConnection.lastSyncedAt).toLocaleString()
+    : "Not synced yet";
+  const hasGoogleCalendarChoices = googleCalendarCalendars.length > 0;
 
   return (
     <div style={chartsPageStyle}>
@@ -94,6 +124,175 @@ function TrackerSettingsPage({ app }) {
         </div>
         <div style={{ marginTop: "18px" }}>
           <button style={primaryButtonStyle(theme)} onClick={saveProfileSettings}>Save Profile Settings</button>
+        </div>
+      </section>
+
+      <section className="galaxy-panel" style={sectionStyle("calendar")}>
+        {renderSectionHeader(
+          "Google Calendar",
+          "Manage your Google Calendar connection and choose what this app syncs out.",
+          "Calendar",
+          "Orbit"
+        )}
+        <div style={{ display: "grid", gap: "14px", padding: "16px", borderRadius: "22px", border: theme.border, background: theme.surfaceElevated || theme.cardBackground || "rgba(255,255,255,0.04)" }}>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "10px", justifyContent: "space-between", alignItems: "center" }}>
+            <p style={{ margin: 0, color: theme.subtleText, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", fontSize: "0.78rem" }}>Connection</p>
+            <div
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                minHeight: "34px",
+                padding: "0.44rem 0.8rem",
+                borderRadius: "999px",
+                border: googleCalendarConnection.status === "ready" ? "none" : theme.border,
+                background:
+                  googleCalendarConnection.status === "ready"
+                    ? theme.primary
+                    : theme.surfaceElevated || theme.cardBackground || "rgba(255,255,255,0.06)",
+                color: googleCalendarConnection.status === "ready" ? theme.primaryText : theme.text,
+                fontWeight: 700,
+                fontSize: "0.88rem",
+              }}
+            >
+              {googleSyncStatusLabel}
+            </div>
+          </div>
+          <p style={{ margin: 0, color: theme.subtleText, lineHeight: 1.6 }}>{googleSyncStatusNote}</p>
+          <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+            <button style={primaryButtonStyle(theme)} onClick={startGoogleCalendarOAuth} disabled={googleCalendarAuthLoading}>
+              {googleCalendarAuthLoading ? "Opening Google..." : "Connect Google"}
+            </button>
+            <button
+              style={softButtonStyle(theme)}
+              onClick={refreshGoogleCalendarChoices}
+              disabled={googleCalendarAuthLoading || googleCalendarConnection.status !== "ready"}
+            >
+              {googleCalendarAuthLoading ? "Refreshing..." : "Refresh Calendars"}
+            </button>
+          </div>
+          <div style={goalFormGridStyle}>
+            <div>
+              <label style={labelStyle(theme)}>Google account email</label>
+              <input
+                style={inputStyle(theme)}
+                type="email"
+                defaultValue={googleCalendarConnection.externalAccountEmail}
+                onBlur={(e) => updateGoogleCalendarSetting("externalAccountEmail", e.target.value)}
+                placeholder="name@gmail.com"
+              />
+            </div>
+            <div>
+              <label style={labelStyle(theme)}>Destination calendar</label>
+              {hasGoogleCalendarChoices ? (
+                <select
+                  style={inputStyle(theme)}
+                  value={googleCalendarConnection.externalCalendarId}
+                  onChange={(e) => {
+                    const selected = googleCalendarCalendars.find((item) => item.id === e.target.value);
+                    updateGoogleCalendarSetting("externalCalendarId", e.target.value);
+                    updateGoogleCalendarSetting("externalCalendarName", selected?.summary || "");
+                  }}
+                >
+                  <option value="">Choose a calendar</option>
+                  {googleCalendarCalendars.map((calendar) => (
+                    <option key={calendar.id} value={calendar.id}>
+                      {calendar.primary ? `${calendar.summary} (Primary)` : calendar.summary}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <input
+                  style={inputStyle(theme)}
+                  type="text"
+                  defaultValue={googleCalendarConnection.externalCalendarName}
+                  onBlur={(e) => updateGoogleCalendarSetting("externalCalendarName", e.target.value)}
+                  placeholder="Primary calendar"
+                />
+              )}
+            </div>
+            <div>
+              <label style={labelStyle(theme)}>Destination calendar ID</label>
+              <input
+                style={inputStyle(theme)}
+                type="text"
+                defaultValue={googleCalendarConnection.externalCalendarId}
+                onBlur={(e) => updateGoogleCalendarSetting("externalCalendarId", e.target.value)}
+                placeholder="Optional until calendar picker loads"
+              />
+            </div>
+          </div>
+          {hasGoogleCalendarChoices ? (
+            <p style={{ margin: 0, color: theme.subtleText, lineHeight: 1.6 }}>
+              Google returned {googleCalendarCalendars.length} calendar choice{googleCalendarCalendars.length === 1 ? "" : "s"} for this account.
+            </p>
+          ) : null}
+          <div>
+            <label style={labelStyle(theme)}>Sync out from the app</label>
+            <div style={{ display: "grid", gap: "10px", gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))" }}>
+              {[
+                ["syncAppointments", "Appointments"],
+                ["syncReminders", "Reminders"],
+                ["syncDatedTodos", "Dated to-dos"],
+              ].map(([key, label]) => (
+                <label
+                  key={key}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "10px",
+                    padding: "12px 14px",
+                    borderRadius: "16px",
+                    border: theme.border,
+                    background: theme.surfaceElevated || theme.cardBackground || "rgba(255,255,255,0.04)",
+                    color: theme.text,
+                  }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={googleCalendarConnection[key]}
+                    onChange={(e) => updateGoogleCalendarSetting(key, e.target.checked)}
+                    style={{ width: "18px", height: "18px", accentColor: theme.trackerAccent || theme.success, cursor: "pointer", flex: "0 0 auto" }}
+                  />
+                  <span>{label}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+          <div style={{ display: "grid", gap: "10px", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))" }}>
+            <div style={{ padding: "14px", borderRadius: "18px", border: theme.border, background: theme.cardBackground }}>
+              <div style={{ color: theme.subtleText, fontSize: "0.78rem", textTransform: "uppercase", letterSpacing: "0.08em" }}>Queued links</div>
+              <div style={{ color: theme.text, marginTop: "6px" }}>{googleCalendarSyncStats.pending}</div>
+            </div>
+            <div style={{ padding: "14px", borderRadius: "18px", border: theme.border, background: theme.cardBackground }}>
+              <div style={{ color: theme.subtleText, fontSize: "0.78rem", textTransform: "uppercase", letterSpacing: "0.08em" }}>Synced links</div>
+              <div style={{ color: theme.text, marginTop: "6px" }}>{googleCalendarSyncStats.synced}</div>
+            </div>
+            <div style={{ padding: "14px", borderRadius: "18px", border: theme.border, background: theme.cardBackground }}>
+              <div style={{ color: theme.subtleText, fontSize: "0.78rem", textTransform: "uppercase", letterSpacing: "0.08em" }}>Failed links</div>
+              <div style={{ color: theme.text, marginTop: "6px" }}>{googleCalendarSyncStats.failed}</div>
+            </div>
+            <div style={{ padding: "14px", borderRadius: "18px", border: theme.border, background: theme.cardBackground }}>
+              <div style={{ color: theme.subtleText, fontSize: "0.78rem", textTransform: "uppercase", letterSpacing: "0.08em" }}>Last sync</div>
+              <div style={{ color: theme.text, marginTop: "6px" }}>{googleLastSyncedLabel}</div>
+            </div>
+          </div>
+          {googleCalendarConnection.lastError ? (
+            <div style={{ padding: "12px 14px", borderRadius: "16px", border: theme.border, background: theme.errorBackground || "rgba(239,68,68,0.12)", color: theme.text }}>
+              {googleCalendarConnection.lastError}
+            </div>
+          ) : null}
+          <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+            <button style={primaryButtonStyle(theme)} onClick={prepareGoogleCalendarSync}>
+              Save Setup Base
+            </button>
+            <button style={softButtonStyle(theme)} onClick={markGoogleCalendarReady}>
+              Mark Ready For OAuth
+            </button>
+            <button style={softButtonStyle(theme)} onClick={disableGoogleCalendarSync}>
+              Pause Sync
+            </button>
+          </div>
         </div>
       </section>
 
