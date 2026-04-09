@@ -427,6 +427,29 @@ function getBrowserTimeZone() {
   return Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
 }
 
+function normalizeGoogleCalendarEvents(rawEvents) {
+  return (Array.isArray(rawEvents) ? rawEvents : [])
+    .filter((item) => item?.status !== "cancelled")
+    .map((item) => {
+      const startDateTime = item?.start?.dateTime || "";
+      const startDate = item?.start?.date || "";
+      const dateKey = startDateTime ? startDateTime.slice(0, 10) : startDate;
+      const timeValue = startDateTime ? startDateTime.slice(11, 16) : "";
+
+      return {
+        id: item?.id || `${dateKey}-${item?.summary || "google-event"}`,
+        date: dateKey,
+        time: timeValue,
+        title: item?.summary || "Google Calendar event",
+        note: item?.description || "",
+        location: item?.location || "",
+        htmlLink: item?.htmlLink || "",
+        allDay: Boolean(startDate && !startDateTime),
+      };
+    })
+    .filter((item) => item.date);
+}
+
 function normalizeTodoPriorityValue(priority) {
   return ["low", "medium", "high"].includes(priority) ? priority : "medium";
 }
@@ -564,6 +587,8 @@ function App() {
   const [googleCalendarCalendars, setGoogleCalendarCalendars] = useState([]);
   const [googleCalendarAuthLoading, setGoogleCalendarAuthLoading] = useState(false);
   const [googleCalendarSyncing, setGoogleCalendarSyncing] = useState(false);
+  const [googleCalendarEvents, setGoogleCalendarEvents] = useState([]);
+  const [googleCalendarEventsLoading, setGoogleCalendarEventsLoading] = useState(false);
   const [supportInbox, setSupportInbox] = useState([]);
   const [supportInboxLoading, setSupportInboxLoading] = useState(false);
   const [supportInboxMessage, setSupportInboxMessage] = useState("");
@@ -2404,6 +2429,54 @@ function App() {
     }
   }
 
+  async function loadGoogleCalendarEvents({
+    silent = false,
+    calendarId = googleCalendarConnection.externalCalendarId,
+  } = {}) {
+    if (
+      !user ||
+      googleCalendarConnection.status === "needs_setup" ||
+      googleCalendarConnection.status === "disabled" ||
+      !String(calendarId || "").trim()
+    ) {
+      setGoogleCalendarEvents([]);
+      return [];
+    }
+
+    setGoogleCalendarEventsLoading(true);
+
+    try {
+      const startDate = new Date(`${today}T00:00:00`);
+      startDate.setDate(startDate.getDate() - 30);
+      const endDate = new Date(`${today}T23:59:59`);
+      endDate.setDate(endDate.getDate() + 90);
+
+      const data = await invokeGoogleCalendarAuth("list-events", {
+        calendarId: String(calendarId).trim(),
+        timeMin: startDate.toISOString(),
+        timeMax: endDate.toISOString(),
+      });
+
+      const normalizedEvents = normalizeGoogleCalendarEvents(data?.events || []);
+      setGoogleCalendarEvents(normalizedEvents);
+      return normalizedEvents;
+    } catch (error) {
+      setGoogleCalendarEvents([]);
+
+      if (!silent) {
+        setConnectionsMessage(
+          error instanceof Error
+            ? error.message
+            : "Could not load Google Calendar events."
+        );
+      }
+
+      return [];
+    } finally {
+      setGoogleCalendarEventsLoading(false);
+    }
+  }
+
   async function prepareGoogleCalendarSync() {
     await saveGoogleCalendarConnection({
       status: "needs_setup",
@@ -3832,6 +3905,10 @@ function App() {
     void refreshGoogleCalendarChoices();
   });
 
+  const refreshGoogleCalendarEventsForEffect = useEffectEvent(() => {
+    void loadGoogleCalendarEvents({ silent: true });
+  });
+
   const refreshOutsiderTrackersForEffect = useEffectEvent(() => {
     void loadOutsiderTrackers();
   });
@@ -4224,7 +4301,30 @@ function App() {
     googleCalendarAuthLoading,
     googleCalendarCalendars.length,
     googleCalendarConnection.status,
-    refreshGoogleCalendarChoicesForEffect,
+    user,
+  ]);
+
+  useEffect(() => {
+    if (
+      !user ||
+      googleCalendarAuthLoading ||
+      googleCalendarSyncing ||
+      googleCalendarConnection.status === "needs_setup" ||
+      googleCalendarConnection.status === "disabled" ||
+      !googleCalendarConnection.externalCalendarId ||
+      !["mission", "calendar", "settings"].includes(activePage)
+    ) {
+      return;
+    }
+
+    refreshGoogleCalendarEventsForEffect();
+  }, [
+    activePage,
+    googleCalendarAuthLoading,
+    googleCalendarConnection.externalCalendarId,
+    googleCalendarConnection.status,
+    googleCalendarSyncing,
+    today,
     user,
   ]);
 
@@ -4383,8 +4483,9 @@ function App() {
         appointments,
         periodCycles,
         nextCycleEstimateDate,
+        externalEvents: googleCalendarEvents,
       }),
-    [todoItems, appointments, periodCycles, nextCycleEstimateDate]
+    [todoItems, appointments, periodCycles, nextCycleEstimateDate, googleCalendarEvents]
   );
   const activePeriodDayCount = activePeriodCycle?.startDate
     ? Math.max(
@@ -5083,6 +5184,7 @@ function App() {
     googleCalendarCalendars,
     googleCalendarAuthLoading,
     googleCalendarSyncing,
+    googleCalendarEventsLoading,
     startGoogleCalendarOAuth,
     refreshGoogleCalendarChoices,
     syncGoogleCalendarNow,
@@ -5845,6 +5947,18 @@ function App() {
       ],
       googleCalendarAuthLoading: false,
       googleCalendarSyncing: false,
+      googleCalendarEventsLoading: false,
+      googleCalendarEvents: [
+        {
+          id: "google-1",
+          date: new Date().toISOString().slice(0, 10),
+          time: "14:00",
+          title: "Dentist check-in",
+          note: "",
+          location: "Downtown",
+          allDay: false,
+        },
+      ],
       startGoogleCalendarOAuth: () => {},
       refreshGoogleCalendarChoices: () => {},
       syncGoogleCalendarNow: () => {},

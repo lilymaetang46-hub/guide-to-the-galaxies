@@ -381,6 +381,7 @@ export function buildCalendarEvents({
   appointments = [],
   periodCycles = [],
   nextCycleEstimateDate = "",
+  externalEvents = [],
 }) {
   const events = [];
 
@@ -471,6 +472,29 @@ export function buildCalendarEvents({
       });
     });
   }
+
+  (Array.isArray(externalEvents) ? externalEvents : []).forEach((item) => {
+    if (!item?.date) return;
+
+    const detailParts = [
+      item.time ? `Google at ${item.time}` : "Google all-day",
+      item.location || "",
+    ].filter(Boolean);
+
+    events.push({
+      id: `google-${item.id || item.date}-${item.title || "event"}`,
+      kind: "appointment",
+      date: item.date,
+      time: item.time || "",
+      title: item.title || "Google Calendar event",
+      detail: detailParts.join(" · "),
+      note: item.note || "",
+      external: true,
+      sourcePageKey: "calendar",
+      sourceLabel: "Google Calendar",
+      badgeLabel: "Google",
+    });
+  });
 
   return events.sort((left, right) => {
     if (left.date !== right.date) return left.date.localeCompare(right.date);

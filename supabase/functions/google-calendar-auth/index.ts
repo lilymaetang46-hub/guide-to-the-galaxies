@@ -234,6 +234,51 @@ async function fetchGoogleCalendars(accessToken: string) {
   }));
 }
 
+async function fetchGoogleCalendarEvents(
+  accessToken: string,
+  calendarId: string,
+  timeMin?: string,
+  timeMax?: string
+) {
+  const url = new URL(
+    `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events`
+  );
+  url.searchParams.set("singleEvents", "true");
+  url.searchParams.set("orderBy", "startTime");
+  url.searchParams.set("maxResults", "250");
+
+  if (timeMin) {
+    url.searchParams.set("timeMin", timeMin);
+  }
+
+  if (timeMax) {
+    url.searchParams.set("timeMax", timeMax);
+  }
+
+  const response = await fetch(url.toString(), {
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+  });
+
+  const payload = await response.json().catch(() => null);
+
+  if (!response.ok) {
+    throw new Error(payload?.error?.message || "Could not load Google Calendar events.");
+  }
+
+  return (payload?.items || []).map((item: Record<string, unknown>) => ({
+    id: String(item.id || ""),
+    status: String(item.status || "confirmed"),
+    summary: String(item.summary || "Untitled event"),
+    description: String(item.description || ""),
+    location: String(item.location || ""),
+    start: item.start || {},
+    end: item.end || {},
+    htmlLink: String(item.htmlLink || ""),
+  }));
+}
+
 async function fetchGoogleUserInfo(accessToken: string) {
   const response = await fetch("https://www.googleapis.com/oauth2/v2/userinfo", {
     headers: {
@@ -1053,6 +1098,48 @@ Deno.serve(async (request) => {
       });
 
       return jsonResponse({ error: message }, 400);
+    }
+  }
+
+  if (action === "list-events") {
+    const { data: connectionRow, error: connectionError } = await adminClient
+      .from("calendar_sync_connections")
+      .select("*")
+      .eq("provider", "google")
+      .eq("user_id", user.id)
+      .maybeSingle<CalendarSyncConnectionRow>();
+
+    if (connectionError || !connectionRow) {
+      return jsonResponse({ error: "Google Calendar is not connected for this user yet." }, 400);
+    }
+
+    const calendarId =
+      (typeof body?.calendarId === "string" && body.calendarId.trim()) ||
+      connectionRow.external_calendar_id ||
+      "";
+
+    if (!calendarId) {
+      return jsonResponse({ error: "Choose a Google calendar before loading events." }, 400);
+    }
+
+    try {
+      const accessToken = await getValidGoogleAccessToken(adminClient, user.id);
+      const events = await fetchGoogleCalendarEvents(
+        accessToken,
+        calendarId,
+        typeof body?.timeMin === "string" ? body.timeMin : undefined,
+        typeof body?.timeMax === "string" ? body.timeMax : undefined
+      );
+
+      return jsonResponse({
+        events,
+        calendarId,
+      });
+    } catch (error) {
+      return jsonResponse(
+        { error: error instanceof Error ? error.message : "Could not load Google Calendar events." },
+        400
+      );
     }
   }
 

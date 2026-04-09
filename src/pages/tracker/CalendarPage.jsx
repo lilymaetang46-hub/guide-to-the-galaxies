@@ -124,6 +124,7 @@ function TrackerCalendarPage({ app }) {
     trackerSectionSwitcherButtonStyle,
     setActivePage,
     calendarEvents = [],
+    googleCalendarEventsLoading = false,
     nextCycleEstimateDate,
   } = app;
 
@@ -364,6 +365,9 @@ function TrackerCalendarPage({ app }) {
           "Orbit",
           "Orbit"
         )}
+        {googleCalendarEventsLoading ? (
+          <p style={smallInfoStyle(theme)}>Refreshing Google Calendar events for this view.</p>
+        ) : null}
         {upcomingGroupedItems.size === 0 ? (
           <p style={emptyTextStyle(theme)}>Nothing dated in the next week yet.</p>
         ) : (
@@ -404,6 +408,9 @@ function TrackerCalendarPage({ app }) {
                           {item.time ? formatTimeLabel(item.time) : item.badgeLabel}
                         </div>
                       </div>
+                      {item.external ? (
+                        <div style={{ ...smallInfoStyle(theme), marginTop: "6px" }}>Imported from Google Calendar</div>
+                      ) : null}
                       {item.detail ? <div style={{ ...smallInfoStyle(theme), marginTop: "6px" }}>{item.detail}</div> : null}
                     </button>
                   ))}
@@ -469,6 +476,9 @@ function TrackerCalendarPage({ app }) {
                           >
                             {getTodoPriorityLabel(item.priority)}
                           </span>
+                        ) : null}
+                        {item.external ? (
+                          <span style={{ ...smallInfoStyle(theme), margin: 0 }}>Imported</span>
                         ) : null}
                         {item.estimated ? <span style={{ ...smallInfoStyle(theme), margin: 0 }}>Estimate</span> : null}
                       </div>
