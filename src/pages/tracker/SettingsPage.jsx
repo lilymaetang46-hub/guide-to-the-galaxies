@@ -49,8 +49,10 @@ function TrackerSettingsPage({ app }) {
     googleCalendarSyncStats,
     googleCalendarCalendars,
     googleCalendarAuthLoading,
+    googleCalendarSyncing,
     startGoogleCalendarOAuth,
     refreshGoogleCalendarChoices,
+    syncGoogleCalendarNow,
     updateGoogleCalendarSetting,
     markGoogleCalendarReady,
     disableGoogleCalendarSync,
@@ -183,9 +185,25 @@ function TrackerSettingsPage({ app }) {
             <button
               style={softButtonStyle(theme)}
               onClick={refreshGoogleCalendarChoices}
-              disabled={googleCalendarAuthLoading || googleCalendarConnection.status !== "ready"}
+              disabled={
+                googleCalendarAuthLoading ||
+                googleCalendarSyncing ||
+                googleCalendarConnection.status === "needs_setup"
+              }
             >
               {googleCalendarAuthLoading ? "Refreshing..." : "Refresh Calendars"}
+            </button>
+            <button
+              style={softButtonStyle(theme)}
+              onClick={() => syncGoogleCalendarNow()}
+              disabled={
+                googleCalendarAuthLoading ||
+                googleCalendarSyncing ||
+                googleCalendarConnection.status === "disabled" ||
+                googleCalendarConnection.status === "needs_setup"
+              }
+            >
+              {googleCalendarSyncing ? "Syncing..." : "Sync Now"}
             </button>
           </div>
           <div style={goalFormGridStyle}>
@@ -300,7 +318,8 @@ function TrackerSettingsPage({ app }) {
               </div>
             ) : null}
           </div>
-          {googleCalendarConnection.lastError ? (
+          {googleCalendarConnection.lastError &&
+          googleCalendarConnection.lastError !== connectionsMessage ? (
             <div style={{ padding: "12px 14px", borderRadius: "16px", border: theme.border, background: theme.errorBackground || "rgba(239,68,68,0.12)", color: theme.text }}>
               {googleCalendarConnection.lastError}
             </div>

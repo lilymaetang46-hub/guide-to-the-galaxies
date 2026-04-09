@@ -243,6 +243,8 @@ Use this file as the shared handoff note for any Codex thread working in this re
   - Updated `src/App.jsx` to load Google sync metadata, expose save actions, and summarize queued/synced/failed external link records for the new panel.
   - Began `GUI-37` locally by queueing appointment and reminder create, update, and delete changes into `calendar_sync_event_links` whenever Google sync is ready.
   - Added a ready-state backfill so existing appointments and reminders are queued when Google Calendar sync is first marked ready.
+  - Built the first outbound Google event sync path by extending `supabase/functions/google-calendar-auth/index.ts` with a `sync-events` action that turns queued appointment/reminder link rows into real Google Calendar event create, update, and delete calls.
+  - Updated `src/App.jsx` and `src/pages/tracker/SettingsPage.jsx` so queued appointment changes trigger a background Google sync attempt and the Settings page exposes a manual `Sync Now` retry control.
   - Added `supabase/functions/google-calendar-auth/index.ts` plus `supabase/migrations/20260408190000_add_google_oauth_state_and_tokens.sql` to start real Google OAuth and server-side token handling.
   - Deployed the new migration and Edge Function to the linked Supabase project, and fixed the previously missing `period_cycle_private_notes` migration in production.
   - Began `Calendar Feature` execution work by adding tracker-side summary surfaces powered by the shared normalized calendar event layer.
@@ -264,7 +266,7 @@ Use this file as the shared handoff note for any Codex thread working in this re
 - What still needs attention:
   - Set `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` in Supabase secrets, then configure the Google OAuth redirect URI to the deployed Edge Function callback.
   - Once Google secrets are present, test the full connect flow and confirm calendar list loading from the tracker Connections page.
-  - Build the next post-OAuth slice that turns queued `calendar_sync_event_links` rows into real Google Calendar event create, update, and delete calls.
+  - Verify the new `sync-events` Edge Function action against a real connected Google account and confirm created, updated, and deleted tracker appointments land in the selected calendar as expected.
   - Confirm the latest commit still builds and behaves correctly after the auth/settings/tracking cleanup.
   - Keep outsider follow-up work anchored to the current Linear sequence instead of reviving old ad hoc planning.
   - Apply the new Supabase migration in the linked environment before starting outsider data-loading work that depends on these policies.

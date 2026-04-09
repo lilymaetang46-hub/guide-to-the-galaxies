@@ -12,6 +12,7 @@ What this function does:
 - stores Google access and refresh token data server-side
 - updates `calendar_sync_connections` with the connected Google account and default calendar
 - can return the user's Google calendar list for the tracker Connections page
+- can process queued `calendar_sync_event_links` rows into real Google Calendar event create, update, and delete calls
 
 Expected Google OAuth redirect URI:
 
@@ -25,4 +26,4 @@ Why this lives in an Edge Function:
 
 - the Google client secret should never be exposed in the browser
 - refresh-token handling belongs on the server side
-- later event create, update, and delete sync work can reuse the same token-refresh logic here
+- event create, update, and delete sync work can reuse the same token-refresh logic here
