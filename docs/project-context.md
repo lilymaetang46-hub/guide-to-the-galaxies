@@ -65,6 +65,22 @@ Use this file as the shared handoff note for any Codex thread working in this re
 ## Active Work
 
 - Active ownership note:
+  - Area/files: `supabase/functions/google-calendar-auth/index.ts`, `docs/project-context.md` touched by `Google Calendar OAuth Debug`
+  - Goal: Debug why Google OAuth reaches the app callback but `calendar_sync_connections` does not transition into a connected ready state.
+  - Status: In progress in this thread on 2026-04-08
+  - Notes:
+    - Investigating whether the callback succeeds at Google token exchange but fails while saving OAuth state, token rows, or the final `ready` connection update.
+    - Hardened the Edge Function so DB write failures are no longer silent and now return a visible callback error instead of a false success redirect.
+    - Added and pushed `20260408213000_reconcile_google_calendar_sync_schema.sql` after the live project reported `status` missing from `calendar_sync_connections`; remote migration history was ahead, but the remote table was missing several expected connection columns.
+    - Added and pushed `20260408214500_add_calendar_sync_connection_uniqueness.sql` after the live project reported no matching unique or exclusion constraint for `ON CONFLICT (user_id, provider)`.
+    - Updated Settings Google Calendar fields to controlled values to avoid stale `defaultValue` rendering after OAuth callback reloads.
+    - Removed confusing legacy scaffold buttons (`Save Setup Base`, `Mark Ready For OAuth`) and replaced with a status-aware `Pause Sync`/`Resume Sync` action.
+    - Updated `google-calendar-auth` default scope to include `openid email` in addition to calendar scope so `external_account_email` can populate reliably.
+    - Confirmed the current product slice is outbound app-to-Google sync setup, not Google-to-app event import.
+    - Updated `list-calendars` to refresh saved Google connection metadata so email and selected calendar details persist better across reloads.
+    - Added a Settings-page auto-refresh for Google calendar choices when a ready connection loads without cached calendar options, fixing the reload bug where the destination calendar field temporarily fell back into the wrong text-input state until the user clicked `Refresh Calendars`.
+
+- Active ownership note:
   - Area/files: `src/App.jsx`, `src/pages/tracker/ConnectionsPage.jsx`, `supabase/migrations/20260408170000_add_google_calendar_sync_tables.sql` touched by `GUI-33`
   - Goal: Start Google Calendar sync by adding durable connection storage, sync-link storage, and a tracker-side setup panel before wiring live OAuth and event push behavior.
   - Status: Started in this thread on 2026-04-08

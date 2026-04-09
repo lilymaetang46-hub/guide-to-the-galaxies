@@ -44,7 +44,7 @@ const GOOGLE_CLIENT_ID = Deno.env.get("GOOGLE_CLIENT_ID") ?? "";
 const GOOGLE_CLIENT_SECRET = Deno.env.get("GOOGLE_CLIENT_SECRET") ?? "";
 const GOOGLE_OAUTH_SCOPE =
   Deno.env.get("GOOGLE_CALENDAR_SCOPE") ??
-  "https://www.googleapis.com/auth/calendar";
+  "openid email https://www.googleapis.com/auth/calendar";
 const DEFAULT_PUBLIC_APP_URL =
   Deno.env.get("PUBLIC_APP_URL") ?? "https://guide-to-the-galaxies.app";
 
@@ -59,14 +59,9 @@ function jsonResponse(body: unknown, status = 200) {
 }
 
 function buildCallbackUrl(request: Request) {
-  const url = new URL(request.url);
-  const callbackUrl = new URL(url.toString());
-
-  if (!callbackUrl.pathname.endsWith("/callback")) {
-    callbackUrl.pathname = `${callbackUrl.pathname.replace(/\/$/, "")}/callback`;
-  }
-
-  callbackUrl.search = "";
+  const requestUrl = new URL(request.url);
+  const supabaseUrl = SUPABASE_URL ? new URL(SUPABASE_URL) : new URL(requestUrl.origin);
+  const callbackUrl = new URL("/functions/v1/google-calendar-auth/callback", supabaseUrl);
   return callbackUrl.toString();
 }
 
@@ -91,6 +86,33 @@ function buildAppRedirect(returnUrl: string, status: "success" | "error", detail
   }
 
   return url.toString();
+}
+
+function encodeStatePayload(payload: Record<string, string>) {
+  const json = JSON.stringify(payload);
+  const bytes = new TextEncoder().encode(json);
+  let binary = "";
+
+  for (const byte of bytes) {
+    binary += String.fromCharCode(byte);
+  }
+
+  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+}
+
+function decodeStatePayload(state: string | null) {
+  if (!state) {
+    return null;
+  }
+
+  try {
+    const padded = state.replace(/-/g, "+").replace(/_/g, "/").padEnd(Math.ceil(state.length / 4) * 4, "=");
+    const binary = atob(padded);
+    const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
+    return JSON.parse(new TextDecoder().decode(bytes));
+  } catch {
+    return null;
+  }
 }
 
 async function getAuthedUser(request: Request) {
@@ -188,6 +210,20 @@ async function fetchGoogleCalendars(accessToken: string) {
   }));
 }
 
+async function fetchGoogleUserInfo(accessToken: string) {
+  const response = await fetch("https://www.googleapis.com/oauth2/v2/userinfo", {
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+  });
+
+  if (!response.ok) {
+    return null;
+  }
+
+  return await response.json();
+}
+
 async function queueExistingAppointments(
   adminClient: ReturnType<typeof createClient>,
   connectionRow: CalendarSyncConnectionRow,
@@ -227,6 +263,28 @@ async function queueExistingAppointments(
   await adminClient
     .from("calendar_sync_event_links")
     .upsert(links, { onConflict: "user_id,provider,source_type,source_record_id" });
+}
+
+async function saveGoogleConnectionErrorState(
+  adminClient: ReturnType<typeof createClient>,
+  connectionRow: CalendarSyncConnectionRow,
+  message: string
+) {
+  const { error } = await adminClient
+    .from("calendar_sync_connections")
+    .update({
+      status: "error",
+      last_error: message,
+      oauth_state: null,
+      oauth_state_expires_at: null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("user_id", connectionRow.user_id)
+    .eq("provider", "google");
+
+  if (error) {
+    console.error("google-calendar-auth: failed to save error state", error);
+  }
 }
 
 async function getValidGoogleAccessToken(
@@ -299,21 +357,27 @@ Deno.serve(async (request) => {
     const state = url.searchParams.get("state");
     const code = url.searchParams.get("code");
     const oauthError = url.searchParams.get("error");
+    const statePayload = decodeStatePayload(state);
 
-    const { data: connectionRow } = await adminClient
-      .from("calendar_sync_connections")
-      .select("*")
-      .eq("provider", "google")
-      .eq("oauth_state", state || "")
-      .maybeSingle<CalendarSyncConnectionRow>();
+    const { data: connectionRow } = statePayload?.userId
+      ? await adminClient
+          .from("calendar_sync_connections")
+          .select("*")
+          .eq("provider", "google")
+          .eq("user_id", statePayload.userId)
+          .maybeSingle<CalendarSyncConnectionRow>()
+      : { data: null };
 
-    const returnUrl = connectionRow?.oauth_return_url || DEFAULT_PUBLIC_APP_URL;
+    const returnUrl =
+      connectionRow?.oauth_return_url ||
+      statePayload?.returnUrl ||
+      DEFAULT_PUBLIC_APP_URL;
 
     if (oauthError) {
       return Response.redirect(buildAppRedirect(returnUrl, "error", oauthError), 302);
     }
 
-    if (!state || !code || !connectionRow) {
+    if (!state || !code || !connectionRow || connectionRow.oauth_state !== state) {
       return Response.redirect(
         buildAppRedirect(returnUrl, "error", "Missing or expired Google OAuth state."),
         302
@@ -338,14 +402,9 @@ Deno.serve(async (request) => {
       const calendars = await fetchGoogleCalendars(tokenPayload.access_token);
       const primaryCalendar =
         calendars.find((item: { primary: boolean }) => item.primary) || calendars[0] || null;
-      const userInfoResponse = await fetch("https://www.googleapis.com/oauth2/v2/userinfo", {
-        headers: {
-          Authorization: `Bearer ${tokenPayload.access_token}`,
-        },
-      });
-      const userInfo = userInfoResponse.ok ? await userInfoResponse.json() : null;
+      const userInfo = await fetchGoogleUserInfo(tokenPayload.access_token);
 
-      await adminClient.from("calendar_sync_google_tokens").upsert(
+      const { error: tokenSaveError } = await adminClient.from("calendar_sync_google_tokens").upsert(
         {
           user_id: connectionRow.user_id,
           access_token: tokenPayload.access_token,
@@ -358,7 +417,11 @@ Deno.serve(async (request) => {
         { onConflict: "user_id" }
       );
 
-      await adminClient
+      if (tokenSaveError) {
+        throw new Error(`Could not save Google tokens: ${tokenSaveError.message}`);
+      }
+
+      const { data: updatedConnection, error: connectionUpdateError } = await adminClient
         .from("calendar_sync_connections")
         .update({
           status: "ready",
@@ -369,33 +432,32 @@ Deno.serve(async (request) => {
           last_error: null,
           oauth_state: null,
           oauth_state_expires_at: null,
+          oauth_return_url: null,
           updated_at: new Date().toISOString(),
         })
         .eq("user_id", connectionRow.user_id)
-        .eq("provider", "google");
+        .eq("provider", "google")
+        .select("*")
+        .single<CalendarSyncConnectionRow>();
+
+      if (connectionUpdateError) {
+        throw new Error(`Could not save Google connection: ${connectionUpdateError.message}`);
+      }
 
       await queueExistingAppointments(
         adminClient,
-        connectionRow,
-        primaryCalendar?.id || connectionRow.external_calendar_id
+        updatedConnection || connectionRow,
+        primaryCalendar?.id || updatedConnection?.external_calendar_id || connectionRow.external_calendar_id
       );
 
       return Response.redirect(buildAppRedirect(returnUrl, "success", "Google Calendar connected."), 302);
     } catch (error) {
-      await adminClient
-        .from("calendar_sync_connections")
-        .update({
-          status: "error",
-          last_error: error instanceof Error ? error.message : "Google OAuth failed.",
-          oauth_state: null,
-          oauth_state_expires_at: null,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("user_id", connectionRow.user_id)
-        .eq("provider", "google");
+      const errorMessage = error instanceof Error ? error.message : "Google OAuth failed.";
+      console.error("google-calendar-auth callback failed", error);
+      await saveGoogleConnectionErrorState(adminClient, connectionRow, errorMessage);
 
       return Response.redirect(
-        buildAppRedirect(returnUrl, "error", error instanceof Error ? error.message : "Google OAuth failed."),
+        buildAppRedirect(returnUrl, "error", errorMessage),
         302
       );
     }
@@ -419,12 +481,16 @@ Deno.serve(async (request) => {
   const action = String(body?.action || "");
 
   if (action === "start") {
-    const oauthState = crypto.randomUUID();
     const returnUrl = buildAppReturnUrl(body?.returnUrl || DEFAULT_PUBLIC_APP_URL);
+    const oauthState = encodeStatePayload({
+      userId: user.id,
+      returnUrl,
+      nonce: crypto.randomUUID(),
+    });
     const callbackUrl = buildCallbackUrl(request);
     const oauthStateExpiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString();
 
-    await adminClient.from("calendar_sync_connections").upsert(
+    const { error: startSaveError } = await adminClient.from("calendar_sync_connections").upsert(
       {
         user_id: user.id,
         provider: "google",
@@ -439,6 +505,14 @@ Deno.serve(async (request) => {
       },
       { onConflict: "user_id,provider" }
     );
+
+    if (startSaveError) {
+      console.error("google-calendar-auth start failed to save oauth state", startSaveError);
+      return jsonResponse(
+        { error: `Could not save Google OAuth session: ${startSaveError.message}` },
+        500
+      );
+    }
 
     const authorizeUrl = new URL("https://accounts.google.com/o/oauth2/v2/auth");
     authorizeUrl.searchParams.set("client_id", GOOGLE_CLIENT_ID);
@@ -460,7 +534,36 @@ Deno.serve(async (request) => {
     try {
       const accessToken = await getValidGoogleAccessToken(adminClient, user.id);
       const calendars = await fetchGoogleCalendars(accessToken);
-      return jsonResponse({ calendars });
+      const userInfo = await fetchGoogleUserInfo(accessToken);
+      const primaryCalendar =
+        calendars.find((item: { primary: boolean }) => item.primary) || calendars[0] || null;
+
+      const { data: connectionRow } = await adminClient
+        .from("calendar_sync_connections")
+        .select("*")
+        .eq("provider", "google")
+        .eq("user_id", user.id)
+        .maybeSingle<CalendarSyncConnectionRow>();
+
+      if (connectionRow) {
+        await adminClient
+          .from("calendar_sync_connections")
+          .update({
+            external_account_email: userInfo?.email || connectionRow.external_account_email,
+            external_calendar_id: connectionRow.external_calendar_id || primaryCalendar?.id || null,
+            external_calendar_name: connectionRow.external_calendar_name || primaryCalendar?.summary || null,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("user_id", user.id)
+          .eq("provider", "google");
+      }
+
+      return jsonResponse({
+        calendars,
+        externalAccountEmail: userInfo?.email || connectionRow?.external_account_email || null,
+        externalCalendarId: connectionRow?.external_calendar_id || primaryCalendar?.id || null,
+        externalCalendarName: connectionRow?.external_calendar_name || primaryCalendar?.summary || null,
+      });
     } catch (error) {
       return jsonResponse(
         { error: error instanceof Error ? error.message : "Could not load Google calendars." },

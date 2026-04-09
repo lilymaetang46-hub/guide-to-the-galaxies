@@ -1,5 +1,5 @@
 ﻿import { useEffect, useMemo, useState } from "react";
-import { supabase } from "./supabase";
+import { supabase, supabaseUrl } from "./supabase";
 import { useEffectEvent } from "react";
 import { App as CapacitorApp } from "@capacitor/app";
 import { Capacitor } from "@capacitor/core";
@@ -678,12 +678,15 @@ function App() {
     if (googleOauthStatus) {
       setSelectedExperience("tracker");
       setAppExperience("tracker");
-      setActivePage("connections");
+      setActivePage("settings");
       setConnectionsMessage(
         googleOauthStatus === "success"
           ? googleOauthDetail || "Google Calendar connected."
           : googleOauthDetail || "Google Calendar connection failed."
       );
+      if (user) {
+        void loadConnectionsData();
+      }
       parsedUrl.searchParams.delete("google_calendar_oauth");
       parsedUrl.searchParams.delete("google_calendar_detail");
       const cleanedLocation = `${parsedUrl.pathname}${parsedUrl.search}${parsedUrl.hash}`;
@@ -2052,21 +2055,44 @@ function App() {
   }
 
   async function invokeGoogleCalendarAuth(action, payload = {}) {
-    const { data, error } = await supabase.functions.invoke("google-calendar-auth", {
-      body: {
+    const {
+      data: { session: currentSession },
+      error: sessionError,
+    } = await supabase.auth.getSession();
+
+    if (sessionError || !currentSession?.access_token) {
+      throw new Error("Your session expired. Please log out and back in, then try Connect Google again.");
+    }
+
+    const response = await fetch(`${supabaseUrl}/functions/v1/google-calendar-auth`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${currentSession.access_token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
         action,
         ...payload,
-      },
+      }),
     });
 
-    if (error) {
-      const genericMessage = error.message || "Google Calendar auth request failed.";
-      if (/non-2xx status code/i.test(genericMessage)) {
-        throw new Error(
-          "Google Calendar OAuth is not fully configured on the server yet. The Supabase project still needs GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET."
-        );
+    const responseText = await response.text();
+    let data = null;
+
+    if (responseText) {
+      try {
+        data = JSON.parse(responseText);
+      } catch {
+        data = null;
       }
-      throw new Error(genericMessage);
+    }
+
+    if (!response.ok) {
+      throw new Error(
+        data?.error ||
+          responseText ||
+          `Google Calendar auth request failed with ${response.status}.`
+      );
     }
 
     if (data?.error) {
@@ -2211,6 +2237,19 @@ function App() {
       const data = await invokeGoogleCalendarAuth("list-calendars");
       const calendars = Array.isArray(data?.calendars) ? data.calendars : [];
       setGoogleCalendarCalendars(calendars);
+      setGoogleCalendarConnection((current) =>
+        current
+          ? {
+              ...current,
+              externalAccountEmail:
+                data?.externalAccountEmail ?? current.externalAccountEmail ?? "",
+              externalCalendarId:
+                data?.externalCalendarId ?? current.externalCalendarId ?? "",
+              externalCalendarName:
+                data?.externalCalendarName ?? current.externalCalendarName ?? "",
+            }
+          : current
+      );
 
       if (!calendars.length) {
         setConnectionsMessage("Google Calendar is connected, but no calendars were returned.");
@@ -3648,6 +3687,10 @@ function App() {
     void loadConnectionsData();
   });
 
+  const refreshGoogleCalendarChoicesForEffect = useEffectEvent(() => {
+    void refreshGoogleCalendarChoices();
+  });
+
   const refreshOutsiderTrackersForEffect = useEffectEvent(() => {
     void loadOutsiderTrackers();
   });
@@ -4019,6 +4062,27 @@ function App() {
       refreshConnectionsDataForEffect();
     }
   }, [activePage, user]);
+
+  useEffect(() => {
+    if (
+      !user ||
+      activePage !== "settings" ||
+      googleCalendarConnection.status !== "ready" ||
+      googleCalendarAuthLoading ||
+      googleCalendarCalendars.length > 0
+    ) {
+      return;
+    }
+
+    refreshGoogleCalendarChoicesForEffect();
+  }, [
+    activePage,
+    googleCalendarAuthLoading,
+    googleCalendarCalendars.length,
+    googleCalendarConnection.status,
+    refreshGoogleCalendarChoicesForEffect,
+    user,
+  ]);
 
   useEffect(() => {
     if (user && (activePage === "support" || activePage === "mission" || activePage === "dashboard")) {
