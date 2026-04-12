@@ -216,6 +216,31 @@ function TrackerOverviewPage({ app }) {
     calendarEvents = [],
     nextCycleEstimateDate,
   } = app;
+  const disableGalaxyFrame =
+    theme.themeFamily === "galaxy" &&
+    !theme.observerConsole &&
+    !theme.trackerSolar &&
+    !theme.trackerReef &&
+    !theme.trackerAbyss;
+  const framelessCardOverrides = disableGalaxyFrame
+    ? {
+        border: "none",
+        boxShadow: "none",
+        clipPath: "none",
+      }
+    : {};
+  const sectionStyle = (sectionKey) => ({
+    ...sectionCardStyle(theme, sectionKey, { disableCelestialFrame: disableGalaxyFrame }),
+    ...framelessCardOverrides,
+  });
+  const summaryStyle = () => ({
+    ...summaryCardStyle(theme, { disableCelestialFrame: disableGalaxyFrame }),
+    ...framelessCardOverrides,
+  });
+  const rewardStyle = () => ({
+    ...rewardCardStyle(theme, { disableCelestialFrame: disableGalaxyFrame }),
+    ...framelessCardOverrides,
+  });
   const getDashboardStat = (key) => dashboardStats.find((item) => item.key === key);
   const getDashboardValue = (key, fallback = "Not logged") => getDashboardStat(key)?.value ?? fallback;
   const getDashboardNote = (key, fallback = "No update yet") => getDashboardStat(key)?.note ?? fallback;
@@ -238,8 +263,23 @@ function TrackerOverviewPage({ app }) {
   const activePeriodItem = calendarEvents.find(
     (item) => item.kind === "period" && !item.estimated && item.date >= today
   );
+  const observatoryFramelessPanelStyle = (accent = "default", overrides = {}) => {
+    const baseStyle = glassPanelStyle(theme, accent);
+
+    if (!isObservatoryTrackerTheme(theme)) {
+      return { ...baseStyle, ...overrides };
+    }
+
+    return {
+      ...baseStyle,
+      backgroundImage: "none",
+      border: "none",
+      boxShadow: "none",
+      ...overrides,
+    };
+  };
   const renderCalendarPulseSection = () => (
-    <section className="galaxy-panel" style={sectionCardStyle(theme, "agenda")}>
+    <section className="galaxy-panel" style={sectionStyle("agenda")}>
       {renderSectionHeader(
         "Calendar Pulse",
         "Today and the next few days, grouped from the shared calendar event layer.",
@@ -247,7 +287,7 @@ function TrackerOverviewPage({ app }) {
         "Orbit"
       )}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "12px" }}>
-        <div style={summaryCardStyle(theme)}>
+        <div style={summaryStyle()}>
           <div style={summaryLabelStyle(theme)}>Today agenda</div>
           <div style={summaryValueStyle(theme)}>{todayAgendaItems.length}</div>
           <div style={summaryNoteStyle(theme)}>
@@ -256,7 +296,7 @@ function TrackerOverviewPage({ app }) {
               : "No dated items on today's agenda."}
           </div>
         </div>
-        <div style={summaryCardStyle(theme)}>
+        <div style={summaryStyle()}>
           <div style={summaryLabelStyle(theme)}>Upcoming week</div>
           <div style={summaryValueStyle(theme)}>{upcomingWeekItems.length}</div>
           <div style={summaryNoteStyle(theme)}>
@@ -265,14 +305,14 @@ function TrackerOverviewPage({ app }) {
               : "No upcoming appointment saved yet."}
           </div>
         </div>
-        <div style={summaryCardStyle(theme)}>
+        <div style={summaryStyle()}>
           <div style={summaryLabelStyle(theme)}>Overdue tasks</div>
           <div style={summaryValueStyle(theme)}>{overdueTaskCount}</div>
           <div style={summaryNoteStyle(theme)}>
             {overdueTaskCount > 0 ? "Tasks with due dates before today still need attention." : "No overdue tasks right now."}
           </div>
         </div>
-        <div style={summaryCardStyle(theme)}>
+        <div style={summaryStyle()}>
           <div style={summaryLabelStyle(theme)}>Cycle outlook</div>
           <div style={summaryValueStyle(theme)}>
             {activePeriodItem ? "Active" : nextCycleEstimateDate ? formatCalendarOverviewDate(nextCycleEstimateDate) : "Open"}
@@ -295,7 +335,7 @@ function TrackerOverviewPage({ app }) {
             <button
               key={`${item.id}-${item.date}`}
               style={{
-                ...summaryCardStyle(theme),
+                ...summaryStyle(),
                 textAlign: "left",
                 cursor: "pointer",
                 width: "100%",
@@ -1155,7 +1195,7 @@ function TrackerOverviewPage({ app }) {
         }}
       >
         <aside style={{ display: "grid", gap: isMobile ? "18px" : "32px", order: isMobile ? 2 : 0 }}>
-          <section style={glassPanelStyle(theme)}>
+          <section style={observatoryFramelessPanelStyle()}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
               <h3 style={{ margin: 0, fontFamily: theme.trackerHeadingFamily, fontStyle: "italic", fontSize: observatoryCardTitleSize, lineHeight: 1.02, color: theme.trackerAccent }}>
                 Telemetry Logs
@@ -1202,7 +1242,7 @@ function TrackerOverviewPage({ app }) {
             </button>
           </section>
 
-          <section style={{ ...glassPanelStyle(theme, "support"), borderLeft: "2px solid rgba(255,240,195,0.3)" }}>
+          <section style={observatoryFramelessPanelStyle("support")}>
             <h3 style={{ margin: 0, fontFamily: theme.trackerHeadingFamily, fontStyle: "italic", fontSize: observatoryCardTitleSize, lineHeight: 1.02, color: theme.trackerAccent }}>
               Support Uplink
             </h3>
@@ -1354,7 +1394,7 @@ function TrackerOverviewPage({ app }) {
             </div>
           </div>
 
-          <section style={{ ...glassPanelStyle(theme), width: "100%", maxWidth: CANONICAL_OVERVIEW_LOWER_PANEL_MAX_WIDTH, padding: isMobile ? "20px 16px" : "28px 40px", borderRadius: isMobile ? "24px" : "32px" }}>
+          <section style={observatoryFramelessPanelStyle("default", { width: "100%", maxWidth: CANONICAL_OVERVIEW_LOWER_PANEL_MAX_WIDTH, padding: isMobile ? "20px 16px" : "28px 40px", borderRadius: isMobile ? "24px" : "32px" })}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: isMobile ? "24px" : "34px", gap: "12px", flexWrap: "wrap" }}>
               <span style={trackerSectionLabel(theme.subtleText)}>Mood Check-In</span>
               <span style={trackerSectionLabel(theme.trackerAccent)}>{moodStateLabel}</span>
@@ -1372,7 +1412,7 @@ function TrackerOverviewPage({ app }) {
         </div>
 
         <aside style={{ display: "grid", gap: isMobile ? "18px" : "32px", order: isMobile ? 3 : 0 }}>
-          <section style={glassPanelStyle(theme)}>
+          <section style={observatoryFramelessPanelStyle()}>
             <h3 style={{ margin: 0, fontFamily: theme.trackerHeadingFamily, fontStyle: "italic", fontSize: observatoryCardTitleSize, lineHeight: 1.02, color: theme.trackerAccent }}>
               Daily Summary
             </h3>
@@ -1416,7 +1456,7 @@ function TrackerOverviewPage({ app }) {
           </section>
 
           <section style={{ display: "grid", gap: isMobile ? "18px" : "24px" }}>
-            <div style={{ ...glassPanelStyle(theme), backgroundColor: "rgba(0,0,0,0.46)", minHeight: isMobile ? "auto" : "180px", display: "grid", alignContent: "start" }}>
+            <div style={observatoryFramelessPanelStyle("default", { backgroundColor: "rgba(0,0,0,0.46)", minHeight: isMobile ? "auto" : "180px", display: "grid", alignContent: "start" })}>
               <span style={trackerSectionLabel("rgba(169,199,255,0.6)")}>Stellar Phase</span>
               <h4 style={{ margin: "12px 0 0", fontFamily: theme.trackerHeadingFamily, fontStyle: "italic", fontSize: observatoryMiniTitleSize, lineHeight: 1.04, color: theme.text, maxWidth: "220px" }}>
                 Support Snapshot
@@ -1425,7 +1465,7 @@ function TrackerOverviewPage({ app }) {
                 {latestSupportPreview}
               </p>
             </div>
-            <div style={{ ...glassPanelStyle(theme), backgroundColor: "rgba(0,0,0,0.46)", minHeight: isMobile ? "auto" : "252px", display: "grid", alignContent: "start" }}>
+            <div style={observatoryFramelessPanelStyle("default", { backgroundColor: "rgba(0,0,0,0.46)", minHeight: isMobile ? "auto" : "252px", display: "grid", alignContent: "start" })}>
               <div style={{ aspectRatio: "16 / 8.6", overflow: "hidden", borderRadius: "16px", background: "rgba(0,0,0,0.4)", marginBottom: "18px", border: "1px solid rgba(255,255,255,0.05)" }}>
                 <div style={{ width: "100%", height: "100%", background: "radial-gradient(circle at 45% 40%, rgba(253,111,133,0.35) 0%, rgba(216,185,255,0.16) 20%, rgba(0,0,0,0) 55%), radial-gradient(circle at 55% 45%, rgba(255,240,195,0.22) 0%, rgba(0,0,0,0) 20%), linear-gradient(135deg, #05070f 0%, #120815 42%, #090f1f 100%)" }} />
               </div>
@@ -1802,7 +1842,7 @@ function TrackerOverviewPage({ app }) {
 
   return (
     <div style={chartsPageStyle}>
-      <section className="galaxy-panel" style={sectionCardStyle(theme, "dashboard")}>
+      <section className="galaxy-panel" style={sectionStyle("dashboard")}>
         {renderSectionHeader(
           trackerLabels.dashboard,
           trackerLabels.dashboardSubtitle,
@@ -1826,7 +1866,7 @@ function TrackerOverviewPage({ app }) {
             <button
               key={item.label}
               style={{
-                ...summaryCardStyle(theme),
+                ...summaryStyle(),
                 textAlign: "left",
                 cursor: "pointer",
                 width: "100%",
@@ -1841,7 +1881,7 @@ function TrackerOverviewPage({ app }) {
         </div>
       </section>
 
-      <section className="galaxy-panel" style={sectionCardStyle(theme, "agenda")}>
+      <section className="galaxy-panel" style={sectionStyle("agenda")}>
         {renderSectionHeader(
           "Calendar Pulse",
           "Today and the next few days, grouped from the shared calendar event layer.",
@@ -1849,7 +1889,7 @@ function TrackerOverviewPage({ app }) {
           "Orbit"
         )}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "12px" }}>
-          <div style={summaryCardStyle(theme)}>
+          <div style={summaryStyle()}>
             <div style={summaryLabelStyle(theme)}>Today agenda</div>
             <div style={summaryValueStyle(theme)}>{todayAgendaItems.length}</div>
             <div style={summaryNoteStyle(theme)}>
@@ -1858,7 +1898,7 @@ function TrackerOverviewPage({ app }) {
                 : "No dated items on today's agenda."}
             </div>
           </div>
-          <div style={summaryCardStyle(theme)}>
+          <div style={summaryStyle()}>
             <div style={summaryLabelStyle(theme)}>Upcoming week</div>
             <div style={summaryValueStyle(theme)}>{upcomingWeekItems.length}</div>
             <div style={summaryNoteStyle(theme)}>
@@ -1867,14 +1907,14 @@ function TrackerOverviewPage({ app }) {
                 : "No upcoming appointment saved yet."}
             </div>
           </div>
-          <div style={summaryCardStyle(theme)}>
+          <div style={summaryStyle()}>
             <div style={summaryLabelStyle(theme)}>Overdue tasks</div>
             <div style={summaryValueStyle(theme)}>{overdueTaskCount}</div>
             <div style={summaryNoteStyle(theme)}>
               {overdueTaskCount > 0 ? "Tasks with due dates before today still need attention." : "No overdue tasks right now."}
             </div>
           </div>
-          <div style={summaryCardStyle(theme)}>
+          <div style={summaryStyle()}>
             <div style={summaryLabelStyle(theme)}>Cycle outlook</div>
             <div style={summaryValueStyle(theme)}>
               {activePeriodItem ? "Active" : nextCycleEstimateDate ? formatCalendarOverviewDate(nextCycleEstimateDate) : "Open"}
@@ -1897,7 +1937,7 @@ function TrackerOverviewPage({ app }) {
               <button
                 key={`${item.id}-${item.date}`}
                 style={{
-                  ...summaryCardStyle(theme),
+                  ...summaryStyle(),
                   textAlign: "left",
                   cursor: "pointer",
                   width: "100%",
@@ -1922,7 +1962,7 @@ function TrackerOverviewPage({ app }) {
       </section>
 
       <div style={gridStyle}>
-        <section className="galaxy-panel" style={sectionCardStyle(theme, "signals")}>
+        <section className="galaxy-panel" style={sectionStyle("signals")}>
           {renderSectionHeader(trackerLabels.mood, trackerLabels.moodSubtitle, "Moon", "Moon")}
           <p style={smallInfoStyle(theme)}>Latest mood: {recentMoodSummary?.mood ?? mood}/5</p>
           <p style={smallInfoStyle(theme)}>
@@ -1940,14 +1980,14 @@ function TrackerOverviewPage({ app }) {
         </section>
       </div>
 
-      <section className="galaxy-panel" style={sectionCardStyle(theme, "signals")}>
+      <section className="galaxy-panel" style={sectionStyle("signals")}>
         {renderSectionHeader("Connected Outsiders", "People currently approved on your tracker account.", "Connected", "Connected")}
         {connectedOutsiders.length === 0 ? (
           <p style={smallInfoStyle(theme)}>No connected outsiders yet.</p>
         ) : (
           <div style={{ display: "grid", gap: "10px" }}>
             {connectedOutsiders.slice(0, 4).map((outsider) => (
-              <div key={outsider.id} style={summaryCardStyle(theme)}>
+              <div key={outsider.id} style={summaryStyle()}>
                 <div style={summaryLabelStyle(theme)}>Connected outsider</div>
                 <div style={summaryValueStyle(theme)}>{outsider.name}</div>
                 <div style={summaryNoteStyle(theme)}>
@@ -1960,7 +2000,7 @@ function TrackerOverviewPage({ app }) {
       </section>
 
       <div style={gridStyle}>
-        <section className="galaxy-panel" style={sectionCardStyle(theme, "goals")}>
+        <section className="galaxy-panel" style={sectionStyle("goals")}>
           {renderSectionHeader(trackerLabels.streaks, trackerLabels.streaksSubtitle, "Bloom", "Constellation")}
           {goals.filter((goal) => !goal.completed).length === 0 && simpleAlignmentStreaks.length === 0 ? (
             <p style={emptyTextStyle(theme)}>{trackerLabels.emptyStreaks}</p>
@@ -1984,7 +2024,7 @@ function TrackerOverviewPage({ app }) {
                     target: Math.max(goal.progress, 1),
                     unit: goal.unit,
                   }))).map((goal) => (
-                <div key={goal.id} style={rewardCardStyle(theme)}>
+                <div key={goal.id} style={rewardStyle()}>
                   <div style={rewardTitleStyle(theme)}>{goal.name}</div>
                   <div style={goalMetaStyle(theme)}>
                     {goal.progress}/{goal.target} {goal.unit}
@@ -2005,7 +2045,7 @@ function TrackerOverviewPage({ app }) {
       </div>
 
       <div style={gridStyle}>
-        <section className="galaxy-panel" style={sectionCardStyle(theme, "dashboard")}>
+        <section className="galaxy-panel" style={sectionStyle("dashboard")}>
           {renderSectionHeader(trackerLabels.rewards, trackerLabels.rewardsSubtitle, "Halo", "Starlight")}
           <p style={smallInfoStyle(theme)}>{trackerLabels.rewards} collected: {rewards.length}</p>
           <p style={smallInfoStyle(theme)}>Completed goals: {goals.filter((goal) => goal.completed).length}</p>
@@ -2017,7 +2057,7 @@ function TrackerOverviewPage({ app }) {
           </p>
         </section>
 
-        <section className="galaxy-panel" style={sectionCardStyle(theme, "signals")}>
+        <section className="galaxy-panel" style={sectionStyle("signals")}>
           {renderSectionHeader(trackerLabels.activity, trackerLabels.activitySubtitle, "Glow", "Moon")}
           {recentActivityItems.length === 0 ? (
             <p style={smallInfoStyle(theme)}>{trackerLabels.emptyActivity}</p>
@@ -2031,7 +2071,7 @@ function TrackerOverviewPage({ app }) {
         </section>
       </div>
 
-      <section className="galaxy-panel" style={sectionCardStyle(theme, "signals")}>
+      <section className="galaxy-panel" style={sectionStyle("signals")}>
         {renderSectionHeader("Support Inbox", "Recent nudges from connected outsiders appear here.", "Support", "Support")}
         <p style={smallInfoStyle(theme)}>Unread messages: {unreadSupportCount}</p>
         {supportInbox.length === 0 ? (

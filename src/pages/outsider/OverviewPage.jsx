@@ -23,6 +23,7 @@ function consolePanel(theme, accent = "primary") {
     position: "relative",
     overflow: "hidden",
     isolation: "isolate",
+    clipPath: "polygon(0 10px, 10px 0, calc(100% - 10px) 0, 100% 10px, 100% calc(100% - 10px), calc(100% - 10px) 100%, 10px 100%, 0 calc(100% - 10px))",
   };
 }
 
@@ -31,7 +32,7 @@ function consoleLabel(color = "#6b7078") {
     margin: 0,
     fontSize: "10px",
     color,
-    letterSpacing: "0.12em",
+    letterSpacing: "0.18em",
     textTransform: "uppercase",
   };
 }
@@ -49,6 +50,7 @@ function OutsiderOverviewPage({ app }) {
   const isMobile = viewportWidth < 768;
   const {
     theme,
+    today,
     chartsPageStyle,
     observerSectionCardStyle,
     renderSectionHeader,
@@ -1051,183 +1053,231 @@ function OutsiderOverviewPage({ app }) {
   }
 
   if (theme.observerConsole) {
+    const selectedTracker = outsiderTrackers[0] || null;
+    const sideModuleStyle = (accent = "primary") => ({
+      ...overviewConsolePanel(accent),
+      padding: isMobile ? "12px" : "14px",
+      minHeight: 0,
+    });
+    const actionButtonStyle = (primary = false) => ({
+      ...(primary ? primaryButtonStyle(theme) : softButtonStyle(theme)),
+      width: "100%",
+      clipPath: "polygon(0 8px, 8px 0, calc(100% - 8px) 0, 100% 8px, 100% calc(100% - 8px), calc(100% - 8px) 100%, 8px 100%, 0 calc(100% - 8px))",
+    });
+    const frameLine = {
+      position: "absolute",
+      border: `1px solid ${theme.observerAccent}24`,
+      pointerEvents: "none",
+      opacity: 0.8,
+    };
+
     return (
       <div style={{ display: "grid", gap: "24px", marginTop: "8px" }}>
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: isMobile ? "1fr" : "minmax(0, 1.15fr) minmax(320px, 0.85fr)",
-            gap: isMobile ? "16px" : "24px",
-            alignItems: "start",
-          }}
-        >
-          <div style={overviewConsolePanel()}>
+        <div style={overviewConsolePanel()}>
             <div style={panelChrome()} />
-            <div style={{ display: "flex", justifyContent: "space-between", gap: "12px", marginBottom: "14px" }}>
-              <span style={consoleLabel()}>[01] TRACKER_LINKS</span>
-              <span style={consoleLabel(theme.observerAccent)}>VIEWPORT_READY</span>
-            </div>
-            {outsiderTrackers.length > 0 ? (
-              <div style={{ display: "grid", gap: "14px" }}>
-                {outsiderTrackers.map((tracker) => (
-                  <div
-                    key={tracker.id}
-                    style={{
-                      border: `1px solid ${theme.observerAccent}22`,
-                      padding: isMobile ? "14px" : "16px",
-                      background: "rgba(0,0,0,0.18)",
-                    }}
-                  >
-                    <div style={{ display: "flex", justifyContent: "space-between", gap: "12px", flexWrap: "wrap" }}>
+            <div
+              style={{
+                position: "relative",
+                minHeight: isMobile ? "auto" : "540px",
+                padding: isMobile ? "14px" : "18px",
+                border: `1px solid ${theme.observerAccent}20`,
+                background: "rgba(7, 12, 20, 0.24)",
+                overflow: "hidden",
+              }}
+            >
+              <div
+                style={{
+                  position: "absolute",
+                  left: "50%",
+                  top: 0,
+                  transform: "translateX(-50%)",
+                  width: isMobile ? "72%" : "56%",
+                  height: "16px",
+                  borderLeft: `1px solid ${theme.observerAccent}44`,
+                  borderRight: `1px solid ${theme.observerAccent}44`,
+                  borderBottom: `1px solid ${theme.observerAccent}44`,
+                  background: `${theme.observerAccent}10`,
+                  clipPath: "polygon(8% 0, 92% 0, 100% 100%, 0 100%)",
+                }}
+              />
+              <div
+                style={{
+                  display: "grid",
+                  gap: isMobile ? "14px" : "18px",
+                }}
+              >
+                <div
+                  style={{
+                    position: "relative",
+                    minHeight: isMobile ? "340px" : "420px",
+                    padding: isMobile ? "18px 16px 22px" : "26px 28px 30px",
+                    border: `1px solid ${theme.observerAccent}26`,
+                    background:
+                      theme.modeName === "Solar"
+                        ? "linear-gradient(180deg, rgba(245,239,229,0.42) 0%, rgba(223,214,202,0.14) 100%)"
+                        : "linear-gradient(180deg, rgba(10,17,28,0.5) 0%, rgba(6,10,18,0.24) 100%)",
+                    clipPath: "polygon(10% 0, 90% 0, 100% 12%, 100% 88%, 90% 100%, 10% 100%, 0 88%, 0 12%)",
+                    overflow: "hidden",
+                  }}
+                >
+                  <div style={{ position: "absolute", left: "14%", right: "14%", top: "18px", height: "4px", background: `${theme.observerAccent}2e`, borderRadius: "999px" }} />
+                  <div style={{ position: "absolute", left: "50%", transform: "translateX(-50%)", bottom: "20px", width: "34%", height: "22px", borderTop: `2px solid ${warningTextColor}`, borderRadius: "50%", opacity: 0.8 }} />
+                  <div style={{ position: "absolute", left: "50%", top: "50%", width: "72px", height: "72px", transform: "translate(-50%, -50%)", border: `1px solid ${theme.observerAccent}34`, borderRadius: "50%" }} />
+                  <div style={{ position: "absolute", left: "50%", top: "50%", width: "12px", height: "12px", transform: "translate(-50%, -50%)", borderRadius: "50%", background: theme.observerAccent, boxShadow: `0 0 16px ${theme.observerAccent}` }} />
+                  <div style={{ position: "absolute", left: "24px", top: "50%", width: "22px", borderTop: `3px double ${theme.observerAccent}66` }} />
+                  <div style={{ position: "absolute", right: "24px", top: "50%", width: "22px", borderTop: `3px double ${theme.observerAccent}66` }} />
+                  <div style={{ position: "relative", zIndex: 1, display: "grid", gap: "12px" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", gap: "12px", alignItems: "center" }}>
+                      <span style={consoleLabel()}>[01] PRIMARY_VIEWPORT</span>
+                      <span style={consoleLabel(theme.observerAccent)}>OVERVIEW</span>
+                    </div>
+                    {selectedTracker ? (
+                      <>
+                        <div>
+                          <p style={{ ...consoleLabel(theme.faintText), marginBottom: "8px" }}>{selectedTracker.themeFamily}</p>
+                          <p style={{ margin: 0, fontFamily: "Newsreader, serif", fontSize: isMobile ? "2rem" : "2.8rem", color: theme.text, lineHeight: 0.94 }}>
+                            {selectedTracker.name}
+                          </p>
+                          <p style={{ margin: "10px 0 0", color: theme.faintText, fontSize: "12px", lineHeight: 1.7, textTransform: "uppercase", letterSpacing: "0.08em" }}>
+                            Status {selectedTracker.status}
+                          </p>
+                        </div>
+                        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(2, minmax(0, max-content))", gap: "10px", marginTop: "auto", alignItems: "end" }}>
+                          <button
+                            style={actionButtonStyle(true)}
+                            onClick={() => {
+                              setSelectedOutsiderId(selectedTracker.id);
+                              setOutsiderPage("outsiderData");
+                            }}
+                          >
+                            Open Telemetry
+                          </button>
+                          <button
+                            style={actionButtonStyle(false)}
+                            onClick={() => {
+                              setSelectedOutsiderId(selectedTracker.id);
+                              setOutsiderPage("outsiderSupport");
+                            }}
+                          >
+                            Open Comms
+                          </button>
+                        </div>
+                      </>
+                    ) : (
+                      <p style={{ margin: 0, color: "#929095", fontSize: "13px" }}>{observerLabels.emptyBody}</p>
+                    )}
+                  </div>
+                </div>
+
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: isMobile ? "1fr" : "minmax(220px, 0.52fr) minmax(0, 1fr) minmax(220px, 0.52fr)",
+                    gap: isMobile ? "12px" : "14px",
+                    marginTop: "16px",
+                  }}
+                >
+                  <div style={sideModuleStyle()}>
+                    <div style={panelChrome()} />
+                    <span style={consoleLabel()}>[03] READOUT</span>
+                    <div style={{ display: "grid", gap: "8px", marginTop: "12px" }}>
+                      {[selectedTracker?.name || "No tracker", selectedTracker?.status || "Waiting", today].map((item) => (
+                        <div
+                          key={item}
+                          style={{
+                            padding: "10px 12px",
+                            border: `1px solid ${theme.observerAccent}22`,
+                            background: "rgba(0,0,0,0.16)",
+                            color: theme.text,
+                            fontSize: "11px",
+                            letterSpacing: "0.08em",
+                            textTransform: "uppercase",
+                            whiteSpace: "nowrap",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            clipPath: "polygon(8% 0, 92% 0, 100% 50%, 92% 100%, 8% 100%, 0 50%)",
+                          }}
+                        >
+                          {item}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div style={sideModuleStyle()}>
+                    <div style={panelChrome()} />
+                    <div style={{ display: "grid", placeItems: "center", minHeight: isMobile ? "88px" : "100px" }}>
+                      <div
+                        style={{
+                          width: "100%",
+                          maxWidth: "220px",
+                          height: "56px",
+                          border: `1px solid ${theme.observerAccent}2a`,
+                          background: `${theme.observerAccent}08`,
+                          clipPath: "polygon(10% 0, 90% 0, 100% 50%, 90% 100%, 10% 100%, 0 50%)",
+                          display: "grid",
+                          placeItems: "center",
+                          color: theme.observerAccent,
+                          fontSize: "12px",
+                          letterSpacing: "0.2em",
+                          textTransform: "uppercase",
+                        }}
+                      >
+                        Overview Hub
+                      </div>
+                    </div>
+                  </div>
+
+                  <div style={sideModuleStyle(selectedTracker ? "warning" : "primary")}>
+                    <div style={panelChrome(selectedTracker ? "warning" : "primary")} />
+                    <span style={consoleLabel(selectedTracker ? warningTextColor : theme.observerAccent)}>[04] STATUS</span>
+                    <p style={{ margin: "10px 0 0", fontFamily: "Newsreader, serif", fontSize: "1.25rem", color: selectedTracker ? warningTextColor : theme.observerAccent }}>
+                      {selectedTracker ? "Ready" : "No Link"}
+                    </p>
+                    <p style={{ margin: "8px 0 0", color: selectedTracker ? warningMutedColor : theme.faintText, fontSize: "12px", lineHeight: 1.7 }}>
+                      {selectedTracker ? "Open telemetry or comms from the main viewport." : "Use an invite code or link to connect a tracker."}
+                    </p>
+                  </div>
+                </div>
+
+                {!selectedTracker ? (
+                  <div style={{ ...sideModuleStyle(), marginTop: "14px" }}>
+                    <div style={panelChrome()} />
+                    <span style={consoleLabel()}>[05] REQUEST_ACCESS</span>
+                    {renderFeedbackMessage(connectionsMessage, theme)}
+                    <div style={{ display: "grid", gap: "12px", marginTop: "12px" }}>
                       <div>
-                        <p style={consoleLabel()}>{tracker.themeFamily}</p>
-                        <p style={{ margin: "6px 0 0", fontFamily: "Newsreader, serif", fontSize: isMobile ? "1.2rem" : "1.5rem", color: theme.text }}>
-                          {tracker.name}
-                        </p>
+                        <label style={consoleLabel()}>Invite Code</label>
+                        <input
+                          style={inputStyle(theme)}
+                          type="text"
+                          value={joinCodeInput}
+                          onChange={(e) => setJoinCodeInput(e.target.value)}
+                          placeholder="STAR-ABC123"
+                        />
                       </div>
-                      <div style={{ color: theme.observerAccent, fontSize: "12px", letterSpacing: "0.08em", textTransform: "uppercase" }}>
-                        {tracker.status}
-                      </div>
-                    </div>
-                    <p style={{ margin: "10px 0 0", color: "#7d8289", fontSize: "12px", letterSpacing: "0.06em", textTransform: "uppercase", lineHeight: 1.6 }}>
-                      Status: {tracker.status} // Goals: {tracker.activeGoals?.length || 0} // Mood {tracker.moodScore}/5
-                    </p>
-                    <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(2, minmax(0, max-content))", gap: "10px", marginTop: "12px" }}>
-                      <button
-                        style={primaryButtonStyle(theme)}
-                        onClick={() => {
-                          setSelectedOutsiderId(tracker.id);
-                          setOutsiderPage("outsiderData");
-                        }}
-                      >
-                        Open Telemetry
+                      <button style={actionButtonStyle(true)} onClick={joinByCode}>
+                        Request by Code
                       </button>
-                      <button
-                        style={softButtonStyle(theme)}
-                        onClick={() => {
-                          setSelectedOutsiderId(tracker.id);
-                          setOutsiderPage("outsiderSupport");
-                        }}
-                      >
-                        Open Comms
+                      <div>
+                        <label style={consoleLabel()}>Invite Link</label>
+                        <input
+                          style={inputStyle(theme)}
+                          type="text"
+                          value={joinLinkInput}
+                          onChange={(e) => setJoinLinkInput(e.target.value)}
+                          placeholder="Paste invite link"
+                        />
+                      </div>
+                      <button style={actionButtonStyle(false)} onClick={joinByLink}>
+                        Request by Link
                       </button>
                     </div>
                   </div>
-                ))}
-              </div>
-            ) : (
-              <p style={{ margin: 0, color: "#929095", fontSize: "13px" }}>{observerLabels.emptyBody}</p>
-            )}
-          </div>
-
-          <div style={{ display: "grid", gap: "24px" }}>
-            <div style={overviewConsolePanel()}>
-              <div style={panelChrome()} />
-              <span style={consoleLabel()}>[02] REQUEST_ACCESS</span>
-              {renderFeedbackMessage(connectionsMessage, theme)}
-              <div style={{ display: "grid", gap: "12px", marginTop: "14px" }}>
-                <div>
-                  <label style={consoleLabel()}>Invite Code</label>
-                  <input
-                    style={inputStyle(theme)}
-                    type="text"
-                    value={joinCodeInput}
-                    onChange={(e) => setJoinCodeInput(e.target.value)}
-                    placeholder="STAR-ABC123"
-                  />
-                  <div style={{ marginTop: "10px" }}>
-                    <button style={primaryButtonStyle(theme)} onClick={joinByCode}>
-                      Request by Code
-                    </button>
-                  </div>
-                </div>
-                <div>
-                  <label style={consoleLabel()}>Invite Link</label>
-                  <input
-                    style={inputStyle(theme)}
-                    type="text"
-                    value={joinLinkInput}
-                    onChange={(e) => setJoinLinkInput(e.target.value)}
-                    placeholder="Paste invite link"
-                  />
-                  <div style={{ marginTop: "10px" }}>
-                    <button style={softButtonStyle(theme)} onClick={joinByLink}>
-                      Request by Link
-                    </button>
-                  </div>
-                </div>
+                ) : null}
               </div>
             </div>
-
-            <div style={overviewConsolePanel("warning")}>
-              <div style={panelChrome("warning")} />
-              <span style={consoleLabel(warningTextColor)}>[03] QUICK_SUPPORT</span>
-              <p style={{ margin: "8px 0 0", fontFamily: "Newsreader, serif", fontSize: "1.7rem", color: warningTextColor }}>
-                Support Queue
-              </p>
-              <p style={{ margin: "8px 0 0", color: warningMutedColor, fontSize: "12px" }}>
-                Approved trackers appear in the viewport and can be opened directly into telemetry or comms.
-              </p>
-            </div>
-          </div>
         </div>
-
-        {outsiderTrackers.length > 0 ? (
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: isMobile ? "1fr" : "minmax(0, 1fr) minmax(0, 1fr)",
-              gap: isMobile ? "16px" : "24px",
-            }}
-          >
-            <div style={overviewConsolePanel()}>
-              <div style={panelChrome()} />
-              <div style={{ display: "flex", justifyContent: "space-between", gap: "12px", marginBottom: "14px" }}>
-                <span style={consoleLabel()}>[04] SHARED_SIGNALS</span>
-                <span style={consoleLabel(theme.observerAccent)}>READ_ONLY</span>
-              </div>
-              <div style={{ display: "grid", gap: "12px" }}>
-                {outsiderTrackers.map((tracker) => (
-                  <div
-                    key={`signal-${tracker.id}`}
-                    style={{
-                      border: `1px solid ${theme.observerAccent}22`,
-                      padding: "14px",
-                      background: "rgba(0,0,0,0.16)",
-                    }}
-                  >
-                    <p style={consoleLabel()}>{tracker.name}</p>
-                    <p style={{ margin: "6px 0 0", color: theme.text, fontSize: "13px", lineHeight: 1.65 }}>
-                      Mood {tracker.moodScore}/5 // Meals {tracker.comparisonStats?.[0]?.value ?? 0} // Movement {tracker.comparisonStats?.[1]?.value ?? 0}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div style={overviewConsolePanel()}>
-              <div style={panelChrome()} />
-              <div style={{ display: "flex", justifyContent: "space-between", gap: "12px", marginBottom: "14px" }}>
-                <span style={consoleLabel()}>[05] SUPPORT_SHORTCUTS</span>
-                <span style={consoleLabel(theme.observerAccent)}>FAST_ACTIONS</span>
-              </div>
-              <div style={{ display: "grid", gap: "12px" }}>
-                {outsiderTrackers.slice(0, 4).map((tracker) => (
-                  <button
-                    key={`support-${tracker.id}`}
-                    style={quickJumpButtonStyle(theme)}
-                    onClick={() => {
-                      setSelectedOutsiderId(tracker.id);
-                      setOutsiderPage("outsiderSupport");
-                    }}
-                  >
-                    {`Support ${tracker.name}`}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-        ) : null}
       </div>
     );
   }

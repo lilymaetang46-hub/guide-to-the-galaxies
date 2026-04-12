@@ -1,6 +1,118 @@
 import LineTrendChart from "../../components/LineTrendChart";
 import useResponsiveViewport from "../../app/useResponsiveViewport";
 
+function averageFromSeries(data, key) {
+  const values = (Array.isArray(data) ? data : [])
+    .map((item) => Number(item?.[key]))
+    .filter((value) => Number.isFinite(value));
+
+  if (values.length === 0) {
+    return null;
+  }
+
+  return values.reduce((sum, value) => sum + value, 0) / values.length;
+}
+
+function countEntriesWithValue(data, predicate) {
+  return (Array.isArray(data) ? data : []).filter((item) => predicate(item)).length;
+}
+
+function formatDateLabel(value) {
+  if (!value) {
+    return "No recent check-in";
+  }
+
+  const parsed = new Date(`${value}T00:00:00`);
+  if (Number.isNaN(parsed.getTime())) {
+    return value;
+  }
+
+  return parsed.toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+  });
+}
+
+function getCoverageLabel(count, total) {
+  if (!total) {
+    return "No shared data";
+  }
+
+  return `${count} of ${total} recent check-ins`;
+}
+
+function getStabilityLabel(score) {
+  if (score >= 4) {
+    return "Mostly steady";
+  }
+  if (score >= 3) {
+    return "Mixed but manageable";
+  }
+  return "Needs a little more support";
+}
+
+function getSupportFocus({ latestEntry, permissions }) {
+  if (!latestEntry) {
+    return {
+      title: "Waiting for shared check-ins",
+      body: "Once this tracker shares recent check-ins, this page will turn them into a quick read instead of a blank console.",
+    };
+  }
+
+  const mealsCount = Array.isArray(latestEntry.meals) ? latestEntry.meals.length : 0;
+  const exerciseCount = Array.isArray(latestEntry.exercise_logs)
+    ? latestEntry.exercise_logs.length
+    : latestEntry.exercise_done
+    ? 1
+    : 0;
+  const hygieneCount = [
+    latestEntry.brushed_teeth,
+    latestEntry.showered,
+    latestEntry.skincare,
+  ].filter(Boolean).length;
+  const medsLogged = Boolean(latestEntry.meds_taken) || Number(latestEntry.meds_count ?? 0) > 0;
+
+  if (permissions.sleep && latestEntry.sleep_quality != null && Number(latestEntry.sleep_quality) <= 2) {
+    return {
+      title: "Sleep looks lower lately",
+      body: `The latest shared check-in logged sleep quality at ${latestEntry.sleep_quality}/5, so a gentle check-in may help more than a productivity nudge.`,
+    };
+  }
+
+  if (permissions.food && mealsCount === 0) {
+    return {
+      title: "Meals were not logged in the latest check-in",
+      body: "Food support may be the most useful next nudge if that fits this person's usual needs.",
+    };
+  }
+
+  if (permissions.meds && !medsLogged) {
+    return {
+      title: "Medication was not confirmed in the latest check-in",
+      body: "Medication details stay minimal here, but this suggests a reminder could be more useful than general encouragement.",
+    };
+  }
+
+  if (permissions.exercise && exerciseCount === 0) {
+    return {
+      title: "Movement has not shown up yet",
+      body: "If this tracker finds movement grounding, a light reminder could help without turning support into pressure.",
+    };
+  }
+
+  if (permissions.hygiene && hygieneCount <= 1) {
+    return {
+      title: "Reset routines look light today",
+      body: "Hygiene and reset tasks were only partly logged, so practical support may land better than broad motivation.",
+    };
+  }
+
+  return {
+    title: "No obvious red flags in the latest shared summary",
+    body: "Recent check-ins look reasonably steady, so simple encouragement or a calm check-in is probably enough right now.",
+  };
+}
+
 function buildWaveformPath(data, yMax = 5) {
   if (!data?.length) {
     return "M0,50 L400,50";
@@ -48,6 +160,7 @@ function telemetryPanelStyle(theme, accent = "primary") {
     position: "relative",
     overflow: "hidden",
     isolation: "isolate",
+    clipPath: "polygon(0 10px, 10px 0, calc(100% - 10px) 0, 100% 10px, 100% calc(100% - 10px), calc(100% - 10px) 100%, 10px 100%, 0 calc(100% - 10px))",
   };
 }
 
@@ -56,7 +169,7 @@ function labelStyle(color = "#6b7078") {
     margin: 0,
     fontSize: "10px",
     color,
-    letterSpacing: "0.12em",
+    letterSpacing: "0.18em",
     textTransform: "uppercase",
   };
 }
@@ -68,6 +181,15 @@ function mobileChartScrollerStyle(theme) {
     marginTop: "12px",
     borderTop: `1px solid ${theme.observerAccent}18`,
     paddingTop: "14px",
+  };
+}
+
+function chartTakeawayStyle(theme) {
+  return {
+    margin: 0,
+    color: theme.modeName === "Solar" ? "#5f564b" : "#929095",
+    fontSize: "12px",
+    lineHeight: 1.7,
   };
 }
 
@@ -127,52 +249,114 @@ function OutsiderTrackerDataPage({ app }) {
 
   const latestChartWindow = selectedOutsiderChartData;
   const hasTrendData = selectedOutsiderHistory.length > 0;
+  const chartWindowSize = latestChartWindow.length;
+  const latestEntryDate = formatDateLabel(selectedOutsider.latestEntry?.entry_date);
+  const moodAverage = averageFromSeries(latestChartWindow, "mood");
+  const sleepAverage = averageFromSeries(latestChartWindow, "sleepQuality");
+  const sharedMoodCount = countEntriesWithValue(latestChartWindow, (item) => typeof item?.mood === "number");
+  const sharedSleepCount = countEntriesWithValue(
+    latestChartWindow,
+    (item) => typeof item?.sleepQuality === "number"
+  );
+  const routineLoggedCount = countEntriesWithValue(
+    latestChartWindow,
+    (item) =>
+      Number(item?.mealsCount ?? 0) > 0 ||
+      Number(item?.exerciseCount ?? 0) > 0 ||
+      Number(item?.hygieneCount ?? 0) > 0
+  );
+  const medsLoggedCount = countEntriesWithValue(
+    latestChartWindow,
+    (item) => Number(item?.medsTaken ?? 0) > 0 || Number(item?.medsCount ?? 0) > 0
+  );
+  const supportFocus = getSupportFocus({
+    latestEntry: selectedOutsider.latestEntry,
+    permissions: selectedOutsiderPermissions,
+  });
+  const wellbeingTakeaway = moodAverage
+    ? `Mood averaged ${moodAverage.toFixed(1)}/5 across ${sharedMoodCount} recent shared check-ins${sleepAverage ? `, with sleep averaging ${sleepAverage.toFixed(1)}/5.` : "."}`
+    : "Wellbeing data is still limited, so treat this page as a rough signal rather than a full picture.";
+  const routineTakeaway =
+    routineLoggedCount > 0
+      ? `Meals, movement, or hygiene showed up in ${getCoverageLabel(routineLoggedCount, chartWindowSize).toLowerCase()}.`
+      : "Routine logging has been sparse lately, so practical support may help more than accountability language.";
+  const medsTakeaway =
+    medsLoggedCount > 0
+      ? `Medication activity appeared in ${getCoverageLabel(medsLoggedCount, chartWindowSize).toLowerCase()}. Only counts are shown here.`
+      : "No recent medication confirmations were shared in this chart window.";
 
   const overviewCards = [
     selectedOutsiderPermissions.mood && {
-      label: "Stability",
-      value: selectedOutsider.moodScore >= 4 ? "High_Resilience" : selectedOutsider.moodScore >= 3 ? "Adaptive" : "Monitor",
-      note: outsiderMoodLabel,
+      label: "Overall read",
+      value: getStabilityLabel(selectedOutsider.moodScore ?? 0),
+      note: `${outsiderMoodLabel}. Latest check-in ${latestEntryDate}.`,
     },
     selectedOutsiderPermissions.mood && {
-      label: "Volatility",
-      value: selectedOutsider.comparisonStats?.[2]?.value ?? "0.12_EPS",
-      note: "Mood average",
+      label: "Mood average",
+      value: moodAverage != null ? `${moodAverage.toFixed(1)}/5` : "Not enough data yet",
+      note:
+        moodAverage != null
+          ? `${sharedMoodCount} recent mood check-ins shared`
+          : "Mood is not available in the recent shared window",
     },
     selectedOutsiderPermissions.activity && {
-      label: "Sync Rate",
-      value: `${Math.max(72, Math.min(99, 80 + selectedOutsiderHistory.length * 2))}%`,
-      note: "Recent shared check-ins",
+      label: "Recent activity",
+      value: `${selectedOutsiderHistory.length} shared check-ins`,
+      note: selectedOutsider.latestEntry
+        ? `Latest check-in was ${latestEntryDate}`
+        : "No recent shared check-ins yet",
+    },
+    selectedOutsiderPermissions.sleep && {
+      label: "Sleep coverage",
+      value: getCoverageLabel(sharedSleepCount, chartWindowSize),
+      note:
+        sleepAverage != null
+          ? `Average shared sleep quality ${sleepAverage.toFixed(1)}/5`
+          : "Sleep quality has not been shared recently",
     },
   ].filter(Boolean);
 
   const systemsStrip = [
     {
-      label: "Sensors",
-      value: selectedOutsiderPermissions.activity ? "Active_Scan" : "Passive",
+      label: "Shared check-ins",
+      value:
+        selectedOutsiderHistory.length > 0 ? `${selectedOutsiderHistory.length} recent entries` : "No recent entries",
+      note: selectedOutsider.latestEntry ? `Latest ${latestEntryDate}` : "Waiting on a first shared update",
       tone: "default",
     },
     {
-      label: "Power",
-      value: selectedOutsiderPermissions.sleep ? "Aux_Grid_IV" : "Standby",
+      label: "Routines",
+      value:
+        routineLoggedCount > 0
+          ? `${routineLoggedCount}/${chartWindowSize || 1} check-ins logged`
+          : "No recent routine logs",
+      note: "Meals, movement, and hygiene summaries only",
       tone: "default",
     },
     {
-      label: "Biometrics",
+      label: "Status",
       value: selectedOutsider.status || "Stable",
+      note: "Based on summary-safe shared data",
       tone: "accent",
     },
     {
-      label: "Coord",
-      value: `${selectedOutsider.moodScore ?? 0}.${selectedOutsider.comparisonStats?.[0]?.value ?? 0} / ${selectedOutsider.comparisonStats?.[1]?.value ?? 0}.8`,
+      label: "Medication",
+      value: selectedOutsiderPermissions.meds
+        ? medsLoggedCount > 0
+          ? `${medsLoggedCount}/${chartWindowSize || 1} check-ins logged`
+          : "No recent medication logs"
+        : "Not shared",
+      note: selectedOutsiderPermissions.meds
+        ? "Counts only, never medication details"
+        : "Medication access is turned off",
       tone: "default",
     },
   ];
 
   const signalStrength = {
-    uplink: getSignalBars((selectedOutsider.moodScore ?? 0) >= 4 ? 3.5 : 3),
-    downlink: getSignalBars((selectedOutsiderHistory?.length ?? 0) >= 5 ? 3 : 2),
-    latency: `${Math.max(24, 64 - selectedOutsiderHistory.length * 3)}ms`,
+    wellbeing: getSignalBars(Math.min(4, Math.max(1, sharedMoodCount || sharedSleepCount || 1))),
+    routines: getSignalBars(Math.min(4, Math.max(1, routineLoggedCount))),
+    coverage: `${chartWindowSize} recent check-ins in view`,
   };
 
   const wellbeingSeries = [
@@ -274,8 +458,11 @@ function OutsiderTrackerDataPage({ app }) {
               <span style={labelStyle()}>[01] MOOD_TREND_ANALYTICS</span>
               <span style={labelStyle(theme.observerAccent)}>SIGMA_V.04</span>
             </div>
+            <p style={chartTakeawayStyle(theme)}>
+              Shared check-ins are translated into a quick, plain-language read so this page stays useful without losing the terminal style.
+            </p>
 
-            <div style={{ height: isMobile ? "140px" : "220px", border: `1px solid ${theme.observerAccent}22`, padding: isMobile ? "10px" : "16px", background: "rgba(0,0,0,0.16)" }}>
+            <div style={{ height: isMobile ? "140px" : "220px", border: `1px solid ${theme.observerAccent}22`, padding: isMobile ? "10px" : "16px", background: "rgba(0,0,0,0.16)", marginTop: "14px" }}>
               {hasTrendData ? (
                 <svg viewBox="0 0 400 100" preserveAspectRatio="none" style={{ width: "100%", height: "100%" }}>
                   <path
@@ -301,7 +488,7 @@ function OutsiderTrackerDataPage({ app }) {
             <div
               style={{
                 display: "grid",
-                gridTemplateColumns: isMobile ? "repeat(2, minmax(0, 1fr))" : "repeat(3, minmax(0, 1fr))",
+                gridTemplateColumns: isMobile ? "repeat(2, minmax(0, 1fr))" : "repeat(4, minmax(0, 1fr))",
                 gap: isMobile ? "10px" : "16px",
                 borderTop: `1px solid ${theme.observerAccent}22`,
                 paddingTop: "16px",
@@ -321,6 +508,7 @@ function OutsiderTrackerDataPage({ app }) {
                   >
                     {item.value}
                   </p>
+                  <p style={{ ...chartTakeawayStyle(theme), marginTop: "6px" }}>{item.note}</p>
                 </div>
               ))}
             </div>
@@ -329,11 +517,11 @@ function OutsiderTrackerDataPage({ app }) {
           <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
             <div style={telemetryPanelStyle(theme)}>
               <div style={panelChrome()} />
-              <span style={labelStyle()}>[02] SIGNAL_STRENGTH</span>
+              <span style={labelStyle()}>[02] SHARED_SIGNAL</span>
               <div style={{ display: "grid", gap: "14px", marginTop: "16px" }}>
                 {[
-                  { label: "UPLINK", bars: signalStrength.uplink },
-                  { label: "DOWNLINK", bars: signalStrength.downlink },
+                  { label: "WELLBEING DATA", bars: signalStrength.wellbeing },
+                  { label: "ROUTINE DATA", bars: signalStrength.routines },
                 ].map((item) => (
                   <div key={item.label} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px" }}>
                     <span style={{ color: theme.text, fontSize: "12px", letterSpacing: "0.08em" }}>{item.label}</span>
@@ -352,29 +540,32 @@ function OutsiderTrackerDataPage({ app }) {
                   </div>
                 ))}
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px" }}>
-                  <span style={{ color: theme.text, fontSize: "12px", letterSpacing: "0.08em" }}>LATENCY</span>
-                  <span style={{ color: theme.observerAccent, fontSize: "12px" }}>{signalStrength.latency}</span>
+                  <span style={{ color: theme.text, fontSize: "12px", letterSpacing: "0.08em" }}>WINDOW</span>
+                  <span style={{ color: theme.observerAccent, fontSize: "12px" }}>{signalStrength.coverage}</span>
                 </div>
               </div>
             </div>
 
             <div style={telemetryPanelStyle(theme, "warning")}>
-              <span style={labelStyle(warningTextColor)}>[03] CORE_TEMP_WARNING</span>
+              <span style={labelStyle(warningTextColor)}>[03] SUPPORT_FOCUS</span>
               <div style={{ display: "flex", alignItems: "baseline", gap: "8px", marginTop: "10px" }}>
                 <p
                   style={{
                     margin: 0,
                     fontFamily: "Newsreader, serif",
-                    fontSize: "clamp(1.4rem, 3vw, 2rem)",
+                    fontSize: "clamp(1.15rem, 2.5vw, 1.6rem)",
                     color: warningTextColor,
                   }}
                 >
-                  {selectedOutsiderPermissions.mood ? "Over_Nominal" : "Standby"}
+                  {supportFocus.title}
                 </p>
                 <span className="material-symbols-outlined" style={{ color: warningTextColor, fontSize: "18px" }}>
                   warning
                 </span>
               </div>
+              <p style={{ margin: "10px 0 0", color: warningTextColor, fontSize: "12px", lineHeight: 1.7 }}>
+                {supportFocus.body}
+              </p>
             </div>
           </div>
         </div>
@@ -387,14 +578,18 @@ function OutsiderTrackerDataPage({ app }) {
           }}
         >
           {systemsStrip.map((item) => (
-            <div
-              key={item.label}
-              style={{
-                background: "rgba(40,42,44,0.5)",
-                padding: "16px",
-                border: "1px solid #47464b",
-              }}
-            >
+                    <div
+                      key={item.label}
+                      style={{
+                        background: theme.modeName === "Solar"
+                          ? "linear-gradient(180deg, rgba(240,236,228,0.92) 0%, rgba(219,211,199,0.98) 100%)"
+                          : "linear-gradient(180deg, rgba(20,28,39,0.92) 0%, rgba(10,15,24,0.98) 100%)",
+                        padding: "16px",
+                        border: `1px solid ${theme.observerAccent}2a`,
+                        clipPath: "polygon(0 9px, 9px 0, calc(100% - 9px) 0, 100% 9px, 100% calc(100% - 9px), calc(100% - 9px) 100%, 9px 100%, 0 calc(100% - 9px))",
+                        boxShadow: "inset 0 1px 0 rgba(255,255,255,0.04)",
+                      }}
+                    >
               <p style={labelStyle()}>{item.label}</p>
               <p
                 style={{
@@ -408,6 +603,7 @@ function OutsiderTrackerDataPage({ app }) {
               >
                 {item.value}
               </p>
+              <p style={{ ...chartTakeawayStyle(theme), marginTop: "8px" }}>{item.note}</p>
             </div>
           ))}
         </div>
@@ -451,6 +647,9 @@ function OutsiderTrackerDataPage({ app }) {
                   <div style={mobileTelemetryCardStyle}>
                     <div style={panelChrome()} />
                     <p style={labelStyle(theme.observerAccent)}>WELLBEING_TREND</p>
+                    <p style={{ ...chartTakeawayStyle(theme), marginTop: "8px" }}>
+                      Recent mood, energy, and sleep signals in one place.
+                    </p>
                     <div style={mobileChartScrollerStyle(theme)}>
                       <div style={{ minWidth: "560px" }}>
                         <LineTrendChart
@@ -464,17 +663,23 @@ function OutsiderTrackerDataPage({ app }) {
                         />
                       </div>
                     </div>
+                    <p style={{ ...chartTakeawayStyle(theme), marginTop: "12px", color: theme.text }}>
+                      {wellbeingTakeaway}
+                    </p>
                   </div>
                 ) : (
-                  <LineTrendChart
-                    title="Shared wellbeing trend"
-                    subtitle="High-level emotional and sleep trends only."
-                    data={latestChartWindow}
-                    yMax={5}
-                    theme={theme}
-                    chartCardStyle={chartCardStyle}
-                    series={wellbeingSeries}
-                  />
+                  <div style={{ display: "grid", gap: "10px" }}>
+                    <LineTrendChart
+                      title="Shared wellbeing trend"
+                      subtitle="High-level emotional and sleep trends only."
+                      data={latestChartWindow}
+                      yMax={5}
+                      theme={theme}
+                      chartCardStyle={chartCardStyle}
+                      series={wellbeingSeries}
+                    />
+                    <p style={chartTakeawayStyle(theme)}>{wellbeingTakeaway}</p>
+                  </div>
                 )
               ) : null}
 
@@ -483,6 +688,9 @@ function OutsiderTrackerDataPage({ app }) {
                   <div style={mobileTelemetryCardStyle}>
                     <div style={panelChrome()} />
                     <p style={labelStyle(theme.observerAccent)}>DAILY_ROUTINES</p>
+                    <p style={{ ...chartTakeawayStyle(theme), marginTop: "8px" }}>
+                      Shared counts for meals, movement, and reset habits.
+                    </p>
                     <div style={mobileChartScrollerStyle(theme)}>
                       <div style={{ minWidth: "560px" }}>
                         <LineTrendChart
@@ -496,17 +704,23 @@ function OutsiderTrackerDataPage({ app }) {
                         />
                       </div>
                     </div>
+                    <p style={{ ...chartTakeawayStyle(theme), marginTop: "12px", color: theme.text }}>
+                      {routineTakeaway}
+                    </p>
                   </div>
                 ) : (
-                  <LineTrendChart
-                    title="Daily routines"
-                    subtitle="Shared counts for meals, movement, and resets."
-                    data={latestChartWindow}
-                    yMax={routineMax}
-                    theme={theme}
-                    chartCardStyle={chartCardStyle}
-                    series={routineSeries}
-                  />
+                  <div style={{ display: "grid", gap: "10px" }}>
+                    <LineTrendChart
+                      title="Daily routines"
+                      subtitle="Shared counts for meals, movement, and resets."
+                      data={latestChartWindow}
+                      yMax={routineMax}
+                      theme={theme}
+                      chartCardStyle={chartCardStyle}
+                      series={routineSeries}
+                    />
+                    <p style={chartTakeawayStyle(theme)}>{routineTakeaway}</p>
+                  </div>
                 )
               ) : null}
 
@@ -515,6 +729,9 @@ function OutsiderTrackerDataPage({ app }) {
                   <div style={mobileTelemetryCardStyle}>
                     <div style={panelChrome()} />
                     <p style={labelStyle(theme.observerAccent)}>MEDICATION_SUPPORT</p>
+                    <p style={{ ...chartTakeawayStyle(theme), marginTop: "8px" }}>
+                      Counts only. Medication names and private details stay hidden.
+                    </p>
                     <div style={mobileChartScrollerStyle(theme)}>
                       <div style={{ minWidth: "560px" }}>
                         <LineTrendChart
@@ -528,17 +745,23 @@ function OutsiderTrackerDataPage({ app }) {
                         />
                       </div>
                     </div>
+                    <p style={{ ...chartTakeawayStyle(theme), marginTop: "12px", color: theme.text }}>
+                      {medsTakeaway}
+                    </p>
                   </div>
                 ) : (
-                  <LineTrendChart
-                    title="Medication support view"
-                    subtitle="Only medication check counts and log counts are shown."
-                    data={latestChartWindow}
-                    yMax={medsMax}
-                    theme={theme}
-                    chartCardStyle={chartCardStyle}
-                    series={medsSeries}
-                  />
+                  <div style={{ display: "grid", gap: "10px" }}>
+                    <LineTrendChart
+                      title="Medication support view"
+                      subtitle="Only medication check counts and log counts are shown."
+                      data={latestChartWindow}
+                      yMax={medsMax}
+                      theme={theme}
+                      chartCardStyle={chartCardStyle}
+                      series={medsSeries}
+                    />
+                    <p style={chartTakeawayStyle(theme)}>{medsTakeaway}</p>
+                  </div>
                 )
               ) : null}
             </div>

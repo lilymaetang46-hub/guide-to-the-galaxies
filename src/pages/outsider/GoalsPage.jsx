@@ -23,6 +23,7 @@ function consolePanel(theme, accent = "primary") {
     position: "relative",
     overflow: "hidden",
     isolation: "isolate",
+    clipPath: "polygon(0 10px, 10px 0, calc(100% - 10px) 0, 100% 10px, 100% calc(100% - 10px), calc(100% - 10px) 100%, 10px 100%, 0 calc(100% - 10px))",
   };
 }
 
@@ -31,7 +32,7 @@ function consoleLabel(color = "#6b7078") {
     margin: 0,
     fontSize: "10px",
     color,
-    letterSpacing: "0.12em",
+    letterSpacing: "0.18em",
     textTransform: "uppercase",
   };
 }
@@ -148,7 +149,17 @@ function OutsiderGoalsPage({ app }) {
               </div>
               <div style={{ display: "grid", gap: "12px" }}>
                 {goalCards.map((goal) => (
-                  <div key={goal.key} style={{ border: `1px solid ${theme.observerAccent}22`, padding: "14px" }}>
+                  <div
+                    key={goal.key}
+                    style={{
+                      border: `1px solid ${theme.observerAccent}22`,
+                      padding: "14px",
+                      background: theme.modeName === "Solar"
+                        ? "linear-gradient(180deg, rgba(245,239,229,0.94) 0%, rgba(223,214,202,0.98) 100%)"
+                        : "linear-gradient(180deg, rgba(21,29,41,0.94) 0%, rgba(11,16,25,0.98) 100%)",
+                      clipPath: "polygon(0 8px, 8px 0, calc(100% - 8px) 0, 100% 8px, 100% calc(100% - 8px), calc(100% - 8px) 100%, 8px 100%, 0 calc(100% - 8px))",
+                    }}
+                  >
                     <p style={consoleLabel()}>{goal.title}</p>
                     <p style={{ margin: "6px 0 0", fontFamily: "Newsreader, serif", fontSize: "1.35rem", color: theme.text }}>
                       {goal.subtitle}
@@ -168,7 +179,17 @@ function OutsiderGoalsPage({ app }) {
               </div>
               <div style={{ display: "grid", gap: "12px" }}>
                 {selectedOutsider.rewards.map((item) => (
-                  <div key={item} style={{ border: "1px solid rgba(253, 139, 0, 0.25)", padding: "14px" }}>
+                  <div
+                    key={item}
+                    style={{
+                      border: "1px solid rgba(253, 139, 0, 0.25)",
+                      padding: "14px",
+                      background: theme.modeName === "Solar"
+                        ? "linear-gradient(180deg, rgba(244,229,210,0.94) 0%, rgba(224,203,173,0.98) 100%)"
+                        : "linear-gradient(180deg, rgba(52,35,27,0.94) 0%, rgba(26,19,16,0.98) 100%)",
+                      clipPath: "polygon(0 8px, 8px 0, calc(100% - 8px) 0, 100% 8px, 100% calc(100% - 8px), calc(100% - 8px) 100%, 8px 100%, 0 calc(100% - 8px))",
+                    }}
+                  >
                     <p style={{ margin: 0, fontFamily: "Newsreader, serif", fontSize: "1.3rem", color: warningTextColor }}>
                       {item}
                     </p>

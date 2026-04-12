@@ -9,6 +9,142 @@ const CONSOLE_NAV_ITEMS = [
   { key: "outsiderSupport", label: "Comms", desktopLabel: "CREW_QUARTERS", icon: "satellite_alt" },
 ];
 
+function TrackerTitleEmblem({
+  label,
+  frameColor = "#8e949d",
+  textColor = "#e7ebf0",
+  mutedTextColor = "rgba(231, 235, 240, 0.72)",
+  width = "min(760px, 76vw)",
+  compact = false,
+}) {
+  const displayLabel = label || "Select Tracker";
+
+  return (
+    <div
+      style={{
+        width,
+        maxWidth: "100%",
+        display: "grid",
+        gap: compact ? "2px" : "6px",
+        justifyItems: "center",
+      }}
+    >
+      <svg
+        viewBox="0 0 900 88"
+        aria-hidden="true"
+        style={{
+          display: "block",
+          width: "100%",
+          height: compact ? "40px" : "48px",
+          filter: "drop-shadow(0 6px 14px rgba(0,0,0,0.2))",
+        }}
+      >
+        <path
+          fill={frameColor}
+          d="M36 34 L126 34 L138 44 L196 44 L208 34 L256 34 L268 44 L310 44 L322 60 L578 60 L590 44 L634 44 L646 34 L694 34 L706 44 L764 44 L776 34 L864 34 L850 54 L780 54 L768 44 L716 44 L704 56 L196 56 L184 44 L138 44 L126 54 L50 54 Z"
+        />
+        <path
+          fill="rgba(255,255,255,0.14)"
+          d="M46 37 L854 37 L844 46 L776 46 L764 38 L706 38 L694 46 L646 46 L634 38 L266 38 L254 46 L208 46 L196 38 L138 38 L126 46 L58 46 Z"
+        />
+        <path
+          fill="rgba(40,48,58,0.92)"
+          d="M332 40 L568 40 L580 50 L568 60 L332 60 L320 50 Z"
+        />
+      </svg>
+      <div
+        style={{
+          marginTop: compact ? "-14px" : "-12px",
+          textAlign: "center",
+        }}
+      >
+        <div
+          style={{
+            color: mutedTextColor,
+            fontSize: compact ? "10px" : "11px",
+            letterSpacing: compact ? "0.32em" : "0.34em",
+            textTransform: "uppercase",
+            whiteSpace: "nowrap",
+          }}
+        >
+          Current Tracker
+        </div>
+        <div
+          style={{
+            color: textColor,
+            fontSize: compact ? "1.22rem" : "clamp(1.15rem, 2.4vw, 1.7rem)",
+            fontWeight: 800,
+            letterSpacing: compact ? "0.1em" : "0.1em",
+            textTransform: "uppercase",
+            textWrap: "balance",
+          }}
+        >
+          {displayLabel}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function HudDial({ accentColor, rimColor, size = 108, value = "99" }) {
+  return (
+    <div
+      style={{
+        width: `${size}px`,
+        height: `${size}px`,
+        borderRadius: "50%",
+        position: "relative",
+        display: "grid",
+        placeItems: "center",
+        background:
+          `radial-gradient(circle at center, rgba(0,0,0,0) 43%, ${rimColor} 43%, ${rimColor} 46%, rgba(0,0,0,0) 46%), radial-gradient(circle at center, ${accentColor}22 0%, rgba(0,0,0,0) 62%)`,
+        boxShadow: `inset 0 0 0 1px ${accentColor}33, 0 0 24px ${accentColor}18`,
+      }}
+    >
+      <div
+        style={{
+          position: "absolute",
+          inset: "10px",
+          borderRadius: "50%",
+          border: `2px solid ${accentColor}88`,
+          borderTopColor: accentColor,
+          borderBottomColor: `${accentColor}44`,
+        }}
+      />
+      <div
+        style={{
+          position: "absolute",
+          inset: "22px",
+          borderRadius: "50%",
+          border: `2px solid ${rimColor}`,
+          opacity: 0.8,
+        }}
+      />
+      <div
+        style={{
+          width: "8px",
+          height: "8px",
+          borderRadius: "50%",
+          background: accentColor,
+          boxShadow: `0 0 12px ${accentColor}`,
+        }}
+      />
+      <div
+        style={{
+          position: "absolute",
+          bottom: "18px",
+          fontSize: "0.92rem",
+          fontWeight: 800,
+          letterSpacing: "0.08em",
+          color: "#f2f5f8",
+        }}
+      >
+        {value}
+      </div>
+    </div>
+  );
+}
+
 function isAbyssOutsiderTheme(theme) {
   return Boolean(theme?.observerAbyssBridge && theme?.themeFamily === "underwater");
 }
@@ -55,6 +191,7 @@ function OutsiderLayout({
   const showDesktopSidebar = !isCoarsePointer && viewportWidth >= 1180;
   const showCompactConsoleNav = !showDesktopSidebar;
   const consoleSidebarWidth = viewportWidth >= 1480 ? 248 : 224;
+  const trackerTitleLabel = selectedTrackerName || title;
 
   useEffect(() => {
     setNavOpen(viewportWidth >= 900);
@@ -215,6 +352,28 @@ function OutsiderLayout({
         >
           <div style={seamLineStyle({ left: "18px", top: "8px", bottom: "8px", width: "2px" })} />
           <div style={seamLineStyle({ right: "18px", top: "8px", bottom: "8px", width: "2px" })} />
+          <div
+            style={{
+              position: "absolute",
+              left: "50%",
+              top: "50%",
+              transform: "translate(-50%, -50%)",
+              pointerEvents: "none",
+              zIndex: 1,
+              width: isMobile ? "82vw" : "min(880px, 70vw)",
+              display: "flex",
+              justifyContent: "center",
+            }}
+          >
+            <TrackerTitleEmblem
+              label={trackerTitleLabel}
+              compact
+              width="100%"
+              frameColor="#8f969f"
+              textColor={theme.observerIndustrialText}
+              mutedTextColor="rgba(226, 230, 235, 0.68)"
+            />
+          </div>
           <div style={{ display: "flex", alignItems: "center", gap: isMobile ? "10px" : "16px", minWidth: 0 }}>
             <span
               style={{
@@ -228,7 +387,7 @@ function OutsiderLayout({
                 textShadow: "0 0 10px rgba(34, 211, 238, 0.8)",
               }}
             >
-              Bridge_Terminal_v4.2
+              Bridge
             </span>
             {!isMobile ? (
               <nav style={{ display: "flex", gap: "18px", marginLeft: "12px" }}>
@@ -814,9 +973,15 @@ function OutsiderLayout({
     return (
       <div style={containerStyle}>
         <div style={heroCardStyle(theme)}>
-          <div style={{ flex: "1 1 320px", minWidth: 0 }}>
+          <div style={{ flex: "1 1 320px", minWidth: 0, width: "100%", display: "grid", justifyItems: "center", textAlign: "center" }}>
             <p style={tinyLabelStyle(theme)}>Guide to the Galaxies</p>
-            <h1 style={titleStyle(theme)}>{title}</h1>
+            <TrackerTitleEmblem
+              label={trackerTitleLabel}
+              width={isMobile ? "min(92vw, 520px)" : "min(760px, 82%)"}
+              frameColor="#9198a2"
+              textColor={theme.text}
+              mutedTextColor={theme.faintText}
+            />
             <p style={subtitleStyle(theme)}>{subtitle}</p>
             <p style={dateStyle(theme)}>{today}</p>
             <p style={lastActionStyle(theme)}>
@@ -933,6 +1098,39 @@ function OutsiderLayout({
   const bridgeAccentLines = isSolarMode
     ? "linear-gradient(90deg, rgba(219,134,49,0.82) 0%, rgba(219,134,49,0.18) 24%, rgba(0,0,0,0) 44%, rgba(0,0,0,0) 56%, rgba(46,143,146,0.2) 76%, rgba(46,143,146,0.78) 100%)"
     : "linear-gradient(90deg, rgba(255,163,92,0.85) 0%, rgba(255,163,92,0.2) 24%, rgba(0,0,0,0) 44%, rgba(0,0,0,0) 56%, rgba(113,214,255,0.22) 76%, rgba(113,214,255,0.82) 100%)";
+  const hudPanelStyle = (tone = "default") => ({
+    position: "relative",
+    overflow: "hidden",
+    borderRadius: isMobile ? "14px" : "18px",
+    border:
+      tone === "warning"
+        ? `1px solid ${isSolarMode ? "rgba(219,134,49,0.42)" : "rgba(255,163,92,0.46)"}`
+        : `1px solid ${theme.observerAccent}2f`,
+    background:
+      tone === "warning"
+        ? isSolarMode
+          ? "linear-gradient(180deg, rgba(236,223,204,0.92) 0%, rgba(208,191,168,0.96) 100%)"
+          : "linear-gradient(180deg, rgba(53,36,27,0.92) 0%, rgba(26,19,16,0.98) 100%)"
+        : isSolarMode
+        ? "linear-gradient(180deg, rgba(245,239,228,0.86) 0%, rgba(221,213,201,0.94) 100%)"
+        : "linear-gradient(180deg, rgba(22,31,47,0.9) 0%, rgba(10,16,26,0.96) 100%)",
+    boxShadow: isSolarMode
+      ? "inset 0 1px 0 rgba(255,255,255,0.22), 0 10px 22px rgba(108,95,76,0.12)"
+      : "inset 0 1px 0 rgba(255,255,255,0.05), 0 14px 26px rgba(0,0,0,0.2)",
+  });
+  const hudLabelStyle = {
+    margin: 0,
+    color: theme.observerAccent,
+    fontSize: isMobile ? "9px" : "10px",
+    letterSpacing: "0.22em",
+    textTransform: "uppercase",
+  };
+  const hudMetrics = [
+    { label: "Signal", value: signalText.replace("_", " "), tone: "default" },
+    { label: "Tracker", value: selectedTrackerName || "Standby", tone: "default" },
+    { label: "Status", value: outsiderMessage ? "Busy" : "Nominal", tone: outsiderMessage ? "warning" : "default" },
+  ];
+  const hudBars = Array.from({ length: 12 }, (_, index) => 18 + ((index * 13) % 54));
 
   return (
     <div
@@ -1000,7 +1198,7 @@ function OutsiderLayout({
           left: 0,
           right: 0,
           zIndex: 60,
-          height: isMobile ? "48px" : "64px",
+          height: isMobile ? "76px" : "96px",
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
@@ -1013,6 +1211,28 @@ function OutsiderLayout({
           boxShadow: isSolarMode ? "0 10px 24px rgba(108, 95, 76, 0.14)" : "0 10px 30px rgba(0,0,0,0.24)",
         }}
       >
+        <div
+          style={{
+            position: "absolute",
+            left: "50%",
+            top: "50%",
+            transform: "translate(-50%, -50%)",
+            width: isMobile ? "92vw" : "min(1180px, 82vw)",
+            maxWidth: "100%",
+            pointerEvents: "none",
+            zIndex: 1,
+            display: "flex",
+            justifyContent: "center",
+          }}
+        >
+          <TrackerTitleEmblem
+            label={trackerTitleLabel}
+            width="100%"
+            frameColor="#8b929c"
+            textColor={theme.text}
+            mutedTextColor={theme.faintText}
+          />
+        </div>
         <div
           style={{
             position: "absolute",
@@ -1039,7 +1259,7 @@ function OutsiderLayout({
               textTransform: "uppercase",
             }}
           >
-            ORBITAL_OS_v.72
+            ORBITAL
           </div>
         </div>
 
@@ -1230,7 +1450,7 @@ function OutsiderLayout({
         style={{
           marginLeft: showDesktopSidebar ? `${consoleSidebarWidth}px` : 0,
           marginRight: 0,
-          paddingTop: isMobile ? "54px" : "80px",
+          paddingTop: isMobile ? "86px" : "112px",
           paddingBottom: showCompactConsoleNav ? (isMobile ? "60px" : "74px") : "24px",
           paddingInline: isMobile ? "4px" : "20px",
           maxWidth: "none",
@@ -1524,7 +1744,250 @@ function OutsiderLayout({
                 </div>
               </div>
 
-              {children}
+              <div
+                style={{
+                  display: "grid",
+                  gap: isMobile ? "12px" : "18px",
+                  marginTop: isMobile ? "14px" : "18px",
+                }}
+              >
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: isMobile ? "1fr" : "132px minmax(0, 1.35fr) 132px",
+                    gap: isMobile ? "10px" : "16px",
+                    alignItems: "stretch",
+                  }}
+                >
+                  <div style={{ ...hudPanelStyle(), padding: isMobile ? "12px" : "14px", display: "grid", placeItems: "center" }}>
+                    <p style={{ ...hudLabelStyle, position: "absolute", top: isMobile ? "10px" : "12px", left: isMobile ? "12px" : "14px" }}>
+                      Vector
+                    </p>
+                    <HudDial
+                      accentColor={theme.observerAccent}
+                      rimColor={isSolarMode ? "rgba(219,134,49,0.7)" : "rgba(255,163,92,0.72)"}
+                      size={isMobile ? 84 : 102}
+                      value="A1"
+                    />
+                  </div>
+                  <div style={{ ...hudPanelStyle(), padding: isMobile ? "12px" : "16px 18px" }}>
+                    <div
+                      style={{
+                        display: "grid",
+                        gridTemplateColumns: "repeat(12, minmax(0, 1fr))",
+                        gap: "8px",
+                        alignItems: "end",
+                      }}
+                    >
+                      {hudBars.map((height, index) => (
+                        <div
+                          key={`hud-bar-${index}`}
+                          style={{
+                            height: `${height}px`,
+                            borderRadius: "999px 999px 2px 2px",
+                            background:
+                              index > 8
+                                ? isSolarMode
+                                  ? "linear-gradient(180deg, rgba(219,134,49,0.82) 0%, rgba(219,134,49,0.22) 100%)"
+                                  : "linear-gradient(180deg, rgba(255,163,92,0.9) 0%, rgba(255,163,92,0.24) 100%)"
+                                : `linear-gradient(180deg, ${theme.observerAccent} 0%, ${theme.observerAccent}22 100%)`,
+                          }}
+                        />
+                      ))}
+                    </div>
+                    <div
+                      style={{
+                        marginTop: "12px",
+                        paddingTop: "10px",
+                        borderTop: `1px solid ${theme.observerAccent}26`,
+                        display: "grid",
+                        gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+                        gap: "10px",
+                      }}
+                    >
+                      {hudMetrics.map((item) => (
+                        <div key={item.label}>
+                          <p style={hudLabelStyle}>{item.label}</p>
+                          <p
+                            style={{
+                              margin: "6px 0 0",
+                              color: item.tone === "warning"
+                                ? isSolarMode
+                                  ? "#9a5710"
+                                  : "#ffb16d"
+                                : theme.text,
+                              fontSize: isMobile ? "0.78rem" : "0.92rem",
+                              fontWeight: 700,
+                              letterSpacing: "0.04em",
+                              textTransform: "uppercase",
+                              whiteSpace: "nowrap",
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                            }}
+                          >
+                            {item.value}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  <div style={{ ...hudPanelStyle("warning"), padding: isMobile ? "12px" : "14px", display: "grid", placeItems: "center" }}>
+                    <p style={{ ...hudLabelStyle, position: "absolute", top: isMobile ? "10px" : "12px", left: isMobile ? "12px" : "14px" }}>
+                      Sync
+                    </p>
+                    <HudDial
+                      accentColor={isSolarMode ? "#db8649" : "#ffa35c"}
+                      rimColor={`${theme.observerAccent}88`}
+                      size={isMobile ? 84 : 102}
+                      value="99"
+                    />
+                  </div>
+                </div>
+
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: isMobile ? "1fr" : "minmax(150px, 0.28fr) minmax(0, 1fr) minmax(170px, 0.32fr)",
+                    gap: isMobile ? "12px" : "18px",
+                    alignItems: "start",
+                  }}
+                >
+                  {!isMobile ? (
+                    <div style={{ display: "grid", gap: "14px" }}>
+                      <div style={{ ...hudPanelStyle(), padding: "14px" }}>
+                        <p style={hudLabelStyle}>Orbit</p>
+                        <div
+                          style={{
+                            marginTop: "10px",
+                            aspectRatio: "1 / 1",
+                            borderRadius: "50%",
+                            position: "relative",
+                            border: `1px solid ${theme.observerAccent}36`,
+                            background:
+                              "radial-gradient(circle at center, rgba(255,255,255,0.05) 0%, rgba(0,0,0,0) 54%)",
+                          }}
+                        >
+                          <div style={{ position: "absolute", inset: "12%", borderRadius: "50%", border: `1px solid ${theme.observerAccent}40` }} />
+                          <div style={{ position: "absolute", inset: "28%", borderRadius: "50%", border: `1px solid ${theme.observerAccent}55` }} />
+                          <div style={{ position: "absolute", left: "50%", top: "8%", width: "1px", height: "84%", background: `${theme.observerAccent}24` }} />
+                          <div style={{ position: "absolute", top: "50%", left: "8%", height: "1px", width: "84%", background: `${theme.observerAccent}24` }} />
+                          <div style={{ position: "absolute", left: "50%", top: "50%", width: "8px", height: "8px", borderRadius: "50%", transform: "translate(-50%, -50%)", background: theme.observerAccent, boxShadow: `0 0 14px ${theme.observerAccent}` }} />
+                        </div>
+                      </div>
+                      <div style={{ ...hudPanelStyle(), padding: "14px" }}>
+                        <p style={hudLabelStyle}>Readout</p>
+                        <div style={{ display: "grid", gap: "8px", marginTop: "10px" }}>
+                          {[pageTitle, today, selectedTrackerName || "No tracker linked"].map((item) => (
+                            <div
+                              key={item}
+                              style={{
+                                padding: "8px 10px",
+                                border: `1px solid ${theme.observerAccent}24`,
+                                color: theme.text,
+                                fontSize: "11px",
+                                textTransform: "uppercase",
+                                letterSpacing: "0.08em",
+                                whiteSpace: "nowrap",
+                                overflow: "hidden",
+                                textOverflow: "ellipsis",
+                              }}
+                            >
+                              {item}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  ) : null}
+
+                  <div style={{ ...hudPanelStyle(), padding: isMobile ? "12px" : "16px" }}>
+                    <div
+                      style={{
+                        position: "relative",
+                        minHeight: isMobile ? "auto" : "420px",
+                        borderRadius: isMobile ? "12px" : "16px",
+                        border: `1px solid ${theme.observerAccent}24`,
+                        background:
+                          isSolarMode
+                            ? "linear-gradient(180deg, rgba(238,232,221,0.46) 0%, rgba(221,214,201,0.22) 100%)"
+                            : "linear-gradient(180deg, rgba(8,16,27,0.72) 0%, rgba(11,18,28,0.34) 100%)",
+                        padding: isMobile ? "12px" : "16px",
+                        overflow: "hidden",
+                      }}
+                    >
+                      <div
+                        style={{
+                          position: "absolute",
+                          inset: "12px",
+                          border: `1px solid ${theme.observerAccent}18`,
+                          clipPath: "polygon(3% 0, 97% 0, 100% 10%, 100% 90%, 97% 100%, 3% 100%, 0 90%, 0 10%)",
+                          pointerEvents: "none",
+                        }}
+                      />
+                      <div
+                        style={{
+                          position: "absolute",
+                          left: "18px",
+                          right: "18px",
+                          top: "14px",
+                          height: "6px",
+                          borderRadius: "999px",
+                          background: bridgeAccentLines,
+                          opacity: 0.48,
+                          pointerEvents: "none",
+                        }}
+                      />
+                      <div style={{ position: "relative", zIndex: 1 }}>{children}</div>
+                    </div>
+                  </div>
+
+                  {!isMobile ? (
+                    <div style={{ display: "grid", gap: "14px" }}>
+                      <div style={{ ...hudPanelStyle(), padding: "14px" }}>
+                        <p style={hudLabelStyle}>Profile</p>
+                        <div
+                          style={{
+                            marginTop: "10px",
+                            height: "110px",
+                            border: `1px solid ${theme.observerAccent}26`,
+                            display: "grid",
+                            placeItems: "center",
+                            background: `${theme.observerAccent}08`,
+                          }}
+                        >
+                          <span className="material-symbols-outlined" style={{ color: `${theme.observerAccent}aa`, fontSize: "42px" }}>
+                            account_circle
+                          </span>
+                        </div>
+                      </div>
+                      <div style={{ ...hudPanelStyle("warning"), padding: "14px" }}>
+                        <p style={hudLabelStyle}>Comms</p>
+                        <div style={{ display: "grid", gap: "8px", marginTop: "10px" }}>
+                          <div style={{ color: theme.text, fontSize: "12px", lineHeight: 1.6 }}>
+                            {outsiderMessage || "Channel clear. Ready for the next support action."}
+                          </div>
+                          <div
+                            style={{
+                              height: "10px",
+                              borderRadius: "999px",
+                              background: `${theme.observerAccent}14`,
+                              overflow: "hidden",
+                            }}
+                          >
+                            <div
+                              style={{
+                                width: outsiderMessage ? "86%" : "44%",
+                                height: "100%",
+                                background: bridgeAccentLines,
+                              }}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ) : null}
+                </div>
+              </div>
 
               <div
                 style={{

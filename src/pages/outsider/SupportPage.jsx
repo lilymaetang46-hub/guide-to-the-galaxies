@@ -23,6 +23,7 @@ function consolePanel(theme, accent = "primary") {
     position: "relative",
     overflow: "hidden",
     isolation: "isolate",
+    clipPath: "polygon(0 10px, 10px 0, calc(100% - 10px) 0, 100% 10px, 100% calc(100% - 10px), calc(100% - 10px) 100%, 10px 100%, 0 calc(100% - 10px))",
   };
 }
 
@@ -31,7 +32,7 @@ function consoleLabel(color = "#6b7078") {
     margin: 0,
     fontSize: "10px",
     color,
-    letterSpacing: "0.12em",
+    letterSpacing: "0.18em",
     textTransform: "uppercase",
   };
 }
@@ -176,7 +177,18 @@ function OutsiderSupportPage({ app }) {
             </div>
             <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(2, minmax(0, 1fr))" : "repeat(2, minmax(0, 1fr))", gap: "12px" }}>
               {generalMessages.map((message) => (
-                <button key={message} style={quickJumpButtonStyle(theme)} onClick={() => sendSupportMessage(message)}>
+                <button
+                  key={message}
+                  style={{
+                    ...quickJumpButtonStyle(theme),
+                    clipPath: "polygon(0 8px, 8px 0, calc(100% - 8px) 0, 100% 8px, 100% calc(100% - 8px), calc(100% - 8px) 100%, 8px 100%, 0 calc(100% - 8px))",
+                    border: `1px solid ${theme.observerAccent}2a`,
+                    background: theme.modeName === "Solar"
+                      ? "linear-gradient(180deg, rgba(245,239,229,0.94) 0%, rgba(223,214,202,0.98) 100%)"
+                      : "linear-gradient(180deg, rgba(21,29,41,0.94) 0%, rgba(11,16,25,0.98) 100%)",
+                  }}
+                  onClick={() => sendSupportMessage(message)}
+                >
                   {message}
                 </button>
               ))}
@@ -191,7 +203,18 @@ function OutsiderSupportPage({ app }) {
             </div>
             <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(2, minmax(0, 1fr))" : "1fr", gap: "12px" }}>
               {categoryMessages.map((message) => (
-                <button key={message} style={quickJumpButtonStyle(theme)} onClick={() => sendSupportMessage(message)}>
+                <button
+                  key={message}
+                  style={{
+                    ...quickJumpButtonStyle(theme),
+                    clipPath: "polygon(0 8px, 8px 0, calc(100% - 8px) 0, 100% 8px, 100% calc(100% - 8px), calc(100% - 8px) 100%, 8px 100%, 0 calc(100% - 8px))",
+                    border: `1px solid ${theme.observerAccent}2a`,
+                    background: theme.modeName === "Solar"
+                      ? "linear-gradient(180deg, rgba(245,239,229,0.94) 0%, rgba(223,214,202,0.98) 100%)"
+                      : "linear-gradient(180deg, rgba(21,29,41,0.94) 0%, rgba(11,16,25,0.98) 100%)",
+                  }}
+                  onClick={() => sendSupportMessage(message)}
+                >
                   {message}
                 </button>
               ))}

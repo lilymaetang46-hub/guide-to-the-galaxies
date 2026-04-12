@@ -127,6 +127,15 @@ function TrackerCalendarPage({ app }) {
     googleCalendarEventsLoading = false,
     nextCycleEstimateDate,
   } = app;
+  const disableGalaxyFrame =
+    theme.themeFamily === "galaxy" &&
+    !theme.observerConsole &&
+    !theme.trackerSolar &&
+    !theme.trackerReef &&
+    !theme.trackerAbyss;
+  const sectionStyle = (sectionKey) =>
+    sectionCardStyle(theme, sectionKey, { disableCelestialFrame: disableGalaxyFrame });
+  const summaryStyle = () => summaryCardStyle(theme, { disableCelestialFrame: disableGalaxyFrame });
 
   const [selectedFilter, setSelectedFilter] = useState("all");
   const [visibleMonth, setVisibleMonth] = useState(() => today?.slice(0, 7) || getMonthKey(new Date()));
@@ -199,7 +208,7 @@ function TrackerCalendarPage({ app }) {
 
   return (
     <div style={{ display: "grid", gap: "18px" }} data-testid="tracker-calendar-page">
-      <section className="galaxy-panel" style={sectionCardStyle(theme, "calendar")}>
+      <section className="galaxy-panel" style={sectionStyle("calendar")}>
         {renderSectionHeader(
           "Calendar",
           "A calm month view for plans, tasks, and cycle context without turning the app into a heavy scheduler.",
@@ -324,14 +333,14 @@ function TrackerCalendarPage({ app }) {
       </section>
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "14px" }}>
-        <div style={summaryCardStyle(theme)}>
+        <div style={summaryStyle()}>
           <div style={summaryLabelStyle(theme)}>Today</div>
           <div style={summaryValueStyle(theme)}>{todayItems.length}</div>
           <div style={summaryNoteStyle(theme)}>
             {todayItems.length === 0 ? "No dated items today." : "Items on today's agenda."}
           </div>
         </div>
-        <div style={summaryCardStyle(theme)}>
+        <div style={summaryStyle()}>
           <div style={summaryLabelStyle(theme)}>Upcoming Week</div>
           <div style={summaryValueStyle(theme)}>{upcomingWeekItems.length}</div>
           <div style={summaryNoteStyle(theme)}>
@@ -340,14 +349,14 @@ function TrackerCalendarPage({ app }) {
               : "Nothing dated in the next week."}
           </div>
         </div>
-        <div style={summaryCardStyle(theme)}>
+        <div style={summaryStyle()}>
           <div style={summaryLabelStyle(theme)}>Overdue Tasks</div>
           <div style={summaryValueStyle(theme)}>{overdueTaskCount}</div>
           <div style={summaryNoteStyle(theme)}>
             {overdueTaskCount > 0 ? "Open tasks with due dates before today." : "No overdue tasks right now."}
           </div>
         </div>
-        <div style={summaryCardStyle(theme)}>
+        <div style={summaryStyle()}>
           <div style={summaryLabelStyle(theme)}>Cycle / Next Plan</div>
           <div style={summaryValueStyle(theme)}>{nextCycleEstimateDate ? formatDateLabel(nextCycleEstimateDate) : "Open"}</div>
           <div style={summaryNoteStyle(theme)}>
@@ -358,7 +367,7 @@ function TrackerCalendarPage({ app }) {
         </div>
       </div>
 
-      <section className="galaxy-panel" style={sectionCardStyle(theme, "agenda")}>
+      <section className="galaxy-panel" style={sectionStyle("agenda")}>
         {renderSectionHeader(
           "Week Ahead",
           "A calmer grouped readout for the next seven days, built from the normalized event layer.",
@@ -376,7 +385,7 @@ function TrackerCalendarPage({ app }) {
               <div
                 key={dateKey}
                 style={{
-                  ...summaryCardStyle(theme),
+                  ...summaryStyle(),
                   display: "grid",
                   gap: "10px",
                 }}
@@ -421,7 +430,7 @@ function TrackerCalendarPage({ app }) {
         )}
       </section>
 
-      <section className="galaxy-panel" style={sectionCardStyle(theme, "agenda")}>
+      <section className="galaxy-panel" style={sectionStyle("agenda")}>
         {renderSectionHeader(
           "Selected Day",
           `${formatDateLabel(selectedDate)}${selectedDate === today ? " · today" : ""}`,

@@ -9746,8 +9746,10 @@ const chartStackStyle = {
   gap: "20px",
 };
 
-const chartCardStyle = (theme) => ({
-  ...(isCelestialGalaxyTrackerTheme(theme) ? getCelestialGalaxyCardStyle("charts", "chart") : {}),
+const chartCardStyle = (theme, options = {}) => ({
+  ...(!options.disableCelestialFrame && isCelestialGalaxyTrackerTheme(theme)
+    ? getCelestialGalaxyCardStyle("charts", "chart")
+    : {}),
   background: isSpaceConsoleTheme(theme)
     ? theme.modeName === "Solar"
       ? `${getThemeCardOrnament(theme, "chart")}, linear-gradient(180deg, rgba(245, 239, 227, 0.98) 0%, rgba(225, 217, 203, 0.995) 100%)`

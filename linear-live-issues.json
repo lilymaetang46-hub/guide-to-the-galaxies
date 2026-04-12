@@ -1,0 +1,1564 @@
+[
+  {
+    "id": "d21a44d1-8885-44ec-8a50-8e0bc4e1cf9e",
+    "identifier": "GUI-67",
+    "title": "Add real iOS shell and APNs setup so native push works on iPhone",
+    "url": "https://linear.app/guide-to-the-galaxies/issue/GUI-67/add-real-ios-shell-and-apns-setup-so-native-push-works-on-iphone",
+    "description": "Problem\nA tracker who opens the app on an iPhone in Chrome sees the Native Push card and can tap Enable Native Push, but the app responds that native push is only available inside the Android or iPhone app shell. This is currently true behavior, but it reveals a real product gap: iPhone native push cannot work yet because the repo does not have an iOS Capacitor shell checked in and the iOS native/APNs setup has not been completed.\n\nWhy this happens today\n\n* The React app only enables native push when Capacitor reports a native platform runtime.\n* Opening the site in Chrome or Safari on iPhone is still a browser session, not the native Capacitor shell.\n* The repo currently includes Android native shell support, but iOS setup still depends on a Mac/Xcode workflow.\n* The settings copy implies iPhone support exists if the app is opened on a phone, which is misleading until the real iOS shell exists.\n\nGoal\nMake native push actually work on iPhone by shipping a real iOS app shell and completing the APNs setup, while also tightening the settings copy so browser users are not misled.\n\nExecution plan once we have a Mac\n\n 1. Add the iOS Capacitor shell with `npx cap add ios` and confirm the shared web build syncs cleanly into the generated Xcode project.\n 2. Open the iOS project in Xcode, set the app target bundle identifier, choose the correct Apple team, and verify signing succeeds on a physical iPhone.\n 3. Enable the required capabilities in Xcode: Push Notifications plus Background Modes with Remote notifications.\n 4. Create or confirm the Apple Developer portal resources: App ID, APNs auth key, key ID, and team ID, all aligned to the chosen bundle identifier.\n 5. Configure Supabase secrets for APNs delivery: `APNS_KEY_ID`, `APNS_TEAM_ID`, `APNS_BUNDLE_ID`, `APNS_PRIVATE_KEY`, and `APNS_USE_SANDBOX=true` for development.\n 6. Build and run the native iOS shell on a physical iPhone with `VITE_PUSH_ENVIRONMENT=sandbox` so development tokens are stored with the correct environment.\n 7. Log in as a tracker inside the installed iPhone app, open Settings, and enable native push. Verify that permission prompts appear and registration succeeds.\n 8. Confirm a row is written to `public.push_notification_devices` with `platform = 'ios'`, `enabled = true`, and `environment = 'sandbox'`.\n 9. Send a support message from a connected outsider session and verify the tracker receives an APNs notification on iPhone.\n10. Tap the notification and confirm the app opens to the intended support destination via the existing app URL handling.\n11. Improve the Settings card copy so browser sessions clearly explain that native push requires the installed native app, not just opening the site on a phone browser.\n12. Document the final local build, signing, APNs secret, and validation steps so future iPhone testing is repeatable.\n\nDefinition of done\n\n* A real iOS Capacitor shell exists and runs on a physical iPhone.\n* Native push registration succeeds from the installed iPhone app.\n* Supabase stores iPhone device tokens with the correct environment.\n* Support-message push notifications are delivered to iPhone and deep-link correctly into the app.\n* Settings copy no longer suggests that mobile browser sessions can enable native push.\n\nValidation notes\n\n* Test on a real iPhone, not the simulator.\n* Keep development testing on APNs sandbox until release prep.\n* Before TestFlight/App Store distribution, switch APNs delivery to production and re-verify token environment handling.",
+    "priority": 2,
+    "project": null,
+    "state": {
+      "name": "Backlog"
+    },
+    "team": {
+      "id": "98137d43-72d0-4802-a6ab-7a758ab24214",
+      "key": "GUI",
+      "name": "Guide to the galaxies"
+    },
+    "labels": {
+      "nodes": [
+        {
+          "id": "a68032e2-2af2-45f1-bde2-86380abf32b0",
+          "name": "Mobile"
+        },
+        {
+          "id": "3be91819-9f86-44b9-bae2-30d24316b1fe",
+          "name": "Planning"
+        }
+      ]
+    }
+  },
+  {
+    "id": "a9b69dd7-2c3b-45dd-ba8e-fe158e5d6190",
+    "identifier": "GUI-66",
+    "title": "Fix tracker log pins being lost on page reload",
+    "url": "https://linear.app/guide-to-the-galaxies/issue/GUI-66/fix-tracker-log-pins-being-lost-on-page-reload",
+    "description": "Pinned Log categories currently work during the session, but they are lost after a full page reload.",
+    "priority": 2,
+    "project": null,
+    "state": {
+      "name": "Backlog"
+    },
+    "team": {
+      "id": "98137d43-72d0-4802-a6ab-7a758ab24214",
+      "key": "GUI",
+      "name": "Guide to the galaxies"
+    },
+    "labels": {
+      "nodes": []
+    }
+  },
+  {
+    "id": "4cdd9473-b721-4d60-9ceb-67f5138c8d2c",
+    "identifier": "GUI-65",
+    "title": "Fix tracking nav dropping Appointments after switching from Log to Mood",
+    "url": "https://linear.app/guide-to-the-galaxies/issue/GUI-65/fix-tracking-nav-dropping-appointments-after-switching-from-log-to",
+    "description": "Bug report:\\\\n- Open the tracker and tap Log\\\\n- Tap Mood\\\\n- The Appointments button disappears from the tracker section switcher\\\\n\\\\nExpected:\\\\n- Appointments should remain visible in the section switcher when moving between Log sub-pages\\\\n\\\\nActual:\\\\n- Appointments disappears after navigating from Log to Mood\\\\n\\\\nNotes:\\\\n- This looks like a tracker navigation/state regression and can be investigated later.\n\nImplementation plan\n\n1. Trace the tracker navigation state between Log, Mood, and Appointments to find where Appointments disappears.\n2. Refactor the section-switcher visibility rules so enabled tracker areas drive the nav instead of the last visited sub-page.\n3. Verify the fix across desktop, mobile, refresh, and back-navigation flows.\n4. Add a regression test or QA checklist so this navigation bug does not come back.\n\nDefinition of done\n\n* Appointments stays visible while moving between Log sub-pages.\n* Tracker navigation remains consistent across mobile and desktop.\n* The regression is covered by a repeatable check.\n\nProgress update (2026-04-02)\n\n* Fixed locally in src/pages/tracker/MoodPage.jsx by including Appointments in the Mood page section switcher list.\n* Verified with npm run build.",
+    "priority": 0,
+    "project": {
+      "id": "cf7b565e-6fe2-42eb-8f93-6c4be952705b",
+      "name": "Tracker Stabilization"
+    },
+    "state": {
+      "name": "Backlog"
+    },
+    "team": {
+      "id": "98137d43-72d0-4802-a6ab-7a758ab24214",
+      "key": "GUI",
+      "name": "Guide to the galaxies"
+    },
+    "labels": {
+      "nodes": [
+        {
+          "id": "90a37857-381e-47cc-9b4e-055d38e72478",
+          "name": "UX"
+        },
+        {
+          "id": "87c39cda-7f9e-41ab-afba-9aeb445398c3",
+          "name": "Later"
+        }
+      ]
+    }
+  },
+  {
+    "id": "3d3ecf44-b943-4981-a69d-9d8b0ba64d2f",
+    "identifier": "GUI-64",
+    "title": "Expand outsider overview with todo, appointments, and period summaries",
+    "url": "https://linear.app/guide-to-the-galaxies/issue/GUI-64/expand-outsider-overview-with-todo-appointments-and-period-summaries",
+    "description": "Update the outsider Overview page to surface summary-level blocks for todos, appointments, and period context without turning the page into tracker parity. Empty states should stay clear when only some categories are shared.\n\nImplementation plan\n\n1. Define the exact outcome for expand outsider overview with todo, appointments, and period summaries in the outsider experience without drifting into tracker parity.\n2. Implement the necessary data, UI, and permission-safe rendering changes on top of the shared outsider summary model.\n3. Keep empty states, mobile layouts, and mixed sharing states clear so the page remains easy to scan.\n4. Run regression QA across privacy boundaries, sharing combinations, and existing outsider flows.\n\nDefinition of done\n\n* The outsider change is implemented against permission-safe shared data.\n* Privacy boundaries still hold across mixed sharing states.\n* Desktop and mobile outsider flows remain usable.",
+    "priority": 2,
+    "project": {
+      "id": "6de083fa-e9b1-40da-9d96-a7f512b83acb",
+      "name": "Outsider App Fixes and Improvements"
+    },
+    "state": {
+      "name": "Backlog"
+    },
+    "team": {
+      "id": "98137d43-72d0-4802-a6ab-7a758ab24214",
+      "key": "GUI",
+      "name": "Guide to the galaxies"
+    },
+    "labels": {
+      "nodes": [
+        {
+          "id": "90a37857-381e-47cc-9b4e-055d38e72478",
+          "name": "UX"
+        },
+        {
+          "id": "a2fd4135-9a61-45fd-816c-c7cc89b0a08d",
+          "name": "Next"
+        }
+      ]
+    }
+  },
+  {
+    "id": "82362828-3dc6-4fb3-af39-f1b960200a4f",
+    "identifier": "GUI-63",
+    "title": "Refactor outsider data loading into a unified shared summary model",
+    "url": "https://linear.app/guide-to-the-galaxies/issue/GUI-63/refactor-outsider-data-loading-into-a-unified-shared-summary-model",
+    "description": "Update src/App.jsx outsider loading so it keeps daily_entries history, includes todo_items, loads appointments and permission-safe period data, and normalizes everything into one outsider-facing summary shape. Avoid relying only on latestEntry for newer tracker features.\n\nImplementation plan\n\n1. Define the exact outcome for refactor outsider data loading into a unified shared summary model in the outsider experience without drifting into tracker parity.\n2. Implement the necessary data, UI, and permission-safe rendering changes on top of the shared outsider summary model.\n3. Keep empty states, mobile layouts, and mixed sharing states clear so the page remains easy to scan.\n4. Run regression QA across privacy boundaries, sharing combinations, and existing outsider flows.\n\nDefinition of done\n\n* The outsider change is implemented against permission-safe shared data.\n* Privacy boundaries still hold across mixed sharing states.\n* Desktop and mobile outsider flows remain usable.",
+    "priority": 2,
+    "project": {
+      "id": "6de083fa-e9b1-40da-9d96-a7f512b83acb",
+      "name": "Outsider App Fixes and Improvements"
+    },
+    "state": {
+      "name": "Backlog"
+    },
+    "team": {
+      "id": "98137d43-72d0-4802-a6ab-7a758ab24214",
+      "key": "GUI",
+      "name": "Guide to the galaxies"
+    },
+    "labels": {
+      "nodes": [
+        {
+          "id": "ddc1dd63-af64-49f1-93a5-8e18e07d0450",
+          "name": "Architecture"
+        },
+        {
+          "id": "a2fd4135-9a61-45fd-816c-c7cc89b0a08d",
+          "name": "Next"
+        }
+      ]
+    }
+  },
+  {
+    "id": "d444d5d1-f069-46dd-999f-249e3f72a4d1",
+    "identifier": "GUI-62",
+    "title": "Run outsider regression sweep across permissions, privacy, and mobile layouts",
+    "url": "https://linear.app/guide-to-the-galaxies/issue/GUI-62/run-outsider-regression-sweep-across-permissions-privacy-and-mobile",
+    "description": "Exercise the outsider flows across legacy sharing, todo sharing, appointments sharing, and period on or off. Verify private notes never appear, existing charts and support still work, mixed shared agenda ordering stays correct, and expanded layouts remain usable on mobile.\n\nImplementation plan\n\n1. Define the exact outcome for run outsider regression sweep across permissions, privacy, and mobile layouts in the outsider experience without drifting into tracker parity.\n2. Implement the necessary data, UI, and permission-safe rendering changes on top of the shared outsider summary model.\n3. Keep empty states, mobile layouts, and mixed sharing states clear so the page remains easy to scan.\n4. Run regression QA across privacy boundaries, sharing combinations, and existing outsider flows.\n\nDefinition of done\n\n* The outsider change is implemented against permission-safe shared data.\n* Privacy boundaries still hold across mixed sharing states.\n* Desktop and mobile outsider flows remain usable.",
+    "priority": 2,
+    "project": {
+      "id": "6de083fa-e9b1-40da-9d96-a7f512b83acb",
+      "name": "Outsider App Fixes and Improvements"
+    },
+    "state": {
+      "name": "Backlog"
+    },
+    "team": {
+      "id": "98137d43-72d0-4802-a6ab-7a758ab24214",
+      "key": "GUI",
+      "name": "Guide to the galaxies"
+    },
+    "labels": {
+      "nodes": [
+        {
+          "id": "5901dc04-8398-4ca3-b39a-f1c86c4b92ff",
+          "name": "QA"
+        },
+        {
+          "id": "a68032e2-2af2-45f1-bde2-86380abf32b0",
+          "name": "Mobile"
+        },
+        {
+          "id": "a2fd4135-9a61-45fd-816c-c7cc89b0a08d",
+          "name": "Next"
+        }
+      ]
+    }
+  },
+  {
+    "id": "484ee7c4-870f-4f67-a709-514fad013044",
+    "identifier": "GUI-61",
+    "title": "Add permission-safe outsider access for appointments and period data",
+    "url": "https://linear.app/guide-to-the-galaxies/issue/GUI-61/add-permission-safe-outsider-access-for-appointments-and-period-data",
+    "description": "Review outsider read policies, add permission-safe access for appointments and period_cycles tied to approved tracker connections, and verify protected fields remain hidden. This should also confirm tracker-side permission toggles for todo, appointments, and period align with what outsiders can actually read.\n\nImplementation plan\n\n1. Define the exact outcome for add permission-safe outsider access for appointments and period data in the outsider experience without drifting into tracker parity.\n2. Implement the necessary data, UI, and permission-safe rendering changes on top of the shared outsider summary model.\n3. Keep empty states, mobile layouts, and mixed sharing states clear so the page remains easy to scan.\n4. Run regression QA across privacy boundaries, sharing combinations, and existing outsider flows.\n\nDefinition of done\n\n* The outsider change is implemented against permission-safe shared data.\n* Privacy boundaries still hold across mixed sharing states.\n* Desktop and mobile outsider flows remain usable.",
+    "priority": 2,
+    "project": {
+      "id": "6de083fa-e9b1-40da-9d96-a7f512b83acb",
+      "name": "Outsider App Fixes and Improvements"
+    },
+    "state": {
+      "name": "Backlog"
+    },
+    "team": {
+      "id": "98137d43-72d0-4802-a6ab-7a758ab24214",
+      "key": "GUI",
+      "name": "Guide to the galaxies"
+    },
+    "labels": {
+      "nodes": [
+        {
+          "id": "ddbfc987-3d90-4af2-8745-aaf13707b3be",
+          "name": "Privacy"
+        },
+        {
+          "id": "ddc1dd63-af64-49f1-93a5-8e18e07d0450",
+          "name": "Architecture"
+        },
+        {
+          "id": "a2fd4135-9a61-45fd-816c-c7cc89b0a08d",
+          "name": "Next"
+        }
+      ]
+    }
+  },
+  {
+    "id": "16be1185-424a-4083-b17f-fcfcb18f2630",
+    "identifier": "GUI-60",
+    "title": "Upgrade outsider telemetry with read-only planning sections and shared agenda",
+    "url": "https://linear.app/guide-to-the-galaxies/issue/GUI-60/upgrade-outsider-telemetry-with-read-only-planning-sections-and-shared",
+    "description": "Expand the outsider data or telemetry experience beyond charts so outsiders can review permission-safe todo, appointments, and period sections. Add a shared agenda only if it improves scanability without overcrowding the page, and keep the existing outsider visual language intact.\n\nImplementation plan\n\n1. Define the exact outcome for upgrade outsider telemetry with read-only planning sections and shared agenda in the outsider experience without drifting into tracker parity.\n2. Implement the necessary data, UI, and permission-safe rendering changes on top of the shared outsider summary model.\n3. Keep empty states, mobile layouts, and mixed sharing states clear so the page remains easy to scan.\n4. Run regression QA across privacy boundaries, sharing combinations, and existing outsider flows.\n\nDefinition of done\n\n* The outsider change is implemented against permission-safe shared data.\n* Privacy boundaries still hold across mixed sharing states.\n* Desktop and mobile outsider flows remain usable.",
+    "priority": 2,
+    "project": {
+      "id": "6de083fa-e9b1-40da-9d96-a7f512b83acb",
+      "name": "Outsider App Fixes and Improvements"
+    },
+    "state": {
+      "name": "Backlog"
+    },
+    "team": {
+      "id": "98137d43-72d0-4802-a6ab-7a758ab24214",
+      "key": "GUI",
+      "name": "Guide to the galaxies"
+    },
+    "labels": {
+      "nodes": [
+        {
+          "id": "90a37857-381e-47cc-9b4e-055d38e72478",
+          "name": "UX"
+        },
+        {
+          "id": "a68032e2-2af2-45f1-bde2-86380abf32b0",
+          "name": "Mobile"
+        },
+        {
+          "id": "a2fd4135-9a61-45fd-816c-c7cc89b0a08d",
+          "name": "Next"
+        }
+      ]
+    }
+  },
+  {
+    "id": "9a8abc50-74ed-43a2-bdfe-f83f2eb009bb",
+    "identifier": "GUI-59",
+    "title": "Tighten outsider support nudges and permission-driven visibility",
+    "url": "https://linear.app/guide-to-the-galaxies/issue/GUI-59/tighten-outsider-support-nudges-and-permission-driven-visibility",
+    "description": "Review outsider support shortcuts so nudges respect per-connection permissions end to end, including todo and appointments when enabled. Keep support language simple for sensitive categories and make sure disabled categories disappear from summaries, details, and nudge actions.\n\nImplementation plan\n\n1. Define the exact outcome for tighten outsider support nudges and permission-driven visibility in the outsider experience without drifting into tracker parity.\n2. Implement the necessary data, UI, and permission-safe rendering changes on top of the shared outsider summary model.\n3. Keep empty states, mobile layouts, and mixed sharing states clear so the page remains easy to scan.\n4. Run regression QA across privacy boundaries, sharing combinations, and existing outsider flows.\n\nDefinition of done\n\n* The outsider change is implemented against permission-safe shared data.\n* Privacy boundaries still hold across mixed sharing states.\n* Desktop and mobile outsider flows remain usable.",
+    "priority": 2,
+    "project": {
+      "id": "6de083fa-e9b1-40da-9d96-a7f512b83acb",
+      "name": "Outsider App Fixes and Improvements"
+    },
+    "state": {
+      "name": "Backlog"
+    },
+    "team": {
+      "id": "98137d43-72d0-4802-a6ab-7a758ab24214",
+      "key": "GUI",
+      "name": "Guide to the galaxies"
+    },
+    "labels": {
+      "nodes": [
+        {
+          "id": "ddbfc987-3d90-4af2-8745-aaf13707b3be",
+          "name": "Privacy"
+        },
+        {
+          "id": "90a37857-381e-47cc-9b4e-055d38e72478",
+          "name": "UX"
+        },
+        {
+          "id": "a2fd4135-9a61-45fd-816c-c7cc89b0a08d",
+          "name": "Next"
+        }
+      ]
+    }
+  },
+  {
+    "id": "a8ffe1bf-fb95-4c44-9e74-46092957a3c9",
+    "identifier": "GUI-58",
+    "title": "Add overdue, skipped, and carry-forward task handling",
+    "url": "https://linear.app/guide-to-the-galaxies/issue/GUI-58/add-overdue-skipped-and-carry-forward-task-handling",
+    "description": "Teach To-Do items how to age across days so the app can distinguish overdue work, intentionally skipped work, and tasks that should carry forward into the next day.\n\nImplementation plan\n\n1. Define the smallest data and UX changes needed for add overdue, skipped, and carry-forward task handling without making To-Do feel heavy.\n2. Implement the required task model, form, and list updates while preserving existing task behavior.\n3. Propagate the new task state through overview and planning summaries where it adds value.\n4. Verify backward compatibility, cross-day behavior, and task edge cases before closing the issue.\n\nDefinition of done\n\n* The targeted To-Do improvement works in storage and UI.\n* Existing task data continues to behave correctly.\n* The change supports future task work instead of adding coupling.",
+    "priority": 2,
+    "project": {
+      "id": "3c425299-3c5d-4ae3-bde8-1337a2682c33",
+      "name": "To-Do Deepening"
+    },
+    "state": {
+      "name": "Backlog"
+    },
+    "team": {
+      "id": "98137d43-72d0-4802-a6ab-7a758ab24214",
+      "key": "GUI",
+      "name": "Guide to the galaxies"
+    },
+    "labels": {
+      "nodes": [
+        {
+          "id": "90a37857-381e-47cc-9b4e-055d38e72478",
+          "name": "UX"
+        },
+        {
+          "id": "8a6d2ddc-3246-4945-a6d8-c6e33bf91c48",
+          "name": "Now"
+        }
+      ]
+    }
+  },
+  {
+    "id": "2e3f7560-8d3c-4be8-97f3-04d9c44e85c4",
+    "identifier": "GUI-57",
+    "title": "Capture pain, energy, and bleeding detail by day",
+    "url": "https://linear.app/guide-to-the-galaxies/issue/GUI-57/capture-pain-energy-and-bleeding-detail-by-day",
+    "description": "Expand period logging to support daily pain, energy, spotting or bleeding detail, and other richer by-day cycle context while keeping the experience privacy-first.\n\nImplementation plan\n\n1. Define the privacy-safe product behavior for capture pain, energy, and bleeding detail by day and keep labels understandable.\n2. Implement the needed logging, storage, and history updates with careful defaults for repeated daily use.\n3. Surface the new detail in summaries or review flows only where it adds value without overclaiming certainty.\n4. Verify privacy boundaries, sparse-data handling, and mobile usability.\n\nDefinition of done\n\n* The period-tracking enhancement is usable in daily practice.\n* Privacy boundaries remain intact.\n* The new detail adds value without making the flow feel heavy.",
+    "priority": 3,
+    "project": {
+      "id": "8b4f80df-89a7-4621-8747-37a97e79b446",
+      "name": "Period Tracker Deepening"
+    },
+    "state": {
+      "name": "Backlog"
+    },
+    "team": {
+      "id": "98137d43-72d0-4802-a6ab-7a758ab24214",
+      "key": "GUI",
+      "name": "Guide to the galaxies"
+    },
+    "labels": {
+      "nodes": [
+        {
+          "id": "90a37857-381e-47cc-9b4e-055d38e72478",
+          "name": "UX"
+        },
+        {
+          "id": "ddbfc987-3d90-4af2-8745-aaf13707b3be",
+          "name": "Privacy"
+        },
+        {
+          "id": "a2fd4135-9a61-45fd-816c-c7cc89b0a08d",
+          "name": "Next"
+        }
+      ]
+    }
+  },
+  {
+    "id": "bf49adca-d1ca-45c6-a217-64cd85d82805",
+    "identifier": "GUI-56",
+    "title": "Add active-cycle daily logging flow for period tracking",
+    "url": "https://linear.app/guide-to-the-galaxies/issue/GUI-56/add-active-cycle-daily-logging-flow-for-period-tracking",
+    "description": "Create a quicker day-to-day logging flow for active cycles so period updates feel lightweight and usable without reopening a large form each time.\n\nImplementation plan\n\n1. Define the privacy-safe product behavior for add active-cycle daily logging flow for period tracking and keep labels understandable.\n2. Implement the needed logging, storage, and history updates with careful defaults for repeated daily use.\n3. Surface the new detail in summaries or review flows only where it adds value without overclaiming certainty.\n4. Verify privacy boundaries, sparse-data handling, and mobile usability.\n\nDefinition of done\n\n* The period-tracking enhancement is usable in daily practice.\n* Privacy boundaries remain intact.\n* The new detail adds value without making the flow feel heavy.\n  Progress note (2026-04-02)\n\n\n* Implemented a lighter active-cycle daily update flow in src/pages/tracker/TrackingPage.jsx.\n* Active cycles now surface quick flow buttons, symptom toggles, compact private notes, and collapsible fuller controls for date changes and ending the cycle.\n* Exposed \u0007ctivePeriodDayCount from src/App.jsx so the tracker period UI can show clearer day-of-cycle status.\n* Verified with \n  pm run build and \n  pm run lint.",
+    "priority": 3,
+    "project": {
+      "id": "8b4f80df-89a7-4621-8747-37a97e79b446",
+      "name": "Period Tracker Deepening"
+    },
+    "state": {
+      "name": "Backlog"
+    },
+    "team": {
+      "id": "98137d43-72d0-4802-a6ab-7a758ab24214",
+      "key": "GUI",
+      "name": "Guide to the galaxies"
+    },
+    "labels": {
+      "nodes": [
+        {
+          "id": "90a37857-381e-47cc-9b4e-055d38e72478",
+          "name": "UX"
+        },
+        {
+          "id": "a2fd4135-9a61-45fd-816c-c7cc89b0a08d",
+          "name": "Next"
+        }
+      ]
+    }
+  },
+  {
+    "id": "19ce6a0b-0d24-4c01-b925-17a0f2f29179",
+    "identifier": "GUI-55",
+    "title": "Expand cycle history with averages and irregular-pattern notes",
+    "url": "https://linear.app/guide-to-the-galaxies/issue/GUI-55/expand-cycle-history-with-averages-and-irregular-pattern-notes",
+    "description": "Improve period history so users can review average cycle length, average period length, and gentle irregular-pattern notes without overclaiming certainty.\n\nImplementation plan\n\n1. Define the privacy-safe product behavior for expand cycle history with averages and irregular-pattern notes and keep labels understandable.\n2. Implement the needed logging, storage, and history updates with careful defaults for repeated daily use.\n3. Surface the new detail in summaries or review flows only where it adds value without overclaiming certainty.\n4. Verify privacy boundaries, sparse-data handling, and mobile usability.\n\nDefinition of done\n\n* The period-tracking enhancement is usable in daily practice.\n* Privacy boundaries remain intact.\n* The new detail adds value without making the flow feel heavy.",
+    "priority": 4,
+    "project": {
+      "id": "8b4f80df-89a7-4621-8747-37a97e79b446",
+      "name": "Period Tracker Deepening"
+    },
+    "state": {
+      "name": "Backlog"
+    },
+    "team": {
+      "id": "98137d43-72d0-4802-a6ab-7a758ab24214",
+      "key": "GUI",
+      "name": "Guide to the galaxies"
+    },
+    "labels": {
+      "nodes": [
+        {
+          "id": "90a37857-381e-47cc-9b4e-055d38e72478",
+          "name": "UX"
+        },
+        {
+          "id": "87c39cda-7f9e-41ab-afba-9aeb445398c3",
+          "name": "Later"
+        }
+      ]
+    }
+  },
+  {
+    "id": "242e7f45-5603-4bc3-9f18-72ac466648d7",
+    "identifier": "GUI-54",
+    "title": "Build grouped Log picker with recent and pinned categories",
+    "url": "https://linear.app/guide-to-the-galaxies/issue/GUI-54/build-grouped-log-picker-with-recent-and-pinned-categories",
+    "description": "Replace long category button rows with a calmer grouped picker inside Log that can support recent and pinned categories on mobile and desktop.\n\nImplementation plan\n\n1. Clarify how build grouped log picker with recent and pinned categories fits the calmer Log-hub and overview-first information architecture.\n2. Implement the shell or in-page navigation changes needed to reduce clutter while preserving wayfinding.\n3. Align related tracker surfaces so navigation patterns stay consistent across breakpoints.\n4. Verify discoverability and reachability on desktop and mobile.\n\nDefinition of done\n\n* The navigation change is calmer and more coherent.\n* Important destinations remain easy to reach.\n* The cleanup supports the broader tracker IA direction.",
+    "priority": 2,
+    "project": {
+      "id": "b3b27b32-260e-4761-8c01-4a953c593761",
+      "name": "Navigation Cleanup"
+    },
+    "state": {
+      "name": "Backlog"
+    },
+    "team": {
+      "id": "98137d43-72d0-4802-a6ab-7a758ab24214",
+      "key": "GUI",
+      "name": "Guide to the galaxies"
+    },
+    "labels": {
+      "nodes": [
+        {
+          "id": "90a37857-381e-47cc-9b4e-055d38e72478",
+          "name": "UX"
+        },
+        {
+          "id": "8a6d2ddc-3246-4945-a6d8-c6e33bf91c48",
+          "name": "Now"
+        }
+      ]
+    }
+  },
+  {
+    "id": "0ccfc16a-ec3b-4024-ac92-74cc9b459e40",
+    "identifier": "GUI-53",
+    "title": "Add simple task categories and lightweight task grouping",
+    "url": "https://linear.app/guide-to-the-galaxies/issue/GUI-53/add-simple-task-categories-and-lightweight-task-grouping",
+    "description": "Add small, optional task categories and calmer grouping rules so To-Do can organize work without turning into a heavy productivity system.\n\nImplementation plan\n\n1. Define the smallest data and UX changes needed for add simple task categories and lightweight task grouping without making To-Do feel heavy.\n2. Implement the required task model, form, and list updates while preserving existing task behavior.\n3. Propagate the new task state through overview and planning summaries where it adds value.\n4. Verify backward compatibility, cross-day behavior, and task edge cases before closing the issue.\n\nDefinition of done\n\n* The targeted To-Do improvement works in storage and UI.\n* Existing task data continues to behave correctly.\n* The change supports future task work instead of adding coupling.",
+    "priority": 4,
+    "project": {
+      "id": "3c425299-3c5d-4ae3-bde8-1337a2682c33",
+      "name": "To-Do Deepening"
+    },
+    "state": {
+      "name": "Backlog"
+    },
+    "team": {
+      "id": "98137d43-72d0-4802-a6ab-7a758ab24214",
+      "key": "GUI",
+      "name": "Guide to the galaxies"
+    },
+    "labels": {
+      "nodes": [
+        {
+          "id": "90a37857-381e-47cc-9b4e-055d38e72478",
+          "name": "UX"
+        },
+        {
+          "id": "87c39cda-7f9e-41ab-afba-9aeb445398c3",
+          "name": "Later"
+        }
+      ]
+    }
+  },
+  {
+    "id": "c448e983-e24a-46de-a389-31c18ed2b2cc",
+    "identifier": "GUI-52",
+    "title": "Add task priority and due time to To-Do items",
+    "url": "https://linear.app/guide-to-the-galaxies/issue/GUI-52/add-task-priority-and-due-time-to-to-do-items",
+    "description": "Bug report:\\\\n- Open the tracker and tap Log\\\\n- Tap Mood\\\\n- The Appointments button disappears from the tracker section switcher\\\\n\\\\nExpected:\\\\n- Appointments should remain visible in the section switcher when moving between Log sub-pages\\\\n\\\\nActual:\\\\n- Appointments disappears after navigating from Log to Mood\\\\n\\\\nNotes:\\\\n- This looks like a tracker navigation/state regression and can be investigated later.\n\nImplementation plan\n\n1. Trace the tracker navigation state between Log, Mood, and Appointments to find where Appointments disappears.\n2. Refactor the section-switcher visibility rules so enabled tracker areas drive the nav instead of the last visited sub-page.\n3. Verify the fix across desktop, mobile, refresh, and back-navigation flows.\n4. Add a regression test or QA checklist so this navigation bug does not come back.\n\nDefinition of done\n\n* Appointments stays visible while moving between Log sub-pages.\n* Tracker navigation remains consistent across mobile and desktop.\n* The regression is covered by a repeatable check. Update the outsider Overview page to surface summary-level blocks for todos, appointments, and period context without turning the page into tracker parity. Empty states should stay clear when only some categories are shared.\n\nImplementation plan\n\n1. Define the exact outcome for expand outsider overview with todo, appointments, and period summaries in the outsider experience without drifting into tracker parity.\n2. Implement the necessary data, UI, and permission-safe rendering changes on top of the shared outsider summary model.\n3. Keep empty states, mobile layouts, and mixed sharing states clear so the page remains easy to scan.\n4. Run regression QA across privacy boundaries, sharing combinations, and existing outsider flows.\n\nDefinition of done\n\n* The outsider change is implemented against permission-safe shared data.\n* Privacy boundaries still hold across mixed sharing states.\n* Desktop and mobile outsider flows remain usable. Update src/App.jsx outsider loading so it keeps daily_entries history, includes todo_items, loads appointments and permission-safe period data, and normalizes everything into one outsider-facing summary shape. Avoid relying only on latestEntry for newer tracker features.\n\nImplementation plan\n\n1. Define the exact outcome for refactor outsider data loading into a unified shared summary model in the outsider experience without drifting into tracker parity.\n2. Implement the necessary data, UI, and permission-safe rendering changes on top of the shared outsider summary model.\n3. Keep empty states, mobile layouts, and mixed sharing states clear so the page remains easy to scan.\n4. Run regression QA across privacy boundaries, sharing combinations, and existing outsider flows.\n\nDefinition of done\n\n* The outsider change is implemented against permission-safe shared data.\n* Privacy boundaries still hold across mixed sharing states.\n* Desktop and mobile outsider flows remain usable. Exercise the outsider flows across legacy sharing, todo sharing, appointments sharing, and period on or off. Verify private notes never appear, existing charts and support still work, mixed shared agenda ordering stays correct, and expanded layouts remain usable on mobile.\n\nImplementation plan\n\n1. Define the exact outcome for run outsider regression sweep across permissions, privacy, and mobile layouts in the outsider experience without drifting into tracker parity.\n2. Implement the necessary data, UI, and permission-safe rendering changes on top of the shared outsider summary model.\n3. Keep empty states, mobile layouts, and mixed sharing states clear so the page remains easy to scan.\n4. Run regression QA across privacy boundaries, sharing combinations, and existing outsider flows.\n\nDefinition of done\n\n* The outsider change is implemented against permission-safe shared data.\n* Privacy boundaries still hold across mixed sharing states.\n* Desktop and mobile outsider flows remain usable. Review outsider read policies, add permission-safe access for appointments and period_cycles tied to approved tracker connections, and verify protected fields remain hidden. This should also confirm tracker-side permission toggles for todo, appointments, and period align with what outsiders can actually read.\n\nImplementation plan\n\n1. Define the exact outcome for add permission-safe outsider access for appointments and period data in the outsider experience without drifting into tracker parity.\n2. Implement the necessary data, UI, and permission-safe rendering changes on top of the shared outsider summary model.\n3. Keep empty states, mobile layouts, and mixed sharing states clear so the page remains easy to scan.\n4. Run regression QA across privacy boundaries, sharing combinations, and existing outsider flows.\n\nDefinition of done\n\n* The outsider change is implemented against permission-safe shared data.\n* Privacy boundaries still hold across mixed sharing states.\n* Desktop and mobile outsider flows remain usable. Expand the outsider data or telemetry experience beyond charts so outsiders can review permission-safe todo, appointments, and period sections. Add a shared agenda only if it improves scanability without overcrowding the page, and keep the existing outsider visual language intact.\n\nImplementation plan\n\n1. Define the exact outcome for upgrade outsider telemetry with read-only planning sections and shared agenda in the outsider experience without drifting into tracker parity.\n2. Implement the necessary data, UI, and permission-safe rendering changes on top of the shared outsider summary model.\n3. Keep empty states, mobile layouts, and mixed sharing states clear so the page remains easy to scan.\n4. Run regression QA across privacy boundaries, sharing combinations, and existing outsider flows.\n\nDefinition of done\n\n* The outsider change is implemented against permission-safe shared data.\n* Privacy boundaries still hold across mixed sharing states.\n* Desktop and mobile outsider flows remain usable. Review outsider support shortcuts so nudges respect per-connection permissions end to end, including todo and appointments when enabled. Keep support language simple for sensitive categories and make sure disabled categories disappear from summaries, details, and nudge actions.\n\nImplementation plan\n\n1. Define the exact outcome for tighten outsider support nudges and permission-driven visibility in the outsider experience without drifting into tracker parity.\n2. Implement the necessary data, UI, and permission-safe rendering changes on top of the shared outsider summary model.\n3. Keep empty states, mobile layouts, and mixed sharing states clear so the page remains easy to scan.\n4. Run regression QA across privacy boundaries, sharing combinations, and existing outsider flows.\n\nDefinition of done\n\n* The outsider change is implemented against permission-safe shared data.\n* Privacy boundaries still hold across mixed sharing states.\n* Desktop and mobile outsider flows remain usable. Teach To-Do items how to age across days so the app can distinguish overdue work, intentionally skipped work, and tasks that should carry forward into the next day.\n\nImplementation plan\n\n1. Define the smallest data and UX changes needed for add overdue, skipped, and carry-forward task handling without making To-Do feel heavy.\n2. Implement the required task model, form, and list updates while preserving existing task behavior.\n3. Propagate the new task state through overview and planning summaries where it adds value.\n4. Verify backward compatibility, cross-day behavior, and task edge cases before closing the issue.\n\nDefinition of done\n\n* The targeted To-Do improvement works in storage and UI.\n* Existing task data continues to behave correctly.\n* The change supports future task work instead of adding coupling. Expand period logging to support daily pain, energy, spotting or bleeding detail, and other richer by-day cycle context while keeping the experience privacy-first.\n\nImplementation plan\n\n1. Define the privacy-safe product behavior for capture pain, energy, and bleeding detail by day and keep labels understandable.\n2. Implement the needed logging, storage, and history updates with careful defaults for repeated daily use.\n3. Surface the new detail in summaries or review flows only where it adds value without overclaiming certainty.\n4. Verify privacy boundaries, sparse-data handling, and mobile usability.\n\nDefinition of done\n\n* The period-tracking enhancement is usable in daily practice.\n* Privacy boundaries remain intact.\n* The new detail adds value without making the flow feel heavy. Create a quicker day-to-day logging flow for active cycles so period updates feel lightweight and usable without reopening a large form each time.\n\nImplementation plan\n\n1. Define the privacy-safe product behavior for add active-cycle daily logging flow for period tracking and keep labels understandable.\n2. Implement the needed logging, storage, and history updates with careful defaults for repeated daily use.\n3. Surface the new detail in summaries or review flows only where it adds value without overclaiming certainty.\n4. Verify privacy boundaries, sparse-data handling, and mobile usability.\n\nDefinition of done\n\n* The period-tracking enhancement is usable in daily practice.\n* Privacy boundaries remain intact.\n* The new detail adds value without making the flow feel heavy. Improve period history so users can review average cycle length, average period length, and gentle irregular-pattern notes without overclaiming certainty.\n\nImplementation plan\n\n1. Define the privacy-safe product behavior for expand cycle history with averages and irregular-pattern notes and keep labels understandable.\n2. Implement the needed logging, storage, and history updates with careful defaults for repeated daily use.\n3. Surface the new detail in summaries or review flows only where it adds value without overclaiming certainty.\n4. Verify privacy boundaries, sparse-data handling, and mobile usability.\n\nDefinition of done\n\n* The period-tracking enhancement is usable in daily practice.\n* Privacy boundaries remain intact.\n* The new detail adds value without making the flow feel heavy. Replace long category button rows with a calmer grouped picker inside Log that can support recent and pinned categories on mobile and desktop.\n\nImplementation plan\n\n1. Clarify how build grouped log picker with recent and pinned categories fits the calmer Log-hub and overview-first information architecture.\n2. Implement the shell or in-page navigation changes needed to reduce clutter while preserving wayfinding.\n3. Align related tracker surfaces so navigation patterns stay consistent across breakpoints.\n4. Verify discoverability and reachability on desktop and mobile.\n\nDefinition of done\n\n* The navigation change is calmer and more coherent.\n* Important destinations remain easy to reach.\n* The cleanup supports the broader tracker IA direction. Add small, optional task categories and calmer grouping rules so To-Do can organize work without turning into a heavy productivity system.\n\nImplementation plan\n\n1. Define the smallest data and UX changes needed for add simple task categories and lightweight task grouping without making To-Do feel heavy.\n2. Implement the required task model, form, and list updates while preserving existing task behavior.\n3. Propagate the new task state through overview and planning summaries where it adds value.\n4. Verify backward compatibility, cross-day behavior, and task edge cases before closing the issue.\n\nDefinition of done\n\n* The targeted To-Do improvement works in storage and UI.\n* Existing task data continues to behave correctly.\n* The change supports future task work instead of adding coupling. Expand the current To-Do item shape so tasks can store priority and an optional due time without losing the lightweight feel of the tracker.\n\nImplementation plan\n\n1. Define the smallest data and UX changes needed for add task priority and due time to to-do items without making To-Do feel heavy.\n2. Implement the required task model, form, and list updates while preserving existing task behavior.\n3. Propagate the new task state through overview and planning summaries where it adds value.\n4. Verify backward compatibility, cross-day behavior, and task edge cases before closing the issue.\n\nDefinition of done\n\n* The targeted To-Do improvement works in storage and UI.\n* Existing task data continues to behave correctly.\n* The change supports future task work instead of adding coupling. Plan and implement the longer-term data model shift from daily_entries.todo_items to dedicated task storage so cross-day scheduling, recurrence, and history become safer to support.\n\nImplementation plan\n\n1. Define the smallest data and UX changes needed for move to-do items to dedicated storage outside daily_entries without making To-Do feel heavy.\n2. Implement the required task model, form, and list updates while preserving existing task behavior.\n3. Propagate the new task state through overview and planning summaries where it adds value.\n4. Verify backward compatibility, cross-day behavior, and task edge cases before closing the issue.\n\nDefinition of done\n\n* The targeted To-Do improvement works in storage and UI.\n* Existing task data continues to behave correctly.\n* The change supports future task work instead of adding coupling. Add planning support around appointments by capturing preparation steps and leave-by timing without turning the feature into a full travel planner.\n\nImplementation plan\n\n1. Define the smallest appointment-model and UX changes needed for add prep checklist and leave-by time to appointments.\n2. Implement the new appointment inputs and editing behavior while keeping everything optional where appropriate.\n3. Surface the richer planning detail in cards, reminders, and summaries only where it improves scanability.\n4. Verify old appointments, partial metadata, and mobile layouts still behave cleanly.\n\nDefinition of done\n\n* Appointments support the targeted richer planning behavior cleanly.\n* The experience stays lightweight rather than becoming a full calendar suite.\n* Existing appointment data remains compatible. Let appointments optionally generate follow-up To-Do items so planning work can continue after an event without manual re-entry.\n\nImplementation plan\n\n1. Define the smallest appointment-model and UX changes needed for support follow-up task creation from appointments.\n2. Implement the new appointment inputs and editing behavior while keeping everything optional where appropriate.\n3. Surface the richer planning detail in cards, reminders, and summaries only where it improves scanability.\n4. Verify old appointments, partial metadata, and mobile layouts still behave cleanly.\n\nDefinition of done\n\n* Appointments support the targeted richer planning behavior cleanly.\n* The experience stays lightweight rather than becoming a full calendar suite.\n* Existing appointment data remains compatible. Expand appointments and reminders with the next most useful planning fields while still avoiding full external-calendar complexity.\n\nImplementation plan\n\n1. Define the smallest appointment-model and UX changes needed for add end time, provider, category, and confirmation status to appointments.\n2. Implement the new appointment inputs and editing behavior while keeping everything optional where appropriate.\n3. Surface the richer planning detail in cards, reminders, and summaries only where it improves scanability.\n4. Verify old appointments, partial metadata, and mobile layouts still behave cleanly.\n\nDefinition of done\n\n* Appointments support the targeted richer planning behavior cleanly.\n* The experience stays lightweight rather than becoming a full calendar suite.\n* Existing appointment data remains compatible. Polish tracker navigation so labels, hierarchy, and page chrome feel quieter and less crowded across the current theme shells.\n\nImplementation plan\n\n1. Clarify how reduce navigation clutter and visual competition across tracker shells fits the calmer Log-hub and overview-first information architecture.\n2. Implement the shell or in-page navigation changes needed to reduce clutter while preserving wayfinding.\n3. Align related tracker surfaces so navigation patterns stay consistent across breakpoints.\n4. Verify discoverability and reachability on desktop and mobile.\n\nDefinition of done\n\n* The navigation change is calmer and more coherent.\n* Important destinations remain easy to reach.\n* The cleanup supports the broader tracker IA direction. Add read-only To-Do, Period, Appointments, and agenda summaries to outsider overview and data pages while keeping the experience privacy-aware and summary-first.\n\nImplementation plan\n\n1. Define how expand outsider overview and tracker data pages with shared planning summaries fits into the shared planning rollout for outsider users.\n2. Implement the needed backend or normalization work so outsider pages read from one permission-safe planning source.\n3. Update the relevant summary or support surfaces so they expose only approved shared planning information.\n4. Run regression QA across privacy, permissions, and mixed shared-category states.\n\nDefinition of done\n\n* The outsider planning change works end to end.\n* Permissions are respected in data and UI layers.\n* Sensitive details remain protected. Refactor outsider data loading so it stops relying on latestEntry alone and instead loads shared To-Do, Period, and Appointments into one normalized outsider-facing model.\n\nImplementation plan\n\n1. Define how load and normalize to-do, period, and appointments for outsider views fits into the shared planning rollout for outsider users.\n2. Implement the needed backend or normalization work so outsider pages read from one permission-safe planning source.\n3. Update the relevant summary or support surfaces so they expose only approved shared planning information.\n4. Run regression QA across privacy, permissions, and mixed shared-category states.\n\nDefinition of done\n\n* The outsider planning change works end to end.\n* Permissions are respected in data and UI layers.\n* Sensitive details remain protected. Let users capture relief methods and short notes about what helped during a cycle while keeping this especially sensitive data private by default.\n\nImplementation plan\n\n1. Define the privacy-safe product behavior for add relief methods and what-helped notes to period entries and keep labels understandable.\n2. Implement the needed logging, storage, and history updates with careful defaults for repeated daily use.\n3. Surface the new detail in summaries or review flows only where it adds value without overclaiming certainty.\n4. Verify privacy boundaries, sparse-data handling, and mobile usability.\n\nDefinition of done\n\n* The period-tracking enhancement is usable in daily practice.\n* Privacy boundaries remain intact.\n* The new detail adds value without making the flow feel heavy. Update outsider support shortcuts for shared planning categories and add regression checks around permissions, private notes, agenda ordering, and mobile rendering.\n\nImplementation plan\n\n1. Define how add support nudges and regression coverage for shared planning categories fits into the shared planning rollout for outsider users.\n2. Implement the needed backend or normalization work so outsider pages read from one permission-safe planning source.\n3. Update the relevant summary or support surfaces so they expose only approved shared planning information.\n4. Run regression QA across privacy, permissions, and mixed shared-category states.\n\nDefinition of done\n\n* The outsider planning change works end to end.\n* Permissions are respected in data and UI layers.\n* Sensitive details remain protected. Add the missing Supabase policies so approved outsiders can read shared appointment and period summary data safely and only within allowed connection permissions.\n\nImplementation plan\n\n1. Define how add outsider read policies for appointments and period cycles fits into the shared planning rollout for outsider users.\n2. Implement the needed backend or normalization work so outsider pages read from one permission-safe planning source.\n3. Update the relevant summary or support surfaces so they expose only approved shared planning information.\n4. Run regression QA across privacy, permissions, and mixed shared-category states.\n\nDefinition of done\n\n* The outsider planning change works end to end.\n* Permissions are respected in data and UI layers.\n* Sensitive details remain protected. Make Overview the calmer launch surface by emphasizing resume actions, today-focused shortcuts, and fewer equal-weight destinations.\n\nImplementation plan\n\n1. Clarify how strengthen overview as the resume and home surface fits the calmer Log-hub and overview-first information architecture.\n2. Implement the shell or in-page navigation changes needed to reduce clutter while preserving wayfinding.\n3. Align related tracker surfaces so navigation patterns stay consistent across breakpoints.\n4. Verify discoverability and reachability on desktop and mobile.\n\nDefinition of done\n\n* The navigation change is calmer and more coherent.\n* Important destinations remain easy to reach.\n* The cleanup supports the broader tracker IA direction. Polish the in-app calendar beyond the first release with stronger weekly summaries and calmer planning surfaces that stay mobile-friendly.\n\nImplementation plan\n\n1. Define the calendar outcome for refine weekly calendar summaries and planning surfaces on top of the shared event layer.\n2. Implement the needed rendering, grouping, or summary behavior against normalized event data rather than one-off page logic.\n3. Tune labels, density, and hierarchy so mixed event types stay readable.\n4. Verify busy and sparse calendar states on mobile and desktop.\n\nDefinition of done\n\n* The calendar improvement adds clearer planning value.\n* The work builds on normalized event data.\n* The calendar remains readable across layouts. Use the shared calendar event layer to add clearer today-agenda, next-appointment, overdue-task, and cycle-summary widgets to overview surfaces.\n\nImplementation plan\n\n1. Define the calendar outcome for add today agenda and overview widgets powered by the calendar event layer on top of the shared event layer.\n2. Implement the needed rendering, grouping, or summary behavior against normalized event data rather than one-off page logic.\n3. Tune labels, density, and hierarchy so mixed event types stay readable.\n4. Verify busy and sparse calendar states on mobile and desktop.\n\nDefinition of done\n\n* The calendar improvement adds clearer planning value.\n* The work builds on normalized event data.\n* The calendar remains readable across layouts. ## Summary\n\nBitwarden's browser autofill overlay throws a runtime error on our auth screen:\n\n`bootstrap-autofill-overlay.js:9562 Uncaught (in promise) TypeError: Cannot read properties of null (reading 'includes')`\n\nThis still happens after we updated the login/signup/password-reset fields to use more standard form semantics (`form` submit handling, `name`, and `autocomplete` hints).\n\n## Impact\n\n* Users with the Bitwarden autofill extension see a console error on our auth experience.\n* The page appears usable, but this is noisy and may indicate Bitwarden is failing to classify some fields correctly.\n* We should aim for our auth UI to behave cleanly with Bitwarden because it is a common password manager.\n\n## Error\n\n`bootstrap-autofill-overlay.js:9562 Uncaught (in promise) TypeError: Cannot read properties of null (reading 'includes')`\n\nStack excerpt:\n\n* `AutofillOverlayContentService.setQualifiedLoginFillType`\n* `AutofillOverlayContentService.isIgnoredField`\n\n## Current app-side mitigation already tried\n\n* Added `onSubmit` form semantics for login.\n* Added explicit field names and autocomplete hints:\n  * login email: `autocomplete=username`\n  * login password: `autocomplete=current-password`\n  * signup password fields: `autocomplete=new-password`\n  * reset-password verification field: `autocomplete=current-password`\n  * PIN-only fields: `autocomplete=off`\n\nFiles touched:\n\n* `src/App.jsx`\n* `src/pages/tracker/SettingsPage.jsx`\n\n## Investigation notes\n\n* The stack trace points at Bitwarden-injected code, not our bundled app code.\n* There are recent public reports that match this same Bitwarden overlay error, so this may be an upstream extension bug.\n* We should still document any DOM patterns in our app that make Bitwarden more likely to mis-detect fields.\n\n## Acceptance ideas\n\n* Reproduce with Bitwarden enabled on the auth screen.\n* Confirm whether any remaining field markup can be made more Bitwarden-friendly.\n* If no additional local workaround exists, track upstream and document as external compatibility issue.\n\n## Implementation plan\n\n1. Reproduce consistently with Bitwarden enabled on the login, signup, and PIN reset flows in desktop Chrome and one Chromium-based mobile wrapper build if available.\n2. Capture a minimal DOM snapshot of the auth fields at the moment Bitwarden injects its overlay so we can compare field names, ids, labels, autocomplete values, and form ancestry.\n3. Normalize auth markup further if needed:\n   * add stable input ids paired with explicit `label htmlFor` or equivalent accessible relationships\n   * ensure each auth flow is wrapped in a distinct `form`\n   * avoid ambiguous password-like fields in the same visual section when possible\n   * keep non-account PIN fields marked away from password-manager heuristics\n4. Test a workaround pass aimed specifically at Bitwarden heuristics:\n   * login fields: username/current-password only\n   * signup fields: username/new-password/new-password\n   * reset-PIN section: current-password for account verification, explicit opt-out markers for PIN-only fields if a safe standards-based option exists\n5. Verify whether the console error still occurs after each markup change, not just whether autofill visually works.\n6. If the error persists with standards-compliant markup, record it as an upstream Bitwarden defect and link the upstream report directly from this issue.\n7. Add a short compatibility note to internal QA guidance so Bitwarden stays in the auth regression checklist.\n\n## Acceptance criteria\n\n* No Bitwarden overlay exception is triggered on the main login screen during normal page load and autofill interaction.\n* Login autofill still works for email/password.\n* Signup autofill does not misclassify confirm-password or PIN fields.\n* Reset PIN flow does not prompt Bitwarden against PIN-only fields.\n* If upstream-only, issue contains reproduction steps, our tested mitigations, and the upstream tracker link.\n\n## Fallback workaround if upstream bug remains\n\n* Keep the current standards-based auth markup cleanup.\n* Add any additional low-risk field disambiguation that improves Bitwarden behavior without harming browser/native autofill.\n* Document the remaining error as external and avoid risky app-side hacks tied to Bitwarden internals. Create external events when a linked app item is created, update external events when title, date, time, or notes change, remove or cancel external events when the source item is deleted based on the product rule we choose, and prevent duplicate event creation during retries.\n\nImplementation plan\n\n1. Clarify the exact scope and success criteria for phase 4: add app-to-google sync rules before building deeper integration behavior.\n2. Implement the smallest safe change against the shared calendar event model and keep ownership between app-native and external events clear.\n3. Add the needed status, labeling, or controls so the behavior is understandable in the UI.\n4. Verify sync, visibility, and failure-path behavior with focused QA before moving to the next phase.\n\nDefinition of done\n\n* This calendar phase has a concrete execution path.\n* App-native and external calendar behavior stay clearly differentiated.\n* The phase is validated with repeatable QA. Decide what sync means for the first release. Options from the planning doc: app to calendar only, calendar to app only, or full two-way sync. Recommended V1: app to calendar for appointments and reminders, optional app to calendar for dated to-dos, and no write-back from external calendars into the app yet.\n\nImplementation plan\n\n1. Clarify the exact scope and success criteria for decide version 1 sync scope before building deeper integration behavior.\n2. Implement the smallest safe change against the shared calendar event model and keep ownership between app-native and external events clear.\n3. Add the needed status, labeling, or controls so the behavior is understandable in the UI.\n4. Verify sync, visibility, and failure-path behavior with focused QA before moving to the next phase.\n\nDefinition of done\n\n* This calendar phase has a concrete execution path.\n* App-native and external calendar behavior stay clearly differentiated.\n* The phase is validated with repeatable QA. Test with real Google accounts on web and mobile, test Apple Calendar import or subscription behavior on iPhone and Mac, verify duplicate prevention, timezone behavior, delete behavior, and edit propagation, then release Google first followed by Apple-compatible support.\n\nImplementation plan\n\n1. Clarify the exact scope and success criteria for phase 7: test and release carefully before building deeper integration behavior.\n2. Implement the smallest safe change against the shared calendar event model and keep ownership between app-native and external events clear.\n3. Add the needed status, labeling, or controls so the behavior is understandable in the UI.\n4. Verify sync, visibility, and failure-path behavior with focused QA before moving to the next phase.\n\nDefinition of done\n\n* This calendar phase has a concrete execution path.\n* App-native and external calendar behavior stay clearly differentiated.\n* The phase is validated with repeatable QA. Decide which app items can become external calendar events. Define one shared calendar event shape for appointments, reminders, and dated to-dos. Decide how fields map to title, date, time, notes, reminders, recurrence, and status. Decide what happens when a source item is edited, completed, or deleted.\n\nImplementation plan\n\n1. Clarify the exact scope and success criteria for phase 1: define the sync model before building deeper integration behavior.\n2. Implement the smallest safe change against the shared calendar event model and keep ownership between app-native and external events clear.\n3. Add the needed status, labeling, or controls so the behavior is understandable in the UI.\n4. Verify sync, visibility, and failure-path behavior with focused QA before moving to the next phase.\n\nDefinition of done\n\n* This calendar phase has a concrete execution path.\n* App-native and external calendar behavior stay clearly differentiated.\n* The phase is validated with repeatable QA. Add Google OAuth connect and disconnect flow, let the user choose which Google calendar to sync with, build event create, update, and delete behavior through the Google Calendar API, and show clear connection status and error states in settings or connections.\n\nImplementation plan\n\n1. Clarify the exact scope and success criteria for phase 3: build google calendar connection before building deeper integration behavior.\n2. Implement the smallest safe change against the shared calendar event model and keep ownership between app-native and external events clear.\n3. Add the needed status, labeling, or controls so the behavior is understandable in the UI.\n4. Verify sync, visibility, and failure-path behavior with focused QA before moving to the next phase.\n\nDefinition of done\n\n* This calendar phase has a concrete execution path.\n* App-native and external calendar behavior stay clearly differentiated.\n* The phase is validated with repeatable QA. Support .ics event export for single items or batches, optionally generate a calendar subscription feed for users who want ongoing Apple Calendar visibility, and make it clear that this Apple-compatible version is not full deep two-way iCloud sync.\n\nImplementation plan\n\n1. Clarify the exact scope and success criteria for phase 5: add apple-friendly support before building deeper integration behavior.\n2. Implement the smallest safe change against the shared calendar event model and keep ownership between app-native and external events clear.\n3. Add the needed status, labeling, or controls so the behavior is understandable in the UI.\n4. Verify sync, visibility, and failure-path behavior with focused QA before moving to the next phase.\n\nDefinition of done\n\n* This calendar phase has a concrete execution path.\n* App-native and external calendar behavior stay clearly differentiated.\n* The phase is validated with repeatable QA. Add storage for connected calendar accounts, user sync preferences, links from internal items to external calendar event IDs, and sync timestamps plus last-known sync state for retries and troubleshooting.\n\nImplementation plan\n\n1. Clarify the exact scope and success criteria for phase 2: prepare the data model before building deeper integration behavior.\n2. Implement the smallest safe change against the shared calendar event model and keep ownership between app-native and external events clear.\n3. Add the needed status, labeling, or controls so the behavior is understandable in the UI.\n4. Verify sync, visibility, and failure-path behavior with focused QA before moving to the next phase.\n\nDefinition of done\n\n* This calendar phase has a concrete execution path.\n* App-native and external calendar behavior stay clearly differentiated.\n* The phase is validated with repeatable QA. Let users turn sync on or off, choose which tracker categories sync out, add per-user timezone handling, handle revoked permissions, expired tokens, and failed sync retries gracefully, and log sync errors clearly enough to debug later.\n\nImplementation plan\n\n1. Clarify the exact scope and success criteria for phase 6: add controls and safeguards before building deeper integration behavior.\n2. Implement the smallest safe change against the shared calendar event model and keep ownership between app-native and external events clear.\n3. Add the needed status, labeling, or controls so the behavior is understandable in the UI.\n4. Verify sync, visibility, and failure-path behavior with focused QA before moving to the next phase.\n\nDefinition of done\n\n* This calendar phase has a concrete execution path.\n* App-native and external calendar behavior stay clearly differentiated.\n* The phase is validated with repeatable QA. Expand automated coverage beyond the current smoke and preview tests. The app now includes auth, connection requests, permissions, outsider data views, support actions, tracking mutations, and calendar behavior, but the existing Playwright coverage only validates a basic landing page and one preview path. Add a practical regression suite for the highest-risk user flows so future tracker expansion work is safer to ship.\n\nImplementation plan\n\n1. Identify the smallest high-value regression set for tracker and outsider flows.\n2. Cover critical paths first: auth entry, connection request flow, tracker logging, outsider read-only access, support messaging, and calendar rendering.\n3. Use stable fixtures or seed data so tests are reliable and easy to maintain.\n4. Add assertions for permission-sensitive behavior where outsider access should hide or show sections.\n5. Keep tests focused on real user outcomes instead of brittle styling details.\n6. Make sure the suite can be run locally and in CI without special manual setup.\n\nDefinition of done\n\n* Core tracker and outsider flows have practical end-to-end regression coverage.\n* Sensitive permission behavior is tested in at least one representative path.\n* The test suite catches real breakage beyond the current smoke checks. Audit the app's mobile and desktop breakpoints and stop deriving responsive state directly from window.innerWidth during render. Several layouts and pages compute isMobile or viewport-dependent UI without reactive resize handling, which can leave the interface in the wrong mode after resize, rotation, or viewport changes. This should be fixed with a shared responsive strategy so tracker and outsider shells stay consistent across device changes.\n\nImplementation plan\n\n1. Inventory every layout or page that derives responsive state directly from window.innerWidth.\n2. Introduce a shared responsive hook or equivalent pattern that reacts to resize and orientation changes.\n3. Replace direct viewport reads in tracker and outsider shells with the shared approach.\n4. Update page-level mobile branching to rely on the same source of truth.\n5. Test resize, refresh, and rotation behavior to confirm layouts switch modes reliably.\n6. Keep the responsive logic simple enough that future mobile work builds on one pattern.\n\nDefinition of done\n\n* Responsive mode changes react correctly to resize and rotation.\n* Tracker and outsider shells use a shared viewport strategy.\n* Direct render-time viewport checks are reduced or removed from the highest-risk surfaces. Refactor the app architecture to reduce delivery risk from oversized top-level files and tightly coupled state. src/App.jsx has grown into a very large controller that mixes auth, profile loading, tracker state, outsider state, connection workflows, support inbox handling, event normalization, preview data, and tutorial logic. Split the app into clearer modules or hooks so future feature work is easier to reason about, test, and ship safely.\n\nImplementation plan\n\n1. Identify clean module boundaries such as auth/profile, tracker data, outsider data, connections/support, calendar normalization, and preview-only logic.\n2. Extract read-only helpers first to reduce risk before moving stateful flows.\n3. Move coherent state and side effects into focused hooks or controller modules with stable inputs and outputs.\n4. Reduce the size of App.jsx incrementally while keeping behavior and prop contracts stable.\n5. Add or strengthen tests around any extracted logic that is easy to regress.\n6. Stop once the top-level app shell reads as orchestration rather than implementation.\n\nDefinition of done\n\n* App.jsx is materially smaller and easier to scan.\n* Major data domains are separated into clearer modules or hooks.\n* Behavior remains unchanged aside from structural cleanup. Create a focused mobile polish pass for the app. The current mobile experience feels rough in several places, with layouts, spacing, navigation density, and section framing not holding up as well as desktop. This issue should cover responsive cleanup across both tracker and outsider flows, especially key daily pages, calendar surfaces, support screens, and navigation patterns, so the app feels intentional and usable on phone-sized screens instead of compressed or cluttered.\n\nImplementation plan\n\n1. Audit the worst mobile screens first: tracker overview, tracker log flows, calendar, outsider overview, outsider telemetry, and support pages.\n2. Capture the biggest phone-sized pain points in spacing, overflow, crowded navigation, and visual hierarchy.\n3. Fix layout and spacing issues in the shared shells before polishing individual pages.\n4. Tidy page-level grids, cards, buttons, and section framing so content reads clearly on narrow widths.\n5. Verify the bottom nav, headers, and action areas remain reachable without overlapping key content.\n6. Re-test on multiple mobile viewport sizes and keep screenshots or notes for before-and-after validation.\n\nDefinition of done\n\n* Core tracker and outsider pages feel intentional on phone-sized screens.\n* Major overflow, crowding, and awkward spacing problems are resolved.\n* Navigation remains usable without hiding important content. Replace category-level top navigation with a calmer top-level Log destination, then move tracker area switching into the logging surface with grouped or compact category selection. Current nav still expands every tracked area into top-level items in src/App.jsx, which conflicts with docs/tracking-expansion-plan.md and will keep getting noisier as features grow.\n\nImplementation plan\n\n1. Define the final top-level tracker nav set and remove category pages from primary nav.\n2. Introduce a single Log destination that opens the logging surface.\n3. Build an in-page category switcher for Log, starting with a compact grouped picker.\n4. Preserve fast access to recently used or likely-needed areas where possible.\n5. Update overview shortcuts and tutorial copy so they reference the new information architecture.\n6. Test the new nav across desktop and mobile themes to confirm parity.\n\nDefinition of done\n\n* Tracker top-level nav no longer grows with every tracking area.\n* Users can reach all enabled tracking categories from Log.\n* Overview and tutorials remain coherent after the nav change. Update outsider data loading, summaries, and support actions so the outsider experience reflects newer tracker features instead of staying chart-era only. This includes summary-safe loading, permission-aware rendering, and read-only views or nudges for To-Do, Period, and Appointments, following the checklist already captured in docs/tracking-expansion-plan.md.\n\nImplementation plan\n\n1. Add or verify backend reads and permission-safe policies for appointments and period data.\n2. Expand outsider data loading so it pulls todo summaries, appointments, and period cycles in addition to legacy daily-entry data.\n3. Normalize the new sources into summary-safe outsider-facing shapes.\n4. Update outsider overview and tracker data pages to show the new sections only when sharing permissions allow them.\n5. Update outsider support shortcuts so supported categories can produce appropriate nudges.\n6. Run regression checks for mixed permission states and confirm protected fields such as private period notes never appear.\n\nDefinition of done\n\n* Outsider overview and data surfaces reflect shared To-Do, Period, and Appointment data.\n* Permission toggles are respected end to end.\n* Sensitive period details remain hidden. Harden period privacy in the normalized calendar event layer. buildCalendarEvents in src/app/utils.js currently falls back to cycle private notes when symptom tags are absent, which risks exposing sensitive text in summary or shared surfaces. Estimated period data should stay clearly labeled as estimates, and private notes should never flow into shared calendar summaries.\n\nImplementation plan\n\n1. Audit every place normalized calendar events are used in tracker and outsider views.\n2. Remove private note fallback from the normalized period event builder.\n3. Decide which safe summary data is allowed for period events, such as flow level or generic labels.\n4. Verify estimated period events remain clearly marked as estimates.\n5. Test tracker calendar, selected-day agenda, and any shared or outsider summary surfaces to confirm private text never appears.\n\nDefinition of done\n\n* private_notes never reach normalized calendar event notes or shared summaries.\n* Period events still render with safe summary text.\n* Estimate labeling remains explicit. Fix the rough edges introduced during recent tracking expansion work: restore a clean lint pass, remove unused props such as rowStyle in src/pages/tracker/TrackingPage.jsx, and clean up mojibake user-facing text like ? and broken smart quotes across tracker calendar and tracking surfaces. This is a focused polish and stability cleanup so future refactors start from a clean baseline.\n\nImplementation plan\n\n1. Run lint and collect the current failures and warnings.\n2. Remove dead props, dead variables, and obvious cleanup leftovers from the expansion work.\n3. Audit user-facing strings for mojibake and encoding corruption across tracker pages.\n4. Fix the corrupted strings without changing intended copy.\n5. Re-run lint and build to confirm the cleanup leaves the app in a green state.\n\nDefinition of done\n\n* npm run lint passes.\n* Known mojibake strings are gone from tracker surfaces.\n* No behavior changes are introduced beyond cleanup and copy integrity. After appointments are syncing well, add optional support for dated to-dos in Google Calendar. Keep this opt-in and avoid overcomplicating the first shared-calendar version.\n\nImplementation plan\n\n1. Clarify the exact scope and success criteria for phase 4: add optional dated to-do syncing before building deeper integration behavior.\n2. Implement the smallest safe change against the shared calendar event model and keep ownership between app-native and external events clear.\n3. Add the needed status, labeling, or controls so the behavior is understandable in the UI.\n4. Verify sync, visibility, and failure-path behavior with focused QA before moving to the next phase.\n\nDefinition of done\n\n* This calendar phase has a concrete execution path.\n* App-native and external calendar behavior stay clearly differentiated.\n* The phase is validated with repeatable QA. Make the in-app calendar easy to understand at a glance before deeper Google Calendar work. Ensure clear visibility for period tracker days, appointments, reminders, and dated to-dos.\n\nImplementation plan\n\n1. Clarify the exact scope and success criteria for phase 1: strengthen in-app calendar visibility before building deeper integration behavior.\n2. Implement the smallest safe change against the shared calendar event model and keep ownership between app-native and external events clear.\n3. Add the needed status, labeling, or controls so the behavior is understandable in the UI.\n4. Verify sync, visibility, and failure-path behavior with focused QA before moving to the next phase.\n\nDefinition of done\n\n* This calendar phase has a concrete execution path.\n* App-native and external calendar behavior stay clearly differentiated.\n* The phase is validated with repeatable QA. Add Google Calendar event visibility to the in-app calendar. For the first version, Google events should be visible, clearly labeled, and read-only inside the app.\n\nImplementation plan\n\n1. Clarify the exact scope and success criteria for phase 2: show google calendar events inside the app calendar before building deeper integration behavior.\n2. Implement the smallest safe change against the shared calendar event model and keep ownership between app-native and external events clear.\n3. Add the needed status, labeling, or controls so the behavior is understandable in the UI.\n4. Verify sync, visibility, and failure-path behavior with focused QA before moving to the next phase.\n\nDefinition of done\n\n* This calendar phase has a concrete execution path.\n* App-native and external calendar behavior stay clearly differentiated.\n* The phase is validated with repeatable QA. Send app appointments into Google Calendar without starting full two-way editing. Keep the sync direction simple and safe in the first version.\n\nImplementation plan\n\n1. Clarify the exact scope and success criteria for phase 3: sync app appointments into google calendar before building deeper integration behavior.\n2. Implement the smallest safe change against the shared calendar event model and keep ownership between app-native and external events clear.\n3. Add the needed status, labeling, or controls so the behavior is understandable in the UI.\n4. Verify sync, visibility, and failure-path behavior with focused QA before moving to the next phase.\n\nDefinition of done\n\n* This calendar phase has a concrete execution path.\n* App-native and external calendar behavior stay clearly differentiated.\n* The phase is validated with repeatable QA. Improve connection status, last sync visibility, refresh behavior, error handling, and overall reliability once the core visibility and sync pieces are in place.\n\nImplementation plan\n\n1. Clarify the exact scope and success criteria for phase 5: improve refresh behavior, errors, and reliability before building deeper integration behavior.\n2. Implement the smallest safe change against the shared calendar event model and keep ownership between app-native and external events clear.\n3. Add the needed status, labeling, or controls so the behavior is understandable in the UI.\n4. Verify sync, visibility, and failure-path behavior with focused QA before moving to the next phase.\n\nDefinition of done\n\n* This calendar phase has a concrete execution path.\n* App-native and external calendar behavior stay clearly differentiated.\n* The phase is validated with repeatable QA. Start using Linear instead of app planning files for new work\n\nImplementation plan\n\n1. Inventory the planning docs that are still active sources of truth and decide which ones belong in Linear.\n2. Create or update the matching Linear projects and issues so active work has scope and execution notes in one place.\n3. Link remaining reference docs back to the right Linear items and reduce duplicated planning guidance.\n4. Document a simple team rule that new planning work starts in Linear by default.\n\nDefinition of done\n\n* Active planning work is represented in Linear.\n* Reference docs point back to the right Linear items.\n* Future planning has a clearer default home.\n\nProgress note (2026-04-02)\n\n* Implemented tracker To-Do priority and optional due time support in src/App.jsx and src/pages/tracker/TrackingPage.jsx.\n* Kept existing task data backward-compatible by normalizing missing priority/time values.\n* Updated tracker calendar task events and selected-day agenda to show task priority context.\n* Verified with npm run build.",
+    "priority": 2,
+    "project": {
+      "id": "3c425299-3c5d-4ae3-bde8-1337a2682c33",
+      "name": "To-Do Deepening"
+    },
+    "state": {
+      "name": "Backlog"
+    },
+    "team": {
+      "id": "98137d43-72d0-4802-a6ab-7a758ab24214",
+      "key": "GUI",
+      "name": "Guide to the galaxies"
+    },
+    "labels": {
+      "nodes": [
+        {
+          "id": "90a37857-381e-47cc-9b4e-055d38e72478",
+          "name": "UX"
+        },
+        {
+          "id": "8a6d2ddc-3246-4945-a6d8-c6e33bf91c48",
+          "name": "Now"
+        }
+      ]
+    }
+  },
+  {
+    "id": "6c4a0694-e032-4d46-bf55-7c04b06ce12b",
+    "identifier": "GUI-51",
+    "title": "Move To-Do items to dedicated storage outside daily_entries",
+    "url": "https://linear.app/guide-to-the-galaxies/issue/GUI-51/move-to-do-items-to-dedicated-storage-outside-daily-entries",
+    "description": "Plan and implement the longer-term data model shift from daily_entries.todo_items to dedicated task storage so cross-day scheduling, recurrence, and history become safer to support.\n\nImplementation plan\n\n1. Define the smallest data and UX changes needed for move to-do items to dedicated storage outside daily_entries without making To-Do feel heavy.\n2. Implement the required task model, form, and list updates while preserving existing task behavior.\n3. Propagate the new task state through overview and planning summaries where it adds value.\n4. Verify backward compatibility, cross-day behavior, and task edge cases before closing the issue.\n\nDefinition of done\n\n* The targeted To-Do improvement works in storage and UI.\n* Existing task data continues to behave correctly.\n* The change supports future task work instead of adding coupling.",
+    "priority": 4,
+    "project": {
+      "id": "3c425299-3c5d-4ae3-bde8-1337a2682c33",
+      "name": "To-Do Deepening"
+    },
+    "state": {
+      "name": "Backlog"
+    },
+    "team": {
+      "id": "98137d43-72d0-4802-a6ab-7a758ab24214",
+      "key": "GUI",
+      "name": "Guide to the galaxies"
+    },
+    "labels": {
+      "nodes": [
+        {
+          "id": "ddc1dd63-af64-49f1-93a5-8e18e07d0450",
+          "name": "Architecture"
+        },
+        {
+          "id": "87c39cda-7f9e-41ab-afba-9aeb445398c3",
+          "name": "Later"
+        }
+      ]
+    }
+  },
+  {
+    "id": "3b556893-0cad-46aa-a49b-ef26f4521bee",
+    "identifier": "GUI-50",
+    "title": "Add prep checklist and leave-by time to appointments",
+    "url": "https://linear.app/guide-to-the-galaxies/issue/GUI-50/add-prep-checklist-and-leave-by-time-to-appointments",
+    "description": "Add planning support around appointments by capturing preparation steps and leave-by timing without turning the feature into a full travel planner.\n\nImplementation plan\n\n1. Define the smallest appointment-model and UX changes needed for add prep checklist and leave-by time to appointments.\n2. Implement the new appointment inputs and editing behavior while keeping everything optional where appropriate.\n3. Surface the richer planning detail in cards, reminders, and summaries only where it improves scanability.\n4. Verify old appointments, partial metadata, and mobile layouts still behave cleanly.\n\nDefinition of done\n\n* Appointments support the targeted richer planning behavior cleanly.\n* The experience stays lightweight rather than becoming a full calendar suite.\n* Existing appointment data remains compatible.",
+    "priority": 4,
+    "project": {
+      "id": "bbd32f16-96d4-434e-bc1e-12c1f5826c2e",
+      "name": "Appointments Deepening"
+    },
+    "state": {
+      "name": "Backlog"
+    },
+    "team": {
+      "id": "98137d43-72d0-4802-a6ab-7a758ab24214",
+      "key": "GUI",
+      "name": "Guide to the galaxies"
+    },
+    "labels": {
+      "nodes": [
+        {
+          "id": "90a37857-381e-47cc-9b4e-055d38e72478",
+          "name": "UX"
+        },
+        {
+          "id": "87c39cda-7f9e-41ab-afba-9aeb445398c3",
+          "name": "Later"
+        }
+      ]
+    }
+  },
+  {
+    "id": "46880a79-e841-469a-830e-b9547cddcd1a",
+    "identifier": "GUI-49",
+    "title": "Support follow-up task creation from appointments",
+    "url": "https://linear.app/guide-to-the-galaxies/issue/GUI-49/support-follow-up-task-creation-from-appointments",
+    "description": "Let appointments optionally generate follow-up To-Do items so planning work can continue after an event without manual re-entry.\n\nImplementation plan\n\n1. Define the smallest appointment-model and UX changes needed for support follow-up task creation from appointments.\n2. Implement the new appointment inputs and editing behavior while keeping everything optional where appropriate.\n3. Surface the richer planning detail in cards, reminders, and summaries only where it improves scanability.\n4. Verify old appointments, partial metadata, and mobile layouts still behave cleanly.\n\nDefinition of done\n\n* Appointments support the targeted richer planning behavior cleanly.\n* The experience stays lightweight rather than becoming a full calendar suite.\n* Existing appointment data remains compatible.",
+    "priority": 4,
+    "project": {
+      "id": "bbd32f16-96d4-434e-bc1e-12c1f5826c2e",
+      "name": "Appointments Deepening"
+    },
+    "state": {
+      "name": "Backlog"
+    },
+    "team": {
+      "id": "98137d43-72d0-4802-a6ab-7a758ab24214",
+      "key": "GUI",
+      "name": "Guide to the galaxies"
+    },
+    "labels": {
+      "nodes": [
+        {
+          "id": "90a37857-381e-47cc-9b4e-055d38e72478",
+          "name": "UX"
+        },
+        {
+          "id": "87c39cda-7f9e-41ab-afba-9aeb445398c3",
+          "name": "Later"
+        }
+      ]
+    }
+  },
+  {
+    "id": "2a7f95fa-787c-45ba-a957-c0a3cbc0c321",
+    "identifier": "GUI-48",
+    "title": "Add end time, provider, category, and confirmation status to appointments",
+    "url": "https://linear.app/guide-to-the-galaxies/issue/GUI-48/add-end-time-provider-category-and-confirmation-status-to-appointments",
+    "description": "Expand appointments and reminders with the next most useful planning fields while still avoiding full external-calendar complexity.\n\nImplementation plan\n\n1. Define the smallest appointment-model and UX changes needed for add end time, provider, category, and confirmation status to appointments.\n2. Implement the new appointment inputs and editing behavior while keeping everything optional where appropriate.\n3. Surface the richer planning detail in cards, reminders, and summaries only where it improves scanability.\n4. Verify old appointments, partial metadata, and mobile layouts still behave cleanly.\n\nDefinition of done\n\n* Appointments support the targeted richer planning behavior cleanly.\n* The experience stays lightweight rather than becoming a full calendar suite.\n* Existing appointment data remains compatible.",
+    "priority": 3,
+    "project": {
+      "id": "bbd32f16-96d4-434e-bc1e-12c1f5826c2e",
+      "name": "Appointments Deepening"
+    },
+    "state": {
+      "name": "Backlog"
+    },
+    "team": {
+      "id": "98137d43-72d0-4802-a6ab-7a758ab24214",
+      "key": "GUI",
+      "name": "Guide to the galaxies"
+    },
+    "labels": {
+      "nodes": [
+        {
+          "id": "90a37857-381e-47cc-9b4e-055d38e72478",
+          "name": "UX"
+        },
+        {
+          "id": "a2fd4135-9a61-45fd-816c-c7cc89b0a08d",
+          "name": "Next"
+        }
+      ]
+    }
+  },
+  {
+    "id": "39274125-e851-41d4-86f4-68aa25834fa8",
+    "identifier": "GUI-47",
+    "title": "Reduce navigation clutter and visual competition across tracker shells",
+    "url": "https://linear.app/guide-to-the-galaxies/issue/GUI-47/reduce-navigation-clutter-and-visual-competition-across-tracker-shells",
+    "description": "Polish tracker navigation so labels, hierarchy, and page chrome feel quieter and less crowded across the current theme shells.\n\nImplementation plan\n\n1. Clarify how reduce navigation clutter and visual competition across tracker shells fits the calmer Log-hub and overview-first information architecture.\n2. Implement the shell or in-page navigation changes needed to reduce clutter while preserving wayfinding.\n3. Align related tracker surfaces so navigation patterns stay consistent across breakpoints.\n4. Verify discoverability and reachability on desktop and mobile.\n\nDefinition of done\n\n* The navigation change is calmer and more coherent.\n* Important destinations remain easy to reach.\n* The cleanup supports the broader tracker IA direction.",
+    "priority": 4,
+    "project": {
+      "id": "b3b27b32-260e-4761-8c01-4a953c593761",
+      "name": "Navigation Cleanup"
+    },
+    "state": {
+      "name": "Backlog"
+    },
+    "team": {
+      "id": "98137d43-72d0-4802-a6ab-7a758ab24214",
+      "key": "GUI",
+      "name": "Guide to the galaxies"
+    },
+    "labels": {
+      "nodes": [
+        {
+          "id": "90a37857-381e-47cc-9b4e-055d38e72478",
+          "name": "UX"
+        },
+        {
+          "id": "87c39cda-7f9e-41ab-afba-9aeb445398c3",
+          "name": "Later"
+        }
+      ]
+    }
+  },
+  {
+    "id": "5a8a0df6-c93c-4644-852c-8ff8637a519d",
+    "identifier": "GUI-46",
+    "title": "Expand outsider overview and tracker data pages with shared planning summaries",
+    "url": "https://linear.app/guide-to-the-galaxies/issue/GUI-46/expand-outsider-overview-and-tracker-data-pages-with-shared-planning",
+    "description": "Add read-only To-Do, Period, Appointments, and agenda summaries to outsider overview and data pages while keeping the experience privacy-aware and summary-first.\n\nImplementation plan\n\n1. Define how expand outsider overview and tracker data pages with shared planning summaries fits into the shared planning rollout for outsider users.\n2. Implement the needed backend or normalization work so outsider pages read from one permission-safe planning source.\n3. Update the relevant summary or support surfaces so they expose only approved shared planning information.\n4. Run regression QA across privacy, permissions, and mixed shared-category states.\n\nDefinition of done\n\n* The outsider planning change works end to end.\n* Permissions are respected in data and UI layers.\n* Sensitive details remain protected.",
+    "priority": 3,
+    "project": {
+      "id": "e3f462d8-c023-4dbc-a987-c60c6cc4f7ec",
+      "name": "Outsider Shared Planning"
+    },
+    "state": {
+      "name": "Backlog"
+    },
+    "team": {
+      "id": "98137d43-72d0-4802-a6ab-7a758ab24214",
+      "key": "GUI",
+      "name": "Guide to the galaxies"
+    },
+    "labels": {
+      "nodes": [
+        {
+          "id": "90a37857-381e-47cc-9b4e-055d38e72478",
+          "name": "UX"
+        },
+        {
+          "id": "a2fd4135-9a61-45fd-816c-c7cc89b0a08d",
+          "name": "Next"
+        }
+      ]
+    }
+  },
+  {
+    "id": "cdac9124-3af8-4fe8-bb4c-80a7c3fcaec3",
+    "identifier": "GUI-45",
+    "title": "Load and normalize To-Do, Period, and Appointments for outsider views",
+    "url": "https://linear.app/guide-to-the-galaxies/issue/GUI-45/load-and-normalize-to-do-period-and-appointments-for-outsider-views",
+    "description": "Refactor outsider data loading so it stops relying on latestEntry alone and instead loads shared To-Do, Period, and Appointments into one normalized outsider-facing model.\n\nImplementation plan\n\n1. Define how load and normalize to-do, period, and appointments for outsider views fits into the shared planning rollout for outsider users.\n2. Implement the needed backend or normalization work so outsider pages read from one permission-safe planning source.\n3. Update the relevant summary or support surfaces so they expose only approved shared planning information.\n4. Run regression QA across privacy, permissions, and mixed shared-category states.\n\nDefinition of done\n\n* The outsider planning change works end to end.\n* Permissions are respected in data and UI layers.\n* Sensitive details remain protected.",
+    "priority": 2,
+    "project": {
+      "id": "e3f462d8-c023-4dbc-a987-c60c6cc4f7ec",
+      "name": "Outsider Shared Planning"
+    },
+    "state": {
+      "name": "Backlog"
+    },
+    "team": {
+      "id": "98137d43-72d0-4802-a6ab-7a758ab24214",
+      "key": "GUI",
+      "name": "Guide to the galaxies"
+    },
+    "labels": {
+      "nodes": [
+        {
+          "id": "ddc1dd63-af64-49f1-93a5-8e18e07d0450",
+          "name": "Architecture"
+        },
+        {
+          "id": "8a6d2ddc-3246-4945-a6d8-c6e33bf91c48",
+          "name": "Now"
+        }
+      ]
+    }
+  },
+  {
+    "id": "85df3a3d-4c7a-4852-9198-fc3c332b0e72",
+    "identifier": "GUI-44",
+    "title": "Add relief methods and what-helped notes to period entries",
+    "url": "https://linear.app/guide-to-the-galaxies/issue/GUI-44/add-relief-methods-and-what-helped-notes-to-period-entries",
+    "description": "Let users capture relief methods and short notes about what helped during a cycle while keeping this especially sensitive data private by default.\n\nImplementation plan\n\n1. Define the privacy-safe product behavior for add relief methods and what-helped notes to period entries and keep labels understandable.\n2. Implement the needed logging, storage, and history updates with careful defaults for repeated daily use.\n3. Surface the new detail in summaries or review flows only where it adds value without overclaiming certainty.\n4. Verify privacy boundaries, sparse-data handling, and mobile usability.\n\nDefinition of done\n\n* The period-tracking enhancement is usable in daily practice.\n* Privacy boundaries remain intact.\n* The new detail adds value without making the flow feel heavy.",
+    "priority": 4,
+    "project": {
+      "id": "8b4f80df-89a7-4621-8747-37a97e79b446",
+      "name": "Period Tracker Deepening"
+    },
+    "state": {
+      "name": "Backlog"
+    },
+    "team": {
+      "id": "98137d43-72d0-4802-a6ab-7a758ab24214",
+      "key": "GUI",
+      "name": "Guide to the galaxies"
+    },
+    "labels": {
+      "nodes": [
+        {
+          "id": "ddbfc987-3d90-4af2-8745-aaf13707b3be",
+          "name": "Privacy"
+        },
+        {
+          "id": "87c39cda-7f9e-41ab-afba-9aeb445398c3",
+          "name": "Later"
+        }
+      ]
+    }
+  },
+  {
+    "id": "c98d2e54-1808-46e0-848b-27b67e57e922",
+    "identifier": "GUI-43",
+    "title": "Add support nudges and regression coverage for shared planning categories",
+    "url": "https://linear.app/guide-to-the-galaxies/issue/GUI-43/add-support-nudges-and-regression-coverage-for-shared-planning",
+    "description": "Update outsider support shortcuts for shared planning categories and add regression checks around permissions, private notes, agenda ordering, and mobile rendering.\n\nImplementation plan\n\n1. Define how add support nudges and regression coverage for shared planning categories fits into the shared planning rollout for outsider users.\n2. Implement the needed backend or normalization work so outsider pages read from one permission-safe planning source.\n3. Update the relevant summary or support surfaces so they expose only approved shared planning information.\n4. Run regression QA across privacy, permissions, and mixed shared-category states.\n\nDefinition of done\n\n* The outsider planning change works end to end.\n* Permissions are respected in data and UI layers.\n* Sensitive details remain protected.",
+    "priority": 4,
+    "project": {
+      "id": "e3f462d8-c023-4dbc-a987-c60c6cc4f7ec",
+      "name": "Outsider Shared Planning"
+    },
+    "state": {
+      "name": "Backlog"
+    },
+    "team": {
+      "id": "98137d43-72d0-4802-a6ab-7a758ab24214",
+      "key": "GUI",
+      "name": "Guide to the galaxies"
+    },
+    "labels": {
+      "nodes": [
+        {
+          "id": "5901dc04-8398-4ca3-b39a-f1c86c4b92ff",
+          "name": "QA"
+        },
+        {
+          "id": "ddbfc987-3d90-4af2-8745-aaf13707b3be",
+          "name": "Privacy"
+        },
+        {
+          "id": "87c39cda-7f9e-41ab-afba-9aeb445398c3",
+          "name": "Later"
+        }
+      ]
+    }
+  },
+  {
+    "id": "fd740323-8d49-4477-a53b-d4ca38f97606",
+    "identifier": "GUI-42",
+    "title": "Add outsider read policies for appointments and period cycles",
+    "url": "https://linear.app/guide-to-the-galaxies/issue/GUI-42/add-outsider-read-policies-for-appointments-and-period-cycles",
+    "description": "Add the missing Supabase policies so approved outsiders can read shared appointment and period summary data safely and only within allowed connection permissions.\n\nImplementation plan\n\n1. Define how add outsider read policies for appointments and period cycles fits into the shared planning rollout for outsider users.\n2. Implement the needed backend or normalization work so outsider pages read from one permission-safe planning source.\n3. Update the relevant summary or support surfaces so they expose only approved shared planning information.\n4. Run regression QA across privacy, permissions, and mixed shared-category states.\n\nDefinition of done\n\n* The outsider planning change works end to end.\n* Permissions are respected in data and UI layers.\n* Sensitive details remain protected.",
+    "priority": 2,
+    "project": {
+      "id": "e3f462d8-c023-4dbc-a987-c60c6cc4f7ec",
+      "name": "Outsider Shared Planning"
+    },
+    "state": {
+      "name": "Done"
+    },
+    "team": {
+      "id": "98137d43-72d0-4802-a6ab-7a758ab24214",
+      "key": "GUI",
+      "name": "Guide to the galaxies"
+    },
+    "labels": {
+      "nodes": [
+        {
+          "id": "ddbfc987-3d90-4af2-8745-aaf13707b3be",
+          "name": "Privacy"
+        }
+      ]
+    }
+  },
+  {
+    "id": "d08ec85b-06b8-4e6d-9f82-6c4fd6c290ac",
+    "identifier": "GUI-41",
+    "title": "Strengthen Overview as the resume and home surface",
+    "url": "https://linear.app/guide-to-the-galaxies/issue/GUI-41/strengthen-overview-as-the-resume-and-home-surface",
+    "description": "Make Overview the calmer launch surface by emphasizing resume actions, today-focused shortcuts, and fewer equal-weight destinations.\n\nImplementation plan\n\n1. Clarify how strengthen overview as the resume and home surface fits the calmer Log-hub and overview-first information architecture.\n2. Implement the shell or in-page navigation changes needed to reduce clutter while preserving wayfinding.\n3. Align related tracker surfaces so navigation patterns stay consistent across breakpoints.\n4. Verify discoverability and reachability on desktop and mobile.\n\nDefinition of done\n\n* The navigation change is calmer and more coherent.\n* Important destinations remain easy to reach.\n* The cleanup supports the broader tracker IA direction.",
+    "priority": 3,
+    "project": {
+      "id": "b3b27b32-260e-4761-8c01-4a953c593761",
+      "name": "Navigation Cleanup"
+    },
+    "state": {
+      "name": "Backlog"
+    },
+    "team": {
+      "id": "98137d43-72d0-4802-a6ab-7a758ab24214",
+      "key": "GUI",
+      "name": "Guide to the galaxies"
+    },
+    "labels": {
+      "nodes": [
+        {
+          "id": "90a37857-381e-47cc-9b4e-055d38e72478",
+          "name": "UX"
+        },
+        {
+          "id": "a2fd4135-9a61-45fd-816c-c7cc89b0a08d",
+          "name": "Next"
+        }
+      ]
+    }
+  },
+  {
+    "id": "755df211-eb6c-4100-9ef7-f731b19cf5c2",
+    "identifier": "GUI-40",
+    "title": "Refine weekly calendar summaries and planning surfaces",
+    "url": "https://linear.app/guide-to-the-galaxies/issue/GUI-40/refine-weekly-calendar-summaries-and-planning-surfaces",
+    "description": "Polish the in-app calendar beyond the first release with stronger weekly summaries and calmer planning surfaces that stay mobile-friendly. Implementation plan: 1. Define the calendar outcome on top of the shared event layer. 2. Implement weekly grouping and summary behavior against normalized event data. 3. Tune labels, density, and hierarchy so mixed event types stay readable. 4. Verify busy and sparse calendar states on mobile and desktop. Definition of done: The calendar improvement adds clearer planning value, builds on normalized event data, and remains readable across layouts. Progress update (2026-04-08): Started implementation in src/pages/tracker/OverviewPage.jsx and src/pages/tracker/CalendarPage.jsx. Added a tracker Overview Calendar Pulse section powered by normalized calendar events for today agenda, the upcoming week, overdue tasks, and cycle outlook. Added a grouped Week Ahead section in the tracker Calendar page so the next seven days scan by date instead of only a flat agenda list. Followed up after QA feedback so Calendar Pulse now renders across all tracker overview theme variants instead of only the default overview layout. Verified with npm run build.",
+    "priority": 4,
+    "project": {
+      "id": "b4eebffe-62da-4050-9e38-9e33e17dba60",
+      "name": "Calendar Feature"
+    },
+    "state": {
+      "name": "Backlog"
+    },
+    "team": {
+      "id": "98137d43-72d0-4802-a6ab-7a758ab24214",
+      "key": "GUI",
+      "name": "Guide to the galaxies"
+    },
+    "labels": {
+      "nodes": [
+        {
+          "id": "90a37857-381e-47cc-9b4e-055d38e72478",
+          "name": "UX"
+        },
+        {
+          "id": "87c39cda-7f9e-41ab-afba-9aeb445398c3",
+          "name": "Later"
+        }
+      ]
+    }
+  },
+  {
+    "id": "8929d083-f61a-447d-8613-5646bb76653a",
+    "identifier": "GUI-39",
+    "title": "Add today agenda and overview widgets powered by the calendar event layer",
+    "url": "https://linear.app/guide-to-the-galaxies/issue/GUI-39/add-today-agenda-and-overview-widgets-powered-by-the-calendar-event",
+    "description": "Use the shared calendar event layer to add clearer today-agenda, next-appointment, overdue-task, and cycle-summary widgets to overview surfaces.\n\nImplementation plan\n\n1. Define the calendar outcome for add today agenda and overview widgets powered by the calendar event layer on top of the shared event layer.\n2. Implement the needed rendering, grouping, or summary behavior against normalized event data rather than one-off page logic.\n3. Tune labels, density, and hierarchy so mixed event types stay readable.\n4. Verify busy and sparse calendar states on mobile and desktop.\n\nDefinition of done\n\n* The calendar improvement adds clearer planning value.\n* The work builds on normalized event data.\n* The calendar remains readable across layouts.",
+    "priority": 3,
+    "project": {
+      "id": "b4eebffe-62da-4050-9e38-9e33e17dba60",
+      "name": "Calendar Feature"
+    },
+    "state": {
+      "name": "Done"
+    },
+    "team": {
+      "id": "98137d43-72d0-4802-a6ab-7a758ab24214",
+      "key": "GUI",
+      "name": "Guide to the galaxies"
+    },
+    "labels": {
+      "nodes": [
+        {
+          "id": "90a37857-381e-47cc-9b4e-055d38e72478",
+          "name": "UX"
+        },
+        {
+          "id": "a2fd4135-9a61-45fd-816c-c7cc89b0a08d",
+          "name": "Next"
+        }
+      ]
+    }
+  },
+  {
+    "id": "7095b095-54c6-4463-8b6a-30bbce9999ed",
+    "identifier": "GUI-38",
+    "title": "Investigate Bitwarden autofill overlay error on auth fields",
+    "url": "https://linear.app/guide-to-the-galaxies/issue/GUI-38/investigate-bitwarden-autofill-overlay-error-on-auth-fields",
+    "description": "## Summary\n\nBitwarden's browser autofill overlay throws a runtime error on our auth screen:\n\n`bootstrap-autofill-overlay.js:9562 Uncaught (in promise) TypeError: Cannot read properties of null (reading 'includes')`\n\nThis still happens after we updated the login/signup/password-reset fields to use more standard form semantics (`form` submit handling, `name`, and `autocomplete` hints).\n\n## Impact\n\n* Users with the Bitwarden autofill extension see a console error on our auth experience.\n* The page appears usable, but this is noisy and may indicate Bitwarden is failing to classify some fields correctly.\n* We should aim for our auth UI to behave cleanly with Bitwarden because it is a common password manager.\n\n## Error\n\n`bootstrap-autofill-overlay.js:9562 Uncaught (in promise) TypeError: Cannot read properties of null (reading 'includes')`\n\nStack excerpt:\n\n* `AutofillOverlayContentService.setQualifiedLoginFillType`\n* `AutofillOverlayContentService.isIgnoredField`\n\n## Current app-side mitigation already tried\n\n* Added `onSubmit` form semantics for login.\n* Added explicit field names and autocomplete hints:\n  * login email: `autocomplete=username`\n  * login password: `autocomplete=current-password`\n  * signup password fields: `autocomplete=new-password`\n  * reset-password verification field: `autocomplete=current-password`\n  * PIN-only fields: `autocomplete=off`\n\nFiles touched:\n\n* `src/App.jsx`\n* `src/pages/tracker/SettingsPage.jsx`\n\n## Investigation notes\n\n* The stack trace points at Bitwarden-injected code, not our bundled app code.\n* There are recent public reports that match this same Bitwarden overlay error, so this may be an upstream extension bug.\n* We should still document any DOM patterns in our app that make Bitwarden more likely to mis-detect fields.\n\n## Acceptance ideas\n\n* Reproduce with Bitwarden enabled on the auth screen.\n* Confirm whether any remaining field markup can be made more Bitwarden-friendly.\n* If no additional local workaround exists, track upstream and document as external compatibility issue.\n\n## Implementation plan\n\n1. Reproduce consistently with Bitwarden enabled on the login, signup, and PIN reset flows in desktop Chrome and one Chromium-based mobile wrapper build if available.\n2. Capture a minimal DOM snapshot of the auth fields at the moment Bitwarden injects its overlay so we can compare field names, ids, labels, autocomplete values, and form ancestry.\n3. Normalize auth markup further if needed:\n   * add stable input ids paired with explicit `label htmlFor` or equivalent accessible relationships\n   * ensure each auth flow is wrapped in a distinct `form`\n   * avoid ambiguous password-like fields in the same visual section when possible\n   * keep non-account PIN fields marked away from password-manager heuristics\n4. Test a workaround pass aimed specifically at Bitwarden heuristics:\n   * login fields: username/current-password only\n   * signup fields: username/new-password/new-password\n   * reset-PIN section: current-password for account verification, explicit opt-out markers for PIN-only fields if a safe standards-based option exists\n5. Verify whether the console error still occurs after each markup change, not just whether autofill visually works.\n6. If the error persists with standards-compliant markup, record it as an upstream Bitwarden defect and link the upstream report directly from this issue.\n7. Add a short compatibility note to internal QA guidance so Bitwarden stays in the auth regression checklist.\n\n## Acceptance criteria\n\n* No Bitwarden overlay exception is triggered on the main login screen during normal page load and autofill interaction.\n* Login autofill still works for email/password.\n* Signup autofill does not misclassify confirm-password or PIN fields.\n* Reset PIN flow does not prompt Bitwarden against PIN-only fields.\n* If upstream-only, issue contains reproduction steps, our tested mitigations, and the upstream tracker link.\n\n## Fallback workaround if upstream bug remains\n\n* Keep the current standards-based auth markup cleanup.\n* Add any additional low-risk field disambiguation that improves Bitwarden behavior without harming browser/native autofill.\n* Document the remaining error as external and avoid risky app-side hacks tied to Bitwarden internals.",
+    "priority": 2,
+    "project": null,
+    "state": {
+      "name": "Backlog"
+    },
+    "team": {
+      "id": "98137d43-72d0-4802-a6ab-7a758ab24214",
+      "key": "GUI",
+      "name": "Guide to the galaxies"
+    },
+    "labels": {
+      "nodes": [
+        {
+          "id": "5901dc04-8398-4ca3-b39a-f1c86c4b92ff",
+          "name": "QA"
+        },
+        {
+          "id": "a68032e2-2af2-45f1-bde2-86380abf32b0",
+          "name": "Mobile"
+        }
+      ]
+    }
+  },
+  {
+    "id": "340d2095-6c81-4716-bf2b-abe6a072013d",
+    "identifier": "GUI-37",
+    "title": "Phase 4: Add app-to-Google sync rules",
+    "url": "https://linear.app/guide-to-the-galaxies/issue/GUI-37/phase-4-add-app-to-google-sync-rules",
+    "description": "Create external events when a linked app item is created, update external events when title, date, time, or notes change, remove or cancel external events when the source item is deleted based on the product rule we choose, and prevent duplicate event creation during retries.\n\nImplementation plan\n\n1. Clarify the exact scope and success criteria for phase 4: add app-to-google sync rules before building deeper integration behavior.\n2. Implement the smallest safe change against the shared calendar event model and keep ownership between app-native and external events clear.\n3. Add the needed status, labeling, or controls so the behavior is understandable in the UI.\n4. Verify sync, visibility, and failure-path behavior with focused QA before moving to the next phase.\n\nDefinition of done\n\n* This calendar phase has a concrete execution path.\n* App-native and external calendar behavior stay clearly differentiated.\n* The phase is validated with repeatable QA.\n\nProgress update (2026-04-08)\n\n* Began the app-to-Google sync rules locally for appointments and reminders.\n* Appointment create, update, and delete actions now queue pending or deleted records in calendar_sync_event_links when Google sync is marked ready.\n* Existing appointments and reminders are also backfilled into the queue when the connection first becomes ready.\n* Live Google Calendar API writes are still the next slice.",
+    "priority": 0,
+    "project": {
+      "id": "040e7114-d4f6-4afd-a68f-370d4437efe7",
+      "name": "External Calendar Sync Plan"
+    },
+    "state": {
+      "name": "Backlog"
+    },
+    "team": {
+      "id": "98137d43-72d0-4802-a6ab-7a758ab24214",
+      "key": "GUI",
+      "name": "Guide to the galaxies"
+    },
+    "labels": {
+      "nodes": [
+        {
+          "id": "8a6d2ddc-3246-4945-a6d8-c6e33bf91c48",
+          "name": "Now"
+        }
+      ]
+    }
+  },
+  {
+    "id": "2ad4b4f2-4fd2-4214-b379-4af1f3387bc7",
+    "identifier": "GUI-36",
+    "title": "Decide Version 1 sync scope",
+    "url": "https://linear.app/guide-to-the-galaxies/issue/GUI-36/decide-version-1-sync-scope",
+    "description": "Decide what sync means for the first release. Options from the planning doc: app to calendar only, calendar to app only, or full two-way sync. Recommended V1: app to calendar for appointments and reminders, optional app to calendar for dated to-dos, and no write-back from external calendars into the app yet.\n\nImplementation plan\n\n1. Clarify the exact scope and success criteria for decide version 1 sync scope before building deeper integration behavior.\n2. Implement the smallest safe change against the shared calendar event model and keep ownership between app-native and external events clear.\n3. Add the needed status, labeling, or controls so the behavior is understandable in the UI.\n4. Verify sync, visibility, and failure-path behavior with focused QA before moving to the next phase.\n\nDefinition of done\n\n* This calendar phase has a concrete execution path.\n* App-native and external calendar behavior stay clearly differentiated.\n* The phase is validated with repeatable QA.",
+    "priority": 0,
+    "project": {
+      "id": "040e7114-d4f6-4afd-a68f-370d4437efe7",
+      "name": "External Calendar Sync Plan"
+    },
+    "state": {
+      "name": "Backlog"
+    },
+    "team": {
+      "id": "98137d43-72d0-4802-a6ab-7a758ab24214",
+      "key": "GUI",
+      "name": "Guide to the galaxies"
+    },
+    "labels": {
+      "nodes": [
+        {
+          "id": "3be91819-9f86-44b9-bae2-30d24316b1fe",
+          "name": "Planning"
+        }
+      ]
+    }
+  },
+  {
+    "id": "b1a4a256-f280-4bf8-a318-43c693c36963",
+    "identifier": "GUI-35",
+    "title": "Phase 7: Test and release carefully",
+    "url": "https://linear.app/guide-to-the-galaxies/issue/GUI-35/phase-7-test-and-release-carefully",
+    "description": "Test with real Google accounts on web and mobile, test Apple Calendar import or subscription behavior on iPhone and Mac, verify duplicate prevention, timezone behavior, delete behavior, and edit propagation, then release Google first followed by Apple-compatible support.\n\nImplementation plan\n\n1. Clarify the exact scope and success criteria for phase 7: test and release carefully before building deeper integration behavior.\n2. Implement the smallest safe change against the shared calendar event model and keep ownership between app-native and external events clear.\n3. Add the needed status, labeling, or controls so the behavior is understandable in the UI.\n4. Verify sync, visibility, and failure-path behavior with focused QA before moving to the next phase.\n\nDefinition of done\n\n* This calendar phase has a concrete execution path.\n* App-native and external calendar behavior stay clearly differentiated.\n* The phase is validated with repeatable QA.",
+    "priority": 0,
+    "project": {
+      "id": "040e7114-d4f6-4afd-a68f-370d4437efe7",
+      "name": "External Calendar Sync Plan"
+    },
+    "state": {
+      "name": "Backlog"
+    },
+    "team": {
+      "id": "98137d43-72d0-4802-a6ab-7a758ab24214",
+      "key": "GUI",
+      "name": "Guide to the galaxies"
+    },
+    "labels": {
+      "nodes": [
+        {
+          "id": "3be91819-9f86-44b9-bae2-30d24316b1fe",
+          "name": "Planning"
+        }
+      ]
+    }
+  },
+  {
+    "id": "ee274fc6-7253-4624-974a-1ea9432109de",
+    "identifier": "GUI-34",
+    "title": "Phase 1: Define the sync model",
+    "url": "https://linear.app/guide-to-the-galaxies/issue/GUI-34/phase-1-define-the-sync-model",
+    "description": "Decide which app items can become external calendar events. Define one shared calendar event shape for appointments, reminders, and dated to-dos. Decide how fields map to title, date, time, notes, reminders, recurrence, and status. Decide what happens when a source item is edited, completed, or deleted.\n\nImplementation plan\n\n1. Clarify the exact scope and success criteria for phase 1: define the sync model before building deeper integration behavior.\n2. Implement the smallest safe change against the shared calendar event model and keep ownership between app-native and external events clear.\n3. Add the needed status, labeling, or controls so the behavior is understandable in the UI.\n4. Verify sync, visibility, and failure-path behavior with focused QA before moving to the next phase.\n\nDefinition of done\n\n* This calendar phase has a concrete execution path.\n* App-native and external calendar behavior stay clearly differentiated.\n* The phase is validated with repeatable QA.",
+    "priority": 0,
+    "project": {
+      "id": "040e7114-d4f6-4afd-a68f-370d4437efe7",
+      "name": "External Calendar Sync Plan"
+    },
+    "state": {
+      "name": "Backlog"
+    },
+    "team": {
+      "id": "98137d43-72d0-4802-a6ab-7a758ab24214",
+      "key": "GUI",
+      "name": "Guide to the galaxies"
+    },
+    "labels": {
+      "nodes": [
+        {
+          "id": "3be91819-9f86-44b9-bae2-30d24316b1fe",
+          "name": "Planning"
+        }
+      ]
+    }
+  },
+  {
+    "id": "da531ea0-9683-4766-9d13-819f62df5d13",
+    "identifier": "GUI-33",
+    "title": "Phase 3: Build Google Calendar connection",
+    "url": "https://linear.app/guide-to-the-galaxies/issue/GUI-33/phase-3-build-google-calendar-connection",
+    "description": "Add Google OAuth connect and disconnect flow, let the user choose which Google calendar to sync with, build event create, update, and delete behavior through the Google Calendar API, and show clear connection status and error states in settings or connections.\n\nImplementation plan\n\n1. Clarify the exact scope and success criteria for phase 3: build google calendar connection before building deeper integration behavior.\n2. Implement the smallest safe change against the shared calendar event model and keep ownership between app-native and external events clear.\n3. Add the needed status, labeling, or controls so the behavior is understandable in the UI.\n4. Verify sync, visibility, and failure-path behavior with focused QA before moving to the next phase.\n\nDefinition of done\n\n* This calendar phase has a concrete execution path.\n* App-native and external calendar behavior stay clearly differentiated.\n* The phase is validated with repeatable QA.\n\nProgress update (2026-04-08)\n\n* Started the Google Calendar sync foundation locally.\n* Added Supabase tables for saved calendar connection metadata and external event-link tracking.\n* Added a tracker-side Google Calendar Sync panel in Connections with destination calendar fields, sync toggles, status, and link counters.\n* Wired src/App.jsx to load and save the new sync settings, then verified with npm run build.\n* OAuth, calendar picking, and live Google event create or update calls are still the next slice.\n\nProgress update (2026-04-08, later)\n\n* Added the next local slice after the setup panel.\n* Marking Google Calendar sync ready now backfills existing appointments and reminders into the pending sync queue.\n* This keeps the saved connection state and the sync-link table aligned before live Google API calls land.\n\nProgress update (2026-04-08, OAuth slice)\n\n* Added and deployed a new Supabase Edge Function named google-calendar-auth for server-side Google OAuth start and callback handling.\n* Added OAuth state and Google token storage in the database, plus tracker-side UI wiring to launch connect flow and refresh calendar choices.\n* Pushed the new OAuth migration to Supabase and set PUBLIC_APP_URL.\n* Remaining blocker: the Supabase project still needs GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET secrets, plus the matching Google redirect URI configuration.",
+    "priority": 0,
+    "project": {
+      "id": "040e7114-d4f6-4afd-a68f-370d4437efe7",
+      "name": "External Calendar Sync Plan"
+    },
+    "state": {
+      "name": "Backlog"
+    },
+    "team": {
+      "id": "98137d43-72d0-4802-a6ab-7a758ab24214",
+      "key": "GUI",
+      "name": "Guide to the galaxies"
+    },
+    "labels": {
+      "nodes": [
+        {
+          "id": "8a6d2ddc-3246-4945-a6d8-c6e33bf91c48",
+          "name": "Now"
+        }
+      ]
+    }
+  },
+  {
+    "id": "9634484e-cb2f-4683-b341-98b32a2f4ab1",
+    "identifier": "GUI-32",
+    "title": "Phase 5: Add Apple-friendly support",
+    "url": "https://linear.app/guide-to-the-galaxies/issue/GUI-32/phase-5-add-apple-friendly-support",
+    "description": "Support .ics event export for single items or batches, optionally generate a calendar subscription feed for users who want ongoing Apple Calendar visibility, and make it clear that this Apple-compatible version is not full deep two-way iCloud sync.\n\nImplementation plan\n\n1. Clarify the exact scope and success criteria for phase 5: add apple-friendly support before building deeper integration behavior.\n2. Implement the smallest safe change against the shared calendar event model and keep ownership between app-native and external events clear.\n3. Add the needed status, labeling, or controls so the behavior is understandable in the UI.\n4. Verify sync, visibility, and failure-path behavior with focused QA before moving to the next phase.\n\nDefinition of done\n\n* This calendar phase has a concrete execution path.\n* App-native and external calendar behavior stay clearly differentiated.\n* The phase is validated with repeatable QA.",
+    "priority": 0,
+    "project": {
+      "id": "040e7114-d4f6-4afd-a68f-370d4437efe7",
+      "name": "External Calendar Sync Plan"
+    },
+    "state": {
+      "name": "Backlog"
+    },
+    "team": {
+      "id": "98137d43-72d0-4802-a6ab-7a758ab24214",
+      "key": "GUI",
+      "name": "Guide to the galaxies"
+    },
+    "labels": {
+      "nodes": [
+        {
+          "id": "3be91819-9f86-44b9-bae2-30d24316b1fe",
+          "name": "Planning"
+        }
+      ]
+    }
+  },
+  {
+    "id": "5c0447b5-9346-45fa-93d9-b669b85a3f6f",
+    "identifier": "GUI-31",
+    "title": "Phase 2: Prepare the data model",
+    "url": "https://linear.app/guide-to-the-galaxies/issue/GUI-31/phase-2-prepare-the-data-model",
+    "description": "Add storage for connected calendar accounts, user sync preferences, links from internal items to external calendar event IDs, and sync timestamps plus last-known sync state for retries and troubleshooting.\n\nImplementation plan\n\n1. Clarify the exact scope and success criteria for phase 2: prepare the data model before building deeper integration behavior.\n2. Implement the smallest safe change against the shared calendar event model and keep ownership between app-native and external events clear.\n3. Add the needed status, labeling, or controls so the behavior is understandable in the UI.\n4. Verify sync, visibility, and failure-path behavior with focused QA before moving to the next phase.\n\nDefinition of done\n\n* This calendar phase has a concrete execution path.\n* App-native and external calendar behavior stay clearly differentiated.\n* The phase is validated with repeatable QA.",
+    "priority": 0,
+    "project": {
+      "id": "040e7114-d4f6-4afd-a68f-370d4437efe7",
+      "name": "External Calendar Sync Plan"
+    },
+    "state": {
+      "name": "Backlog"
+    },
+    "team": {
+      "id": "98137d43-72d0-4802-a6ab-7a758ab24214",
+      "key": "GUI",
+      "name": "Guide to the galaxies"
+    },
+    "labels": {
+      "nodes": [
+        {
+          "id": "3be91819-9f86-44b9-bae2-30d24316b1fe",
+          "name": "Planning"
+        }
+      ]
+    }
+  },
+  {
+    "id": "cae0a45a-8897-4e1c-960a-2bded7f2464e",
+    "identifier": "GUI-30",
+    "title": "Phase 6: Add controls and safeguards",
+    "url": "https://linear.app/guide-to-the-galaxies/issue/GUI-30/phase-6-add-controls-and-safeguards",
+    "description": "Let users turn sync on or off, choose which tracker categories sync out, add per-user timezone handling, handle revoked permissions, expired tokens, and failed sync retries gracefully, and log sync errors clearly enough to debug later.\n\nImplementation plan\n\n1. Clarify the exact scope and success criteria for phase 6: add controls and safeguards before building deeper integration behavior.\n2. Implement the smallest safe change against the shared calendar event model and keep ownership between app-native and external events clear.\n3. Add the needed status, labeling, or controls so the behavior is understandable in the UI.\n4. Verify sync, visibility, and failure-path behavior with focused QA before moving to the next phase.\n\nDefinition of done\n\n* This calendar phase has a concrete execution path.\n* App-native and external calendar behavior stay clearly differentiated.\n* The phase is validated with repeatable QA.",
+    "priority": 0,
+    "project": {
+      "id": "040e7114-d4f6-4afd-a68f-370d4437efe7",
+      "name": "External Calendar Sync Plan"
+    },
+    "state": {
+      "name": "Backlog"
+    },
+    "team": {
+      "id": "98137d43-72d0-4802-a6ab-7a758ab24214",
+      "key": "GUI",
+      "name": "Guide to the galaxies"
+    },
+    "labels": {
+      "nodes": [
+        {
+          "id": "3be91819-9f86-44b9-bae2-30d24316b1fe",
+          "name": "Planning"
+        }
+      ]
+    }
+  },
+  {
+    "id": "a907f48f-067c-48d6-9ba0-dbd978e8fc66",
+    "identifier": "GUI-29",
+    "title": "Add real regression coverage for core tracker and outsider flows",
+    "url": "https://linear.app/guide-to-the-galaxies/issue/GUI-29/add-real-regression-coverage-for-core-tracker-and-outsider-flows",
+    "description": "Expand automated coverage beyond the current smoke and preview tests. The app now includes auth, connection requests, permissions, outsider data views, support actions, tracking mutations, and calendar behavior, but the existing Playwright coverage only validates a basic landing page and one preview path. Add a practical regression suite for the highest-risk user flows so future tracker expansion work is safer to ship.\n\nImplementation plan\n\n1. Identify the smallest high-value regression set for tracker and outsider flows.\n2. Cover critical paths first: auth entry, connection request flow, tracker logging, outsider read-only access, support messaging, and calendar rendering.\n3. Use stable fixtures or seed data so tests are reliable and easy to maintain.\n4. Add assertions for permission-sensitive behavior where outsider access should hide or show sections.\n5. Keep tests focused on real user outcomes instead of brittle styling details.\n6. Make sure the suite can be run locally and in CI without special manual setup.\n\nDefinition of done\n\n* Core tracker and outsider flows have practical end-to-end regression coverage.\n* Sensitive permission behavior is tested in at least one representative path.\n* The test suite catches real breakage beyond the current smoke checks.",
+    "priority": 3,
+    "project": {
+      "id": "cf7b565e-6fe2-42eb-8f93-6c4be952705b",
+      "name": "Tracker Stabilization"
+    },
+    "state": {
+      "name": "Backlog"
+    },
+    "team": {
+      "id": "98137d43-72d0-4802-a6ab-7a758ab24214",
+      "key": "GUI",
+      "name": "Guide to the galaxies"
+    },
+    "labels": {
+      "nodes": [
+        {
+          "id": "a2fd4135-9a61-45fd-816c-c7cc89b0a08d",
+          "name": "Next"
+        },
+        {
+          "id": "5901dc04-8398-4ca3-b39a-f1c86c4b92ff",
+          "name": "QA"
+        }
+      ]
+    }
+  },
+  {
+    "id": "78a8b921-bcbf-456f-a3c3-6c96449c94c7",
+    "identifier": "GUI-28",
+    "title": "Make responsive layout handling reactive across tracker and outsider screens",
+    "url": "https://linear.app/guide-to-the-galaxies/issue/GUI-28/make-responsive-layout-handling-reactive-across-tracker-and-outsider",
+    "description": "Audit the app's mobile and desktop breakpoints and stop deriving responsive state directly from window.innerWidth during render. Several layouts and pages compute isMobile or viewport-dependent UI without reactive resize handling, which can leave the interface in the wrong mode after resize, rotation, or viewport changes. This should be fixed with a shared responsive strategy so tracker and outsider shells stay consistent across device changes.",
+    "priority": 2,
+    "project": {
+      "id": "cf7b565e-6fe2-42eb-8f93-6c4be952705b",
+      "name": "Tracker Stabilization"
+    },
+    "state": {
+      "name": "Backlog"
+    },
+    "team": {
+      "id": "98137d43-72d0-4802-a6ab-7a758ab24214",
+      "key": "GUI",
+      "name": "Guide to the galaxies"
+    },
+    "labels": {
+      "nodes": [
+        {
+          "id": "8a6d2ddc-3246-4945-a6d8-c6e33bf91c48",
+          "name": "Now"
+        },
+        {
+          "id": "a68032e2-2af2-45f1-bde2-86380abf32b0",
+          "name": "Mobile"
+        }
+      ]
+    }
+  },
+  {
+    "id": "6f86b95b-a764-4083-be6e-c0e96e794750",
+    "identifier": "GUI-27",
+    "title": "Break up App.jsx and reduce shell-level complexity",
+    "url": "https://linear.app/guide-to-the-galaxies/issue/GUI-27/break-up-appjsx-and-reduce-shell-level-complexity",
+    "description": "Refactor the app architecture to reduce delivery risk from oversized top-level files and tightly coupled state. src/App.jsx has grown into a very large controller that mixes auth, profile loading, tracker state, outsider state, connection workflows, support inbox handling, event normalization, preview data, and tutorial logic. Split the app into clearer modules or hooks so future feature work is easier to reason about, test, and ship safely.\n\nImplementation plan\n\n1. Identify clean module boundaries such as auth/profile, tracker data, outsider data, connections/support, calendar normalization, and preview-only logic.\n2. Extract read-only helpers first to reduce risk before moving stateful flows.\n3. Move coherent state and side effects into focused hooks or controller modules with stable inputs and outputs.\n4. Reduce the size of App.jsx incrementally while keeping behavior and prop contracts stable.\n5. Add or strengthen tests around any extracted logic that is easy to regress.\n6. Stop once the top-level app shell reads as orchestration rather than implementation.\n\nDefinition of done\n\n* App.jsx is materially smaller and easier to scan.\n* Major data domains are separated into clearer modules or hooks.\n* Behavior remains unchanged aside from structural cleanup.",
+    "priority": 4,
+    "project": {
+      "id": "cf7b565e-6fe2-42eb-8f93-6c4be952705b",
+      "name": "Tracker Stabilization"
+    },
+    "state": {
+      "name": "Backlog"
+    },
+    "team": {
+      "id": "98137d43-72d0-4802-a6ab-7a758ab24214",
+      "key": "GUI",
+      "name": "Guide to the galaxies"
+    },
+    "labels": {
+      "nodes": [
+        {
+          "id": "87c39cda-7f9e-41ab-afba-9aeb445398c3",
+          "name": "Later"
+        },
+        {
+          "id": "ddc1dd63-af64-49f1-93a5-8e18e07d0450",
+          "name": "Architecture"
+        }
+      ]
+    }
+  },
+  {
+    "id": "0ab73127-01c5-4b16-bb79-d525f31dad43",
+    "identifier": "GUI-26",
+    "title": "Clean up mobile UI across tracker and outsider flows",
+    "url": "https://linear.app/guide-to-the-galaxies/issue/GUI-26/clean-up-mobile-ui-across-tracker-and-outsider-flows",
+    "description": "Create a focused mobile polish pass for the app. The current mobile experience feels rough in several places, with layouts, spacing, navigation density, and section framing not holding up as well as desktop. This issue should cover responsive cleanup across both tracker and outsider flows, especially key daily pages, calendar surfaces, support screens, and navigation patterns, so the app feels intentional and usable on phone-sized screens instead of compressed or cluttered.\n\nImplementation plan\n\n1. Audit the worst mobile screens first: tracker overview, tracker log flows, calendar, outsider overview, outsider telemetry, and support pages.\n2. Capture the biggest phone-sized pain points in spacing, overflow, crowded navigation, and visual hierarchy.\n3. Fix layout and spacing issues in the shared shells before polishing individual pages.\n4. Tidy page-level grids, cards, buttons, and section framing so content reads clearly on narrow widths.\n5. Verify the bottom nav, headers, and action areas remain reachable without overlapping key content.\n6. Re-test on multiple mobile viewport sizes and keep screenshots or notes for before-and-after validation.\n\nDefinition of done\n\n* Core tracker and outsider pages feel intentional on phone-sized screens.\n* Major overflow, crowding, and awkward spacing problems are resolved.\n* Navigation remains usable without hiding important content.",
+    "priority": 2,
+    "project": {
+      "id": "cf7b565e-6fe2-42eb-8f93-6c4be952705b",
+      "name": "Tracker Stabilization"
+    },
+    "state": {
+      "name": "Backlog"
+    },
+    "team": {
+      "id": "98137d43-72d0-4802-a6ab-7a758ab24214",
+      "key": "GUI",
+      "name": "Guide to the galaxies"
+    },
+    "labels": {
+      "nodes": [
+        {
+          "id": "8a6d2ddc-3246-4945-a6d8-c6e33bf91c48",
+          "name": "Now"
+        },
+        {
+          "id": "90a37857-381e-47cc-9b4e-055d38e72478",
+          "name": "UX"
+        },
+        {
+          "id": "a68032e2-2af2-45f1-bde2-86380abf32b0",
+          "name": "Mobile"
+        }
+      ]
+    }
+  },
+  {
+    "id": "b85c2ec9-d8e1-4044-93f9-b3f2b0708d96",
+    "identifier": "GUI-25",
+    "title": "Simplify tracker navigation into a single Log hub",
+    "url": "https://linear.app/guide-to-the-galaxies/issue/GUI-25/simplify-tracker-navigation-into-a-single-log-hub",
+    "description": "Replace category-level top navigation with a calmer top-level Log destination, then move tracker area switching into the logging surface with grouped or compact category selection. Current nav still expands every tracked area into top-level items in src/App.jsx, which conflicts with docs/tracking-expansion-plan.md and will keep getting noisier as features grow.\n\nImplementation plan\n\n1. Define the final top-level tracker nav set and remove category pages from primary nav.\n2. Introduce a single Log destination that opens the logging surface.\n3. Build an in-page category switcher for Log, starting with a compact grouped picker.\n4. Preserve fast access to recently used or likely-needed areas where possible.\n5. Update overview shortcuts and tutorial copy so they reference the new information architecture.\n6. Test the new nav across desktop and mobile themes to confirm parity.\n\nDefinition of done\n\n* Tracker top-level nav no longer grows with every tracking area.\n* Users can reach all enabled tracking categories from Log.\n* Overview and tutorials remain coherent after the nav change.",
+    "priority": 4,
+    "project": {
+      "id": "cf7b565e-6fe2-42eb-8f93-6c4be952705b",
+      "name": "Tracker Stabilization"
+    },
+    "state": {
+      "name": "Backlog"
+    },
+    "team": {
+      "id": "98137d43-72d0-4802-a6ab-7a758ab24214",
+      "key": "GUI",
+      "name": "Guide to the galaxies"
+    },
+    "labels": {
+      "nodes": [
+        {
+          "id": "90a37857-381e-47cc-9b4e-055d38e72478",
+          "name": "UX"
+        },
+        {
+          "id": "ddc1dd63-af64-49f1-93a5-8e18e07d0450",
+          "name": "Architecture"
+        },
+        {
+          "id": "87c39cda-7f9e-41ab-afba-9aeb445398c3",
+          "name": "Later"
+        }
+      ]
+    }
+  },
+  {
+    "id": "da10903d-3455-4f35-bef3-d94ed84e97c3",
+    "identifier": "GUI-24",
+    "title": "Expand outsider views for To-Do, Period, and Appointments",
+    "url": "https://linear.app/guide-to-the-galaxies/issue/GUI-24/expand-outsider-views-for-to-do-period-and-appointments",
+    "description": "Update outsider data loading, summaries, and support actions so the outsider experience reflects newer tracker features instead of staying chart-era only. This includes summary-safe loading, permission-aware rendering, and read-only views or nudges for To-Do, Period, and Appointments, following the checklist already captured in docs/tracking-expansion-plan.md.\n\nImplementation plan\n\n1. Add or verify backend reads and permission-safe policies for appointments and period data.\n2. Expand outsider data loading so it pulls todo summaries, appointments, and period cycles in addition to legacy daily-entry data.\n3. Normalize the new sources into summary-safe outsider-facing shapes.\n4. Update outsider overview and tracker data pages to show the new sections only when sharing permissions allow them.\n5. Update outsider support shortcuts so supported categories can produce appropriate nudges.\n6. Run regression checks for mixed permission states and confirm protected fields such as private period notes never appear.\n\nDefinition of done\n\n* Outsider overview and data surfaces reflect shared To-Do, Period, and Appointment data.\n* Permission toggles are respected end to end.\n* Sensitive period details remain hidden.",
+    "priority": 4,
+    "project": {
+      "id": "cf7b565e-6fe2-42eb-8f93-6c4be952705b",
+      "name": "Tracker Stabilization"
+    },
+    "state": {
+      "name": "Backlog"
+    },
+    "team": {
+      "id": "98137d43-72d0-4802-a6ab-7a758ab24214",
+      "key": "GUI",
+      "name": "Guide to the galaxies"
+    },
+    "labels": {
+      "nodes": [
+        {
+          "id": "90a37857-381e-47cc-9b4e-055d38e72478",
+          "name": "UX"
+        },
+        {
+          "id": "87c39cda-7f9e-41ab-afba-9aeb445398c3",
+          "name": "Later"
+        }
+      ]
+    }
+  },
+  {
+    "id": "0d0d79fc-7f05-4ef4-9ebf-373658954c93",
+    "identifier": "GUI-23",
+    "title": "Remove private period notes from shared calendar event surfaces",
+    "url": "https://linear.app/guide-to-the-galaxies/issue/GUI-23/remove-private-period-notes-from-shared-calendar-event-surfaces",
+    "description": "Harden period privacy in the normalized calendar event layer. buildCalendarEvents in src/app/utils.js currently falls back to cycle private notes when symptom tags are absent, which risks exposing sensitive text in summary or shared surfaces. Estimated period data should stay clearly labeled as estimates, and private notes should never flow into shared calendar summaries.\n\nImplementation plan\n\n1. Audit every place normalized calendar events are used in tracker and outsider views.\n2. Remove private note fallback from the normalized period event builder.\n3. Decide which safe summary data is allowed for period events, such as flow level or generic labels.\n4. Verify estimated period events remain clearly marked as estimates.\n5. Test tracker calendar, selected-day agenda, and any shared or outsider summary surfaces to confirm private text never appears.\n\nDefinition of done\n\n* private_notes never reach normalized calendar event notes or shared summaries.\n* Period events still render with safe summary text.\n* Estimate labeling remains explicit.",
+    "priority": 2,
+    "project": {
+      "id": "cf7b565e-6fe2-42eb-8f93-6c4be952705b",
+      "name": "Tracker Stabilization"
+    },
+    "state": {
+      "name": "Done"
+    },
+    "team": {
+      "id": "98137d43-72d0-4802-a6ab-7a758ab24214",
+      "key": "GUI",
+      "name": "Guide to the galaxies"
+    },
+    "labels": {
+      "nodes": [
+        {
+          "id": "8a6d2ddc-3246-4945-a6d8-c6e33bf91c48",
+          "name": "Now"
+        },
+        {
+          "id": "ddbfc987-3d90-4af2-8745-aaf13707b3be",
+          "name": "Privacy"
+        }
+      ]
+    }
+  },
+  {
+    "id": "ce8e64d0-8b35-45a8-b6f0-85f0502720fd",
+    "identifier": "GUI-22",
+    "title": "Clean up tracking UI polish regressions from expansion work",
+    "url": "https://linear.app/guide-to-the-galaxies/issue/GUI-22/clean-up-tracking-ui-polish-regressions-from-expansion-work",
+    "description": "Fix the rough edges introduced during recent tracking expansion work: restore a clean lint pass, remove unused props such as rowStyle in src/pages/tracker/TrackingPage.jsx, and clean up mojibake user-facing text like · and broken smart quotes across tracker calendar and tracking surfaces. This is a focused polish and stability cleanup so future refactors start from a clean baseline.",
+    "priority": 2,
+    "project": {
+      "id": "cf7b565e-6fe2-42eb-8f93-6c4be952705b",
+      "name": "Tracker Stabilization"
+    },
+    "state": {
+      "name": "Backlog"
+    },
+    "team": {
+      "id": "98137d43-72d0-4802-a6ab-7a758ab24214",
+      "key": "GUI",
+      "name": "Guide to the galaxies"
+    },
+    "labels": {
+      "nodes": [
+        {
+          "id": "8a6d2ddc-3246-4945-a6d8-c6e33bf91c48",
+          "name": "Now"
+        },
+        {
+          "id": "90a37857-381e-47cc-9b4e-055d38e72478",
+          "name": "UX"
+        }
+      ]
+    }
+  },
+  {
+    "id": "1e545337-dcc5-44e4-8b07-1ea06e5cdf26",
+    "identifier": "GUI-21",
+    "title": "Phase 4: Add optional dated to-do syncing",
+    "url": "https://linear.app/guide-to-the-galaxies/issue/GUI-21/phase-4-add-optional-dated-to-do-syncing",
+    "description": "After appointments are syncing well, add optional support for dated to-dos in Google Calendar. Keep this opt-in and avoid overcomplicating the first shared-calendar version.\n\nImplementation plan\n\n1. Clarify the exact scope and success criteria for phase 4: add optional dated to-do syncing before building deeper integration behavior.\n2. Implement the smallest safe change against the shared calendar event model and keep ownership between app-native and external events clear.\n3. Add the needed status, labeling, or controls so the behavior is understandable in the UI.\n4. Verify sync, visibility, and failure-path behavior with focused QA before moving to the next phase.\n\nDefinition of done\n\n* This calendar phase has a concrete execution path.\n* App-native and external calendar behavior stay clearly differentiated.\n* The phase is validated with repeatable QA.",
+    "priority": 0,
+    "project": {
+      "id": "84b85651-64e3-4850-99c4-473be84a0fbd",
+      "name": "Calendar Visibility"
+    },
+    "state": {
+      "name": "Backlog"
+    },
+    "team": {
+      "id": "98137d43-72d0-4802-a6ab-7a758ab24214",
+      "key": "GUI",
+      "name": "Guide to the galaxies"
+    },
+    "labels": {
+      "nodes": [
+        {
+          "id": "8a6d2ddc-3246-4945-a6d8-c6e33bf91c48",
+          "name": "Now"
+        }
+      ]
+    }
+  },
+  {
+    "id": "75c9107a-4218-43b7-b395-a885cb37ad00",
+    "identifier": "GUI-20",
+    "title": "Phase 1: Strengthen in-app calendar visibility",
+    "url": "https://linear.app/guide-to-the-galaxies/issue/GUI-20/phase-1-strengthen-in-app-calendar-visibility",
+    "description": "Make the in-app calendar easy to understand at a glance before deeper Google Calendar work. Ensure clear visibility for period tracker days, appointments, reminders, and dated to-dos.\n\nImplementation plan\n\n1. Clarify the exact scope and success criteria for phase 1: strengthen in-app calendar visibility before building deeper integration behavior.\n2. Implement the smallest safe change against the shared calendar event model and keep ownership between app-native and external events clear.\n3. Add the needed status, labeling, or controls so the behavior is understandable in the UI.\n4. Verify sync, visibility, and failure-path behavior with focused QA before moving to the next phase.\n\nDefinition of done\n\n* This calendar phase has a concrete execution path.\n* App-native and external calendar behavior stay clearly differentiated.\n* The phase is validated with repeatable QA.",
+    "priority": 0,
+    "project": {
+      "id": "84b85651-64e3-4850-99c4-473be84a0fbd",
+      "name": "Calendar Visibility"
+    },
+    "state": {
+      "name": "Done"
+    },
+    "team": {
+      "id": "98137d43-72d0-4802-a6ab-7a758ab24214",
+      "key": "GUI",
+      "name": "Guide to the galaxies"
+    },
+    "labels": {
+      "nodes": [
+        {
+          "id": "3be91819-9f86-44b9-bae2-30d24316b1fe",
+          "name": "Planning"
+        }
+      ]
+    }
+  },
+  {
+    "id": "09149735-f045-40bc-8a00-96761632c1db",
+    "identifier": "GUI-19",
+    "title": "Phase 2: Show Google Calendar events inside the app calendar",
+    "url": "https://linear.app/guide-to-the-galaxies/issue/GUI-19/phase-2-show-google-calendar-events-inside-the-app-calendar",
+    "description": "Add Google Calendar event visibility to the in-app calendar. For the first version, Google events should be visible, clearly labeled, and read-only inside the app.\n\nImplementation plan\n\n1. Clarify the exact scope and success criteria for phase 2: show google calendar events inside the app calendar before building deeper integration behavior.\n2. Implement the smallest safe change against the shared calendar event model and keep ownership between app-native and external events clear.\n3. Add the needed status, labeling, or controls so the behavior is understandable in the UI.\n4. Verify sync, visibility, and failure-path behavior with focused QA before moving to the next phase.\n\nDefinition of done\n\n* This calendar phase has a concrete execution path.\n* App-native and external calendar behavior stay clearly differentiated.\n* The phase is validated with repeatable QA.\n\nProgress update (2026-04-09)\n\n* The tracker app now has a first-pass Google event import path through the deployed google-calendar-auth Edge Function.\n* Google events are being fetched from the selected Google calendar and normalized into the same shared calendarEvents layer used by tracker appointments, to-dos, and period items.\n* The tracker Calendar page now shows imported Google items inline with a clear Imported cue instead of splitting them into a separate view.\n* This work is currently local app code plus deployed function behavior and has not been committed or pushed yet.\n\nWhat still needs attention\n\n* Validate the new Google event import path against real connected accounts across Overview and Calendar surfaces, not just the selected calendar page.\n* Decide whether imported Google items should appear with richer metadata such as all-day labeling, direct Google links, or provider-specific badges in more surfaces.\n* Confirm how conflicts or duplicates should be presented when a tracker appointment also exists as a synced Google event.\n* Keep imported Google items read-only for now; editing imported external events from inside the app is a later decision, not part of this phase.",
+    "priority": 0,
+    "project": {
+      "id": "84b85651-64e3-4850-99c4-473be84a0fbd",
+      "name": "Calendar Visibility"
+    },
+    "state": {
+      "name": "Backlog"
+    },
+    "team": {
+      "id": "98137d43-72d0-4802-a6ab-7a758ab24214",
+      "key": "GUI",
+      "name": "Guide to the galaxies"
+    },
+    "labels": {
+      "nodes": [
+        {
+          "id": "8a6d2ddc-3246-4945-a6d8-c6e33bf91c48",
+          "name": "Now"
+        }
+      ]
+    }
+  },
+  {
+    "id": "8d9abc9a-db90-4e5d-af4d-8d1f47d644a6",
+    "identifier": "GUI-18",
+    "title": "Phase 3: Sync app appointments into Google Calendar",
+    "url": "https://linear.app/guide-to-the-galaxies/issue/GUI-18/phase-3-sync-app-appointments-into-google-calendar",
+    "description": "Send app appointments into Google Calendar without starting full two-way editing. Keep the sync direction simple and safe in the first version.\n\nImplementation plan\n\n1. Clarify the exact scope and success criteria for phase 3: sync app appointments into google calendar before building deeper integration behavior.\n2. Implement the smallest safe change against the shared calendar event model and keep ownership between app-native and external events clear.\n3. Add the needed status, labeling, or controls so the behavior is understandable in the UI.\n4. Verify sync, visibility, and failure-path behavior with focused QA before moving to the next phase.\n\nDefinition of done\n\n* This calendar phase has a concrete execution path.\n* App-native and external calendar behavior stay clearly differentiated.\n* The phase is validated with repeatable QA.\n\nProgress update (2026-04-09)\n\n* Google Calendar OAuth connect is working end to end from the tracker Settings flow.\n* The app can now push tracker appointments and reminders into the selected Google calendar through the deployed google-calendar-auth Edge Function.\n* Manual Sync Now plus automatic queue-triggered sync are both wired, and deleting an appointment in the app removes the corresponding Google event.\n* Real-world validation exposed older live calendar_sync_event_links schema drift, so follow-up compatibility migrations and function updates were added to make the working outbound sync path reliable against the current linked Supabase project.\n* The Settings Google connection fields now repopulate correctly on load after the calendar-connect and sync fixes.\n\nWhat still needs attention\n\n* Run a focused regression sweep on appointment create, update, and delete behavior against real Google calendars, including retries after token refresh and stale-link edge cases.\n* Decide whether reminder and appointment default durations should stay hard-coded or become editable appointment fields later.\n* Clean up the compatibility-heavy sync code now that the working version is secured in git, without breaking the live linked project.\n* Keep dated to-dos out of this phase; that remains separate in GUI-21.",
+    "priority": 0,
+    "project": {
+      "id": "84b85651-64e3-4850-99c4-473be84a0fbd",
+      "name": "Calendar Visibility"
+    },
+    "state": {
+      "name": "Backlog"
+    },
+    "team": {
+      "id": "98137d43-72d0-4802-a6ab-7a758ab24214",
+      "key": "GUI",
+      "name": "Guide to the galaxies"
+    },
+    "labels": {
+      "nodes": [
+        {
+          "id": "8a6d2ddc-3246-4945-a6d8-c6e33bf91c48",
+          "name": "Now"
+        }
+      ]
+    }
+  }
+]

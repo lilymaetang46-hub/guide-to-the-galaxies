@@ -60,8 +60,11 @@ function TrackerChartsPage({ app }) {
               data={recentChartData}
               yMax={5}
               theme={theme}
-              chartCardStyle={chartCardStyle}
+              chartCardStyle={(chartTheme) =>
+                chartCardStyle(chartTheme, { disableCelestialFrame: isGalaxyTrackerTheme })
+              }
               panelTone="charts"
+              disableGalaxyFrame={isGalaxyTrackerTheme}
               series={[
                 { key: "mood", label: "Mood", color: theme.chartPalette.mood },
                 { key: "focus", label: "Focus", color: theme.chartPalette.focus },
@@ -87,8 +90,11 @@ function TrackerChartsPage({ app }) {
               data={recentChartData}
               yMax={Math.max(maxMeals, maxMeds, maxHygiene, maxExercise, 3)}
               theme={theme}
-              chartCardStyle={chartCardStyle}
+              chartCardStyle={(chartTheme) =>
+                chartCardStyle(chartTheme, { disableCelestialFrame: isGalaxyTrackerTheme })
+              }
               panelTone="care"
+              disableGalaxyFrame={isGalaxyTrackerTheme}
               series={[
                 { key: "mealsCount", label: "Meals", color: theme.chartPalette.meals },
                 { key: "medsCount", label: "Meds", color: theme.chartPalette.meds },

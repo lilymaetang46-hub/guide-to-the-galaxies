@@ -183,7 +183,7 @@ function CelestialFrameOverlay({ title, subtitle }) {
   );
 }
 
-function LineTrendChart({ title, subtitle, data, yMax, series, theme, chartCardStyle, panelTone }) {
+function LineTrendChart({ title, subtitle, data, yMax, series, theme, chartCardStyle, panelTone, disableGalaxyFrame = false }) {
   const isConsoleChart = theme.observerChartMode === "stepped";
   const isSolarConsole = isConsoleChart && theme.modeName === "Solar";
   const isGalaxyTrackerCard =
@@ -191,7 +191,8 @@ function LineTrendChart({ title, subtitle, data, yMax, series, theme, chartCardS
     !theme.observerConsole &&
     !theme.trackerSolar &&
     !theme.trackerReef &&
-    !theme.trackerAbyss;
+    !theme.trackerAbyss &&
+    !disableGalaxyFrame;
 
   const width = 500;
   const height = 198;
